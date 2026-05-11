@@ -38,7 +38,7 @@ public class SimpleNeuralNetwork
         if (inputs == null || inputs.Length != InputCount)
         {
             Debug.LogWarning("SimpleNeuralNetwork received the wrong number of inputs.");
-            return new float[OutputCount];
+            return new float[Mathf.Max(1, OutputCount)];
         }
 
         float[] hidden = new float[HiddenCount];
@@ -88,6 +88,11 @@ public class SimpleNeuralNetwork
 
     private float[] CopyAndMutate(float[] source, float mutationRate, float mutationStrength)
     {
+        if (source == null)
+        {
+            return new float[0];
+        }
+
         float[] result = new float[source.Length];
 
         for (int i = 0; i < source.Length; i++)

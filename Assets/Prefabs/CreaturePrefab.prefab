@@ -14,6 +14,7 @@ GameObject:
   - component: {fileID: 3687400044241324804}
   - component: {fileID: 2075440987222123123}
   - component: {fileID: 4206938082564389894}
+  - component: {fileID: 1879219479675903565}
   m_Layer: 0
   m_Name: CreaturePrefab
   m_TagString: Untagged
@@ -151,18 +152,26 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Candidate:
     Genome:
-      Speed: 4
+      BaseSpeed: 4
       Acceleration: 8
       TurnRate: 180
       BodySize: 1
-      VisionRange: 15
       EnergyCapacity: 100
+      TailSize: 1
+      FinSize: 1
+      JawSize: 1
+      SensorSize: 1
+      Armour: 0.2
+      Muscle: 1
+      DigestiveEfficiency: 1
+      PlantDiet: 0.7
+      MeatDiet: 0.2
+      CarrionDiet: 0.2
       HungerDrive: 0.7
-      AttractionRange: 0.3
-      ThreatRange: 0.3
       GroupingChance: 0.2
       Aggression: 0.2
       RiskTolerance: 0.5
+      SeparationDrive: 0.45
       ReproductionEnergyThreshold: 80
       MutationRate: 0.08
       MutationStrength: 1
@@ -174,16 +183,46 @@ MonoBehaviour:
         HiddenOutputWeights: []
         HiddenBiases: []
         OutputBiases: []
+    SpeciesKeyAtBirth: 
     SurvivalTime: 0
     EnergyGained: 0
     FoodEaten: 0
+    PlantMeals: 0
+    MeatMeals: 0
+    CarrionMeals: 0
+    Kills: 0
     ReproductionCount: 0
+    DamageDealt: 0
+    DamageTaken: 0
     DistanceTravelled: 0
-    AverageSpeedUsed: 0
-    AverageFoodDistance: 0
   CurrentEnergy: 0
+  CurrentHealth: 0
+  IsAlive: 1
   BaseEnergyDrainPerSecond: 3.5
   ReproductionCooldown: 5
+  MinimumAgeBeforeReproduction: 8
   FoodEatDistance: 1.25
-  SeparationDistance: 2
+  CreatureSeparationDistance: 2
   SwimNoiseStrength: 0.15
+  BaseAttackCooldown: 1.35
+  MinimumHunterScoreToChase: 0.34
+  SameSpeciesAttackPenalty: 0.35
+  BoundaryAvoidanceDistance: 7
+  BoundaryAvoidanceStrength: 6
+  BoundaryHardStopMargin: 0.4
+  BoundaryVelocityDamping: 0.15
+  DebugBoundaryAvoidance: 0
+--- !u!114 &1879219479675903565
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1169779037587707263}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5931c976de5bcf449a9b716a612b387, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  AutoBuildPrimitiveBody: 1
+  HideOriginalRenderer: 1

@@ -5,39 +5,55 @@ using UnityEngine;
 public class EvolutionCandidate
 {
     public EvolutionGenome Genome;
+    public string SpeciesKeyAtBirth;
 
     [Header("Evaluation")]
     public float SurvivalTime;
     public float EnergyGained;
     public int FoodEaten;
+    public int PlantMeals;
+    public int MeatMeals;
+    public int CarrionMeals;
+    public int Kills;
     public int ReproductionCount;
+    public float DamageDealt;
+    public float DamageTaken;
     public float DistanceTravelled;
-    public float AverageSpeedUsed;
-    public float AverageFoodDistance;
 
     public EvolutionCandidate(EvolutionGenome genome)
     {
         Genome = genome;
+        if (Genome == null)
+        {
+            Genome = EvolutionGenome.CreateRandom();
+        }
+
+        Genome.ClampValues();
+        SpeciesKeyAtBirth = SpeciesUtility.GetSpeciesKey(Genome);
     }
 
     public float GetFitness()
     {
+        // This is kept as an evaluation value only. The continuous ecosystem does not force a fixed winner each generation.
         float fitness = 0f;
         fitness += SurvivalTime * 1.0f;
-        fitness += EnergyGained * 0.35f;
-        fitness += FoodEaten * 12f;
-        fitness += ReproductionCount * 45f;
-        fitness += DistanceTravelled * 0.02f;
-
+        fitness += EnergyGained * 0.25f;
+        fitness += FoodEaten * 10f;
+        fitness += ReproductionCount * 55f;
+        fitness += Kills * 18f;
+        fitness += DistanceTravelled * 0.01f;
+        fitness -= DamageTaken * 0.1f;
         return Mathf.Max(0f, fitness);
     }
 
-    public Vector2 GetBehaviourDescriptor()
+    public Vector2 GetGroupingAggressionDescriptor()
     {
-        float movementDescriptor = Mathf.Clamp01(DistanceTravelled / 500f);
-        float feedingDescriptor = Mathf.Clamp01(FoodEaten / 12f);
+        if (Genome == null)
+        {
+            return Vector2.zero;
+        }
 
-        return new Vector2(movementDescriptor, feedingDescriptor);
+        return new Vector2(Genome.GroupingChance, Genome.Aggression);
     }
 
     public EvolutionCandidate CreateChild(float mutationMultiplier)
@@ -48,21 +64,5 @@ public class EvolutionCandidate
         }
 
         return new EvolutionCandidate(Genome.CreateMutatedCopy(mutationMultiplier));
-    }
-
-    public void AddMetricsFrom(EvolutionCandidate other)
-    {
-        if (other == null)
-        {
-            return;
-        }
-
-        SurvivalTime += other.SurvivalTime;
-        EnergyGained += other.EnergyGained;
-        FoodEaten += other.FoodEaten;
-        ReproductionCount += other.ReproductionCount;
-        DistanceTravelled += other.DistanceTravelled;
-        AverageSpeedUsed += other.AverageSpeedUsed;
-        AverageFoodDistance += other.AverageFoodDistance;
     }
 }

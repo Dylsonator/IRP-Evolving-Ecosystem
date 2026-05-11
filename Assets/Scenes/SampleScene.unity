@@ -438,6 +438,7 @@ GameObject:
   - component: {fileID: 1204215838}
   - component: {fileID: 1204215837}
   - component: {fileID: 1204215839}
+  - component: {fileID: 1204215840}
   m_Layer: 0
   m_Name: Ecosystem
   m_TagString: Untagged
@@ -474,10 +475,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   CurrentSeason: 0
   SeasonLength: 60
-  AutoCycleSeasons: 1
-  FoodSpawnMultiplier: 1
+  PlantFoodSpawnMultiplier: 1
   EnergyDrainMultiplier: 1
   MutationMultiplier: 1
+  MeatRotSpeedMultiplier: 1
 --- !u!114 &1204215838
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -495,22 +496,28 @@ MonoBehaviour:
   Environment: {fileID: 1204215837}
   StatsTracker: {fileID: 1204215839}
   SimulationAreaSize: {x: 80, y: 25, z: 80}
+  SpawnPaddingFromBounds: 4
   StartingPopulation: 25
-  FixedPopulationSize: 35
-  GenerationDuration: 120
-  Selection: 0
-  TournamentSize: 4
+  MaxPopulation: 180
+  AutoReseedIfExtinct: 1
+  ReseedPopulation: 20
   UseFixedRandomSeed: 0
   RandomSeed: 12345
-  StartingFood: 150
-  TargetFoodAmount: 120
-  FoodSpawnInterval: 0.25
+  StartingPlantFood: 120
+  TargetPlantFood: 160
+  PlantFoodSpawnInterval: 0.2
+  PlantEnergyValue: 28
+  CreateMeatOnDeath: 1
+  MeatEnergyPerBodySize: 35
+  MinimumMeatEnergy: 20
   UseExtinctionEvents: 1
   ExtinctionEventInterval: 120
   ExtinctionKillPercentage: 0.25
-  CurrentGeneration: 1
-  GenerationTimer: 0
-  OffspringCount: 0
+  Runtime: 0
+  CurrentPopulation: 0
+  CurrentPlantFood: 0
+  CurrentFreshMeat: 0
+  CurrentRottenMeat: 0
 --- !u!114 &1204215839
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -523,19 +530,59 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 89a3306792f2b3d4faaad3932c28b5f7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  CurrentGeneration: 0
-  CurrentPopulation: 0
-  OffspringPoolCount: 0
-  AverageFitness: 0
-  AverageSpeed: 0
-  AverageVisionRange: 0
-  AverageBodySize: 0
-  AverageMutationRate: 0
-  AverageFoodEaten: 0
-  AverageSurvivalTime: 0
-  BehaviourDiversity: 0
+  SampleInterval: 5
   WriteCsvLog: 1
   CsvFileName: IRP_EvolutionStats.csv
+  SampleIndex: 0
+  TotalBirths: 0
+  TotalDeaths: 0
+  TotalKills: 0
+  TotalFoodEaten: 0
+  TotalPlantsEaten: 0
+  TotalMeatEaten: 0
+  TotalCarrionEaten: 0
+  TotalFoodRotted: 0
+  TotalExtinctionEvents: 0
+  CurrentPopulation: 0
+  CurrentSpeciesCount: 0
+  CurrentPlantFood: 0
+  CurrentFreshMeat: 0
+  CurrentRottenMeat: 0
+  AverageFitness: 0
+  AverageBodySize: 0
+  AverageSpeed: 0
+  AverageVision: 0
+  AverageJawSize: 0
+  AverageTailSize: 0
+  AverageFinSize: 0
+  AverageSensorSize: 0
+  AverageAggression: 0
+  AverageGrouping: 0
+  AveragePlantDiet: 0
+  AverageMeatDiet: 0
+  AverageCarrionDiet: 0
+  SpeciesDiversity: 0
+--- !u!114 &1204215840
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1204215835}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5648f718e3468b847a568c313f59b02a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ShowUI: 1
+  WindowRect:
+    serializedVersion: 2
+    x: 15
+    y: 15
+    width: 390
+    height: 560
+  ToggleKey: 85
+  ExtinctionEventKey: 95
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

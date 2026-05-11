@@ -6,26 +6,55 @@ public class MarineCreatureAgent : MonoBehaviour
     [Header("Runtime")]
     public EvolutionCandidate Candidate;
     public float CurrentEnergy;
+    public float CurrentHealth;
+    public bool IsAlive = true;
 
     [Header("Energy")]
-    public float BaseEnergyDrainPerSecond = 3.5f;
-    public float ReproductionCooldown = 5f;
+    public float BaseEnergyDrainPerSecond = 3.2f;
+    public float ReproductionCooldown = 6f;
+    public float MinimumAgeBeforeReproduction = 8f;
 
     [Header("Movement")]
-    public float FoodEatDistance = 1.25f;
-    public float SeparationDistance = 2f;
-    public float SwimNoiseStrength = 0.15f;
+    public float FoodEatDistance = 1.2f;
+    public float CreatureSeparationDistance = 2f;
+    public float SwimNoiseStrength = 0.18f;
+
+    [Header("Combat")]
+    public float BaseAttackCooldown = 1.35f;
+    public float MinimumHunterScoreToChase = 0.34f;
+    public float SameSpeciesAttackPenalty = 0.35f;
+
+    [Header("Boundary Safety")]
+    public float BoundaryAvoidanceDistance = 7f;
+    public float BoundaryAvoidanceStrength = 6f;
+    public float BoundaryHardStopMargin = 0.4f;
+    public float BoundaryVelocityDamping = 0.15f;
+    public bool DebugBoundaryAvoidance;
 
     private Rigidbody rb;
+    private CreatureBodyMorph bodyMorph;
+
     private FoodSource nearestFood;
     private MarineCreatureAgent nearestCreature;
+    private MarineCreatureAgent nearestGroupMate;
+    private MarineCreatureAgent nearestPrey;
+    private MarineCreatureAgent nearestThreat;
 
     private float reproductionTimer;
+    private float attackTimer;
+    private float aliveTimer;
     private Vector3 lastPosition;
     private Vector3 wantedDirection;
-    private float aliveTimer;
 
-    public void Initialise(EvolutionCandidate candidate)
+    public EvolutionGenome Genome
+    {
+        get
+        {
+            return Candidate != null ? Candidate.Genome : null;
+        }
+    }
+
+    public void Initialise(EvolutionCandidate candidate, float startingEnergy = -1f)
     {
         Candidate = candidate;
 
@@ -40,12 +69,19 @@ public class MarineCreatureAgent : MonoBehaviour
         }
 
         Candidate.Genome.ClampValues();
-        CurrentEnergy = Candidate.Genome.EnergyCapacity * 0.65f;
+
+        CurrentEnergy = startingEnergy > 0f
+            ? Mathf.Min(startingEnergy, Candidate.Genome.EnergyCapacity)
+            : Candidate.Genome.EnergyCapacity * 0.65f;
+
+        CurrentHealth = Candidate.Genome.GetMaxHealth();
+        IsAlive = true;
 
         transform.localScale = Vector3.one * Candidate.Genome.BodySize;
         lastPosition = transform.position;
         aliveTimer = 0f;
         reproductionTimer = Random.Range(1f, ReproductionCooldown);
+        attackTimer = Random.Range(0f, BaseAttackCooldown);
 
         if (rb == null)
         {
@@ -53,13 +89,24 @@ public class MarineCreatureAgent : MonoBehaviour
         }
 
         rb.useGravity = false;
-        rb.linearDamping = 2f;
+        rb.linearDamping = 2.2f;
         rb.angularDamping = 5f;
+
+        if (bodyMorph == null)
+        {
+            bodyMorph = GetComponent<CreatureBodyMorph>();
+        }
+
+        if (bodyMorph != null)
+        {
+            bodyMorph.ApplyGenome(Candidate.Genome);
+        }
     }
 
     private void Awake()
     {
         rb = GetComponent<Rigidbody>();
+        bodyMorph = GetComponent<CreatureBodyMorph>();
     }
 
     private void Start()
@@ -72,24 +119,26 @@ public class MarineCreatureAgent : MonoBehaviour
 
     private void FixedUpdate()
     {
-        if (Candidate == null || Candidate.Genome == null)
+        if (!IsAlive || Candidate == null || Candidate.Genome == null)
         {
             return;
         }
 
         aliveTimer += Time.fixedDeltaTime;
         reproductionTimer -= Time.fixedDeltaTime;
+        attackTimer -= Time.fixedDeltaTime;
 
         SenseEnvironment();
         RunBrainMovement();
         DrainEnergy();
         TryEatFood();
+        TryAttackPrey();
         TryReproduce();
         UpdateMetrics();
 
         if (CurrentEnergy <= 0f)
         {
-            Die(false);
+            Die(null, true, "Starved");
         }
     }
 
@@ -100,72 +149,102 @@ public class MarineCreatureAgent : MonoBehaviour
             return;
         }
 
-        nearestFood = EvolutionEcosystemManager.Instance.GetNearestFood(transform.position, Candidate.Genome.VisionRange);
-        nearestCreature = EvolutionEcosystemManager.Instance.GetNearestCreature(this, transform.position, Candidate.Genome.VisionRange);
+        float visionRange = Candidate.Genome.GetVisionRange();
+
+        nearestFood = EvolutionEcosystemManager.Instance.GetNearestEdibleFood(transform.position, visionRange, Candidate.Genome);
+        nearestCreature = EvolutionEcosystemManager.Instance.GetNearestCreature(this, transform.position, visionRange);
+        nearestGroupMate = EvolutionEcosystemManager.Instance.GetNearestSimilarCreature(this, transform.position, visionRange);
+        nearestPrey = EvolutionEcosystemManager.Instance.GetNearestPreyCandidate(this, transform.position, visionRange);
+        nearestThreat = EvolutionEcosystemManager.Instance.GetNearestThreat(this, transform.position, visionRange);
     }
 
     private void RunBrainMovement()
     {
-        Vector3 toFood = Vector3.zero;
-        float foodDistanceNormalised = 1f;
+        EvolutionGenome genome = Candidate.Genome;
+        genome.EnsureBrainIsValid();
 
-        if (nearestFood != null)
-        {
-            toFood = nearestFood.transform.position - transform.position;
-            foodDistanceNormalised = Mathf.Clamp01(toFood.magnitude / Candidate.Genome.VisionRange);
-            toFood = toFood.normalized;
-        }
+        float visionRange = Mathf.Max(0.1f, genome.GetVisionRange());
+        float energyRatio = Mathf.Clamp01(CurrentEnergy / genome.EnergyCapacity);
 
-        Vector3 toCreature = Vector3.zero;
-        float creatureDistanceNormalised = 1f;
+        Vector3 toFood = GetDirectionTo(nearestFood != null ? nearestFood.transform.position : transform.position);
+        float foodCloseness = GetCloseness(nearestFood != null ? nearestFood.transform.position : transform.position, visionRange, nearestFood != null);
 
-        if (nearestCreature != null)
-        {
-            toCreature = nearestCreature.transform.position - transform.position;
-            creatureDistanceNormalised = Mathf.Clamp01(toCreature.magnitude / Candidate.Genome.VisionRange);
-            toCreature = toCreature.normalized;
-        }
+        Vector3 toCreature = GetDirectionTo(nearestCreature != null ? nearestCreature.transform.position : transform.position);
+        float creatureCloseness = GetCloseness(nearestCreature != null ? nearestCreature.transform.position : transform.position, visionRange, nearestCreature != null);
 
-        float energyRatio = Mathf.Clamp01(CurrentEnergy / Candidate.Genome.EnergyCapacity);
+        Vector3 toThreat = GetDirectionTo(nearestThreat != null ? nearestThreat.transform.position : transform.position);
 
         float[] inputs =
         {
             energyRatio,
             toFood.x,
+            toFood.y,
             toFood.z,
-            1f - foodDistanceNormalised,
+            foodCloseness,
             toCreature.x,
+            toCreature.y,
             toCreature.z,
-            1f - creatureDistanceNormalised,
+            creatureCloseness,
+            toThreat.x,
+            toThreat.y,
+            toThreat.z,
+            genome.HungerDrive,
+            genome.Aggression,
             Random.Range(-1f, 1f)
         };
 
-        float[] outputs = Candidate.Genome.Brain.Evaluate(inputs);
+        float[] outputs = genome.Brain.Evaluate(inputs);
+        Vector3 brainDirection = new Vector3(outputs[0], outputs[1], outputs[2]);
 
-        Vector3 brainDirection = new Vector3(outputs[0], 0f, outputs[1]);
+        float hunger = 1f - energyRatio;
+        float foodDietValue = nearestFood != null ? genome.GetDietPreference(nearestFood.FoodType) : 0f;
+        Vector3 foodPull = toFood * genome.HungerDrive * hunger * (0.3f + foodDietValue);
 
-        Vector3 foodPull = toFood * Candidate.Genome.HungerDrive * (1f - energyRatio);
-        Vector3 groupingPull = toCreature * Candidate.Genome.GroupingChance * Candidate.Genome.AttractionRange;
+        Vector3 preyPull = Vector3.zero;
+        if (nearestPrey != null)
+        {
+            float hunterScore = genome.GetHunterScore();
+            float sameSpeciesMultiplier = IsSimilarSpecies(nearestPrey) ? SameSpeciesAttackPenalty : 1f;
+            preyPull = GetDirectionTo(nearestPrey.transform.position) * hunterScore * genome.Aggression * sameSpeciesMultiplier;
+        }
+
+        Vector3 groupingPull = Vector3.zero;
+        if (nearestGroupMate != null)
+        {
+            float socialWeight = Mathf.Lerp(0.2f, 1f, energyRatio);
+            groupingPull = GetDirectionTo(nearestGroupMate.transform.position) * genome.GroupingChance * socialWeight;
+        }
 
         Vector3 separationPush = Vector3.zero;
         if (nearestCreature != null)
         {
-            float creatureDistance = Vector3.Distance(transform.position, nearestCreature.transform.position);
+            float distance = Vector3.Distance(transform.position, nearestCreature.transform.position);
+            float personalSpace = CreatureSeparationDistance * genome.BodySize;
 
-            if (creatureDistance < SeparationDistance * Candidate.Genome.BodySize)
+            if (distance < personalSpace)
             {
-                separationPush = -toCreature * (1f - Candidate.Genome.RiskTolerance);
+                float strength = 1f - Mathf.Clamp01(distance / personalSpace);
+                separationPush = -GetDirectionTo(nearestCreature.transform.position) * strength * genome.SeparationDrive;
             }
         }
 
-        Vector3 noise = Random.insideUnitSphere * SwimNoiseStrength;
-        noise.y = 0f;
+        Vector3 threatPush = Vector3.zero;
+        if (nearestThreat != null)
+        {
+            float threatDistance = Vector3.Distance(transform.position, nearestThreat.transform.position);
+            float threatStrength = 1f - Mathf.Clamp01(threatDistance / visionRange);
+            threatPush = -GetDirectionTo(nearestThreat.transform.position) * threatStrength * (1f - genome.RiskTolerance) * 1.8f;
+        }
 
-        wantedDirection = brainDirection + foodPull + groupingPull + separationPush + noise;
+        Vector3 noise = Random.insideUnitSphere * SwimNoiseStrength;
+        Vector3 boundaryPush = GetBoundaryAvoidanceDirection();
+
+        wantedDirection = brainDirection + foodPull + preyPull + groupingPull + separationPush + threatPush + boundaryPush + noise;
+        PreventOutwardDirectionAtBounds(ref wantedDirection);
 
         if (wantedDirection.sqrMagnitude < 0.05f)
         {
-            wantedDirection = transform.forward;
+            wantedDirection = GetDirectionToSimulationCentre();
         }
 
         wantedDirection.Normalize();
@@ -174,42 +253,42 @@ public class MarineCreatureAgent : MonoBehaviour
         Quaternion newRotation = Quaternion.RotateTowards(
             transform.rotation,
             targetRotation,
-            Candidate.Genome.TurnRate * Time.fixedDeltaTime
+            genome.GetEffectiveTurnRate() * Time.fixedDeltaTime
         );
 
         rb.MoveRotation(newRotation);
 
-        Vector3 wantedVelocity = transform.forward * Candidate.Genome.Speed;
+        Vector3 wantedVelocity = transform.forward * genome.GetEffectiveSpeed();
         Vector3 newVelocity = Vector3.MoveTowards(
             rb.linearVelocity,
             wantedVelocity,
-            Candidate.Genome.Acceleration * Time.fixedDeltaTime
+            genome.GetEffectiveAcceleration() * Time.fixedDeltaTime
         );
 
-        rb.linearVelocity = newVelocity;
+        rb.linearVelocity = PreventOutwardVelocityAtBounds(newVelocity);
 
         if (EvolutionEcosystemManager.Instance != null)
         {
-            Vector3 clampedPosition = EvolutionEcosystemManager.Instance.ClampToSimulationArea(transform.position);
-            rb.position = clampedPosition;
+            Vector3 clampedPosition = EvolutionEcosystemManager.Instance.ClampToSimulationArea(rb.position);
+
+            if ((clampedPosition - rb.position).sqrMagnitude > 0.0001f)
+            {
+                rb.position = clampedPosition;
+                rb.linearVelocity = PreventOutwardVelocityAtBounds(rb.linearVelocity) * BoundaryVelocityDamping;
+            }
         }
     }
 
     private void DrainEnergy()
     {
-        float environmentDrain = 1f;
+        float environmentDrainMultiplier = 1f;
 
         if (EvolutionEcosystemManager.Instance != null && EvolutionEcosystemManager.Instance.Environment != null)
         {
-            environmentDrain = EvolutionEcosystemManager.Instance.Environment.EnergyDrainMultiplier;
+            environmentDrainMultiplier = EvolutionEcosystemManager.Instance.Environment.EnergyDrainMultiplier;
         }
 
-        float movementCost = rb.linearVelocity.magnitude / Mathf.Max(0.1f, Candidate.Genome.Speed);
-        float traitCost = Candidate.Genome.GetEnergyDrainMultiplier();
-
-        float drain = BaseEnergyDrainPerSecond * traitCost * environmentDrain;
-        drain += movementCost * 0.75f;
-
+        float drain = BaseEnergyDrainPerSecond * Candidate.Genome.GetEnergyDrainMultiplier() * environmentDrainMultiplier;
         CurrentEnergy -= drain * Time.fixedDeltaTime;
     }
 
@@ -220,27 +299,88 @@ public class MarineCreatureAgent : MonoBehaviour
             return;
         }
 
-        float eatDistance = FoodEatDistance * Candidate.Genome.BodySize;
+        float distance = Vector3.Distance(transform.position, nearestFood.transform.position);
+        float eatDistance = FoodEatDistance * Mathf.Max(0.5f, Candidate.Genome.BodySize);
 
-        if (Vector3.Distance(transform.position, nearestFood.transform.position) > eatDistance)
+        if (distance > eatDistance)
         {
             return;
         }
 
-        float energyGained = nearestFood.Consume();
+        float dietPreference = Candidate.Genome.GetDietPreference(nearestFood.FoodType);
+        if (dietPreference <= 0.05f)
+        {
+            return;
+        }
 
-        CurrentEnergy = Mathf.Min(
-            CurrentEnergy + energyGained,
-            Candidate.Genome.EnergyCapacity
-        );
+        EcosystemFoodType foodType = nearestFood.FoodType;
+        float baseEnergy = nearestFood.Consume();
+        float gained = baseEnergy * Mathf.Lerp(0.35f, 1.25f, dietPreference) * Candidate.Genome.DigestiveEfficiency;
 
-        Candidate.EnergyGained += energyGained;
+        CurrentEnergy = Mathf.Min(CurrentEnergy + gained, Candidate.Genome.EnergyCapacity);
+
+        Candidate.EnergyGained += gained;
         Candidate.FoodEaten++;
+
+        if (foodType == EcosystemFoodType.Plant)
+        {
+            Candidate.PlantMeals++;
+        }
+        else if (foodType == EcosystemFoodType.FreshMeat)
+        {
+            Candidate.MeatMeals++;
+        }
+        else
+        {
+            Candidate.CarrionMeals++;
+        }
+
+        if (EvolutionEcosystemManager.Instance != null && EvolutionEcosystemManager.Instance.StatsTracker != null)
+        {
+            EvolutionEcosystemManager.Instance.StatsTracker.RegisterFoodEaten(foodType);
+        }
+    }
+
+    private void TryAttackPrey()
+    {
+        EvolutionGenome genome = Candidate.Genome;
+
+        if (nearestPrey == null || !nearestPrey.IsAlive)
+        {
+            return;
+        }
+
+        if (attackTimer > 0f)
+        {
+            return;
+        }
+
+        if (genome.GetHunterScore() < MinimumHunterScoreToChase)
+        {
+            return;
+        }
+
+        float distance = Vector3.Distance(transform.position, nearestPrey.transform.position);
+        if (distance > genome.GetAttackRange())
+        {
+            return;
+        }
+
+        attackTimer = Mathf.Lerp(BaseAttackCooldown * 1.25f, BaseAttackCooldown * 0.55f, genome.Aggression);
+
+        float damage = genome.GetAttackDamage();
+        if (IsSimilarSpecies(nearestPrey))
+        {
+            damage *= SameSpeciesAttackPenalty;
+        }
+
+        Candidate.DamageDealt += damage;
+        nearestPrey.TakeDamage(damage, this);
     }
 
     private void TryReproduce()
     {
-        if (reproductionTimer > 0f)
+        if (reproductionTimer > 0f || aliveTimer < MinimumAgeBeforeReproduction)
         {
             return;
         }
@@ -250,60 +390,195 @@ public class MarineCreatureAgent : MonoBehaviour
             return;
         }
 
-        if (EvolutionEcosystemManager.Instance == null)
+        if (EvolutionEcosystemManager.Instance == null || !EvolutionEcosystemManager.Instance.CanSpawnMoreCreatures())
         {
             return;
         }
 
-        float mutationMultiplier = 1f;
+        float mutationMultiplier = EvolutionEcosystemManager.Instance.GetEnvironmentMutationMultiplier();
+        EvolutionCandidate childCandidate = Candidate.CreateChild(mutationMultiplier);
 
-        if (EvolutionEcosystemManager.Instance.Environment != null)
-        {
-            mutationMultiplier = EvolutionEcosystemManager.Instance.Environment.MutationMultiplier;
-        }
+        float childEnergy = childCandidate.Genome.EnergyCapacity * 0.45f;
+        CurrentEnergy *= 0.55f;
 
-        EvolutionCandidate offspring = Candidate.CreateChild(mutationMultiplier);
-        EvolutionEcosystemManager.Instance.RegisterOffspring(offspring);
+        Vector3 childPosition = transform.position + Random.insideUnitSphere * Mathf.Max(1.5f, Candidate.Genome.BodySize * 2f);
+        childPosition = EvolutionEcosystemManager.Instance.ClampToSimulationArea(childPosition);
+
+        EvolutionEcosystemManager.Instance.SpawnCreature(childCandidate, childPosition, childEnergy);
 
         Candidate.ReproductionCount++;
-        CurrentEnergy *= 0.5f;
         reproductionTimer = ReproductionCooldown;
     }
 
-    private void UpdateMetrics()
+    public void TakeDamage(float amount, MarineCreatureAgent attacker)
     {
-        float distance = Vector3.Distance(transform.position, lastPosition);
-        Candidate.DistanceTravelled += distance;
-        Candidate.SurvivalTime = aliveTimer;
-        Candidate.AverageSpeedUsed = Mathf.Lerp(Candidate.AverageSpeedUsed, rb.linearVelocity.magnitude, 0.05f);
-
-        if (nearestFood != null)
+        if (!IsAlive)
         {
-            float foodDistance = Vector3.Distance(transform.position, nearestFood.transform.position);
-            Candidate.AverageFoodDistance = Mathf.Lerp(Candidate.AverageFoodDistance, foodDistance, 0.05f);
+            return;
         }
 
-        lastPosition = transform.position;
+        float finalDamage = amount / (1f + Candidate.Genome.Armour * 0.55f);
+        CurrentHealth -= finalDamage;
+        Candidate.DamageTaken += finalDamage;
+
+        if (CurrentHealth <= 0f)
+        {
+            Die(attacker, true, "Killed");
+        }
     }
 
-    public void Die(bool causedByExtinctionEvent)
+    private void Die(MarineCreatureAgent killer, bool createMeat, string reason)
     {
+        if (!IsAlive)
+        {
+            return;
+        }
+
+        IsAlive = false;
+
+        if (killer != null && killer.Candidate != null)
+        {
+            killer.Candidate.Kills++;
+        }
+
         if (EvolutionEcosystemManager.Instance != null)
         {
-            EvolutionEcosystemManager.Instance.UnregisterCreature(this);
+            EvolutionEcosystemManager.Instance.UnregisterCreature(this, createMeat, killer != null);
         }
 
         Destroy(gameObject);
     }
 
-    private void OnDrawGizmosSelected()
+    private void UpdateMetrics()
     {
-        if (Candidate == null || Candidate.Genome == null)
+        Candidate.SurvivalTime = aliveTimer;
+        Candidate.DistanceTravelled += Vector3.Distance(transform.position, lastPosition);
+        lastPosition = transform.position;
+    }
+
+    private bool IsSimilarSpecies(MarineCreatureAgent other)
+    {
+        return other != null && SpeciesUtility.AreSimilarEnoughForGrouping(Candidate.Genome, other.Genome);
+    }
+
+    private Vector3 GetDirectionTo(Vector3 target)
+    {
+        Vector3 direction = target - transform.position;
+
+        if (direction.sqrMagnitude < 0.0001f)
+        {
+            return Vector3.zero;
+        }
+
+        return direction.normalized;
+    }
+
+    private float GetCloseness(Vector3 target, float range, bool valid)
+    {
+        if (!valid)
+        {
+            return 0f;
+        }
+
+        return 1f - Mathf.Clamp01(Vector3.Distance(transform.position, target) / range);
+    }
+
+    private Vector3 GetBoundaryAvoidanceDirection()
+    {
+        if (EvolutionEcosystemManager.Instance == null)
+        {
+            return Vector3.zero;
+        }
+
+        Vector3 centre = EvolutionEcosystemManager.Instance.transform.position;
+        Vector3 half = EvolutionEcosystemManager.Instance.SimulationAreaSize * 0.5f;
+        Vector3 position = rb != null ? rb.position : transform.position;
+
+        Vector3 min = centre - half;
+        Vector3 max = centre + half;
+        Vector3 push = Vector3.zero;
+
+        AddBoundaryPush(position.x - min.x, Vector3.right, ref push);
+        AddBoundaryPush(max.x - position.x, Vector3.left, ref push);
+        AddBoundaryPush(position.y - min.y, Vector3.up, ref push);
+        AddBoundaryPush(max.y - position.y, Vector3.down, ref push);
+        AddBoundaryPush(position.z - min.z, Vector3.forward, ref push);
+        AddBoundaryPush(max.z - position.z, Vector3.back, ref push);
+
+        if (push.sqrMagnitude <= 0.0001f)
+        {
+            return Vector3.zero;
+        }
+
+        Vector3 result = push.normalized * BoundaryAvoidanceStrength;
+
+        if (DebugBoundaryAvoidance)
+        {
+            Debug.DrawRay(position, result, Color.yellow, Time.fixedDeltaTime);
+        }
+
+        return result;
+    }
+
+    private void AddBoundaryPush(float distanceToBoundary, Vector3 inwardDirection, ref Vector3 push)
+    {
+        if (distanceToBoundary >= BoundaryAvoidanceDistance)
         {
             return;
         }
 
-        Gizmos.color = Color.cyan;
-        Gizmos.DrawWireSphere(transform.position, Candidate.Genome.VisionRange);
+        float strength = 1f - Mathf.Clamp01(distanceToBoundary / Mathf.Max(0.01f, BoundaryAvoidanceDistance));
+        push += inwardDirection * strength;
+    }
+
+    private void PreventOutwardDirectionAtBounds(ref Vector3 direction)
+    {
+        if (EvolutionEcosystemManager.Instance == null || direction.sqrMagnitude <= 0.0001f)
+        {
+            return;
+        }
+
+        Vector3 blocked = PreventOutwardVelocityAtBounds(direction);
+        direction = blocked;
+    }
+
+    private Vector3 PreventOutwardVelocityAtBounds(Vector3 velocity)
+    {
+        if (EvolutionEcosystemManager.Instance == null)
+        {
+            return velocity;
+        }
+
+        Vector3 centre = EvolutionEcosystemManager.Instance.transform.position;
+        Vector3 half = EvolutionEcosystemManager.Instance.SimulationAreaSize * 0.5f;
+        Vector3 position = rb != null ? rb.position : transform.position;
+
+        Vector3 min = centre - half;
+        Vector3 max = centre + half;
+
+        if (position.x <= min.x + BoundaryHardStopMargin && velocity.x < 0f) velocity.x = 0f;
+        if (position.x >= max.x - BoundaryHardStopMargin && velocity.x > 0f) velocity.x = 0f;
+        if (position.y <= min.y + BoundaryHardStopMargin && velocity.y < 0f) velocity.y = 0f;
+        if (position.y >= max.y - BoundaryHardStopMargin && velocity.y > 0f) velocity.y = 0f;
+        if (position.z <= min.z + BoundaryHardStopMargin && velocity.z < 0f) velocity.z = 0f;
+        if (position.z >= max.z - BoundaryHardStopMargin && velocity.z > 0f) velocity.z = 0f;
+
+        return velocity;
+    }
+
+    private Vector3 GetDirectionToSimulationCentre()
+    {
+        if (EvolutionEcosystemManager.Instance == null)
+        {
+            return Random.insideUnitSphere.normalized;
+        }
+
+        Vector3 direction = EvolutionEcosystemManager.Instance.transform.position - transform.position;
+        if (direction.sqrMagnitude < 0.0001f)
+        {
+            return Random.insideUnitSphere.normalized;
+        }
+
+        return direction.normalized;
     }
 }
