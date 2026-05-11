@@ -38,12 +38,12 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 0}
-  m_IndirectSpecularColor: {r: 0.18028378, g: 0.22571412, b: 0.30692285, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
   m_ObjectHideFlags: 0
-  serializedVersion: 12
+  serializedVersion: 13
+  m_BakeOnSceneLoad: 0
   m_GISettings:
     serializedVersion: 2
     m_BounceScale: 1
@@ -250,12 +250,12 @@ MonoBehaviour:
   m_RequiresColorTexture: 0
   m_Version: 2
   m_TaaSettings:
-    quality: 3
-    frameInfluence: 0.1
-    jitterScale: 1
-    mipBias: 0
-    varianceClampScale: 0.9
-    contrastAdaptiveSharpening: 0
+    m_Quality: 3
+    m_FrameInfluence: 0.1
+    m_JitterScale: 1
+    m_MipBias: 0
+    m_VarianceClampScale: 0.9
+    m_ContrastAdaptiveSharpening: 0
 --- !u!1 &410087039
 GameObject:
   m_ObjectHideFlags: 0
@@ -336,6 +336,9 @@ Light:
   m_ForceVisible: 0
   m_ShadowRadius: 0
   m_ShadowAngle: 0
+  m_LightUnit: 1
+  m_LuxAtDistance: 1
+  m_EnableSpotReflector: 1
 --- !u!4 &410087041
 Transform:
   m_ObjectHideFlags: 0
@@ -423,6 +426,116 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1204215835
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1204215836}
+  - component: {fileID: 1204215838}
+  - component: {fileID: 1204215837}
+  - component: {fileID: 1204215839}
+  m_Layer: 0
+  m_Name: Ecosystem
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1204215836
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1204215835}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0.2400856, y: -0.32117558, z: -0.4985695}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1204215837
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1204215835}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 17f19133bfafcee42a88d010d076959c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  CurrentSeason: 0
+  SeasonLength: 60
+  AutoCycleSeasons: 1
+  FoodSpawnMultiplier: 1
+  EnergyDrainMultiplier: 1
+  MutationMultiplier: 1
+--- !u!114 &1204215838
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1204215835}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a8ae8b9ed5f19024bac594b8ec2fe695, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  CreaturePrefab: {fileID: 4206938082564389894, guid: 0ffd650424504294986080b1bbb79698, type: 3}
+  FoodPrefab: {fileID: 5059079653024269994, guid: 9112ca78a5748054e971412ab322c1b0, type: 3}
+  Environment: {fileID: 1204215837}
+  StatsTracker: {fileID: 1204215839}
+  SimulationAreaSize: {x: 80, y: 25, z: 80}
+  StartingPopulation: 25
+  FixedPopulationSize: 35
+  GenerationDuration: 120
+  Selection: 0
+  TournamentSize: 4
+  UseFixedRandomSeed: 0
+  RandomSeed: 12345
+  StartingFood: 150
+  TargetFoodAmount: 120
+  FoodSpawnInterval: 0.25
+  UseExtinctionEvents: 1
+  ExtinctionEventInterval: 120
+  ExtinctionKillPercentage: 0.25
+  CurrentGeneration: 1
+  GenerationTimer: 0
+  OffspringCount: 0
+--- !u!114 &1204215839
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1204215835}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 89a3306792f2b3d4faaad3932c28b5f7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  CurrentGeneration: 0
+  CurrentPopulation: 0
+  OffspringPoolCount: 0
+  AverageFitness: 0
+  AverageSpeed: 0
+  AverageVisionRange: 0
+  AverageBodySize: 0
+  AverageMutationRate: 0
+  AverageFoodEaten: 0
+  AverageSurvivalTime: 0
+  BehaviourDiversity: 0
+  WriteCsvLog: 1
+  CsvFileName: IRP_EvolutionStats.csv
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -430,3 +543,4 @@ SceneRoots:
   - {fileID: 330585546}
   - {fileID: 410087041}
   - {fileID: 832575519}
+  - {fileID: 1204215836}
