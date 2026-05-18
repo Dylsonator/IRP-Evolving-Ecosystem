@@ -12,13 +12,13 @@ public class SeasonalEnvironment : MonoBehaviour
 {
     [Header("Season Settings")]
     public EcosystemSeason CurrentSeason = EcosystemSeason.Spring;
-    public float SeasonLength = 90f;
+    public float SeasonLength = 60f;
+    public bool AutoCycleSeasons = true;
 
-    [Header("Runtime Multipliers")]
-    public float PlantFoodSpawnMultiplier = 1f;
+    [Header("Current Pressure Values")]
+    public float FoodSpawnMultiplier = 1f;
     public float EnergyDrainMultiplier = 1f;
     public float MutationMultiplier = 1f;
-    public float MeatRotSpeedMultiplier = 1f;
 
     private float seasonTimer;
 
@@ -29,6 +29,11 @@ public class SeasonalEnvironment : MonoBehaviour
 
     private void Update()
     {
+        if (!AutoCycleSeasons)
+        {
+            return;
+        }
+
         seasonTimer += Time.deltaTime;
 
         if (seasonTimer >= SeasonLength)
@@ -38,49 +43,47 @@ public class SeasonalEnvironment : MonoBehaviour
         }
     }
 
-    private void MoveToNextSeason()
+    public void MoveToNextSeason()
     {
-        CurrentSeason++;
+        int nextSeason = (int)CurrentSeason + 1;
 
-        if ((int)CurrentSeason > 3)
+        if (nextSeason > (int)EcosystemSeason.Winter)
         {
-            CurrentSeason = EcosystemSeason.Spring;
+            nextSeason = 0;
         }
 
+        CurrentSeason = (EcosystemSeason)nextSeason;
         ApplySeasonSettings();
-        Debug.Log("Season changed to: " + CurrentSeason);
+
+        Debug.Log("Season changed to " + CurrentSeason);
     }
 
-    private void ApplySeasonSettings()
+    public void ApplySeasonSettings()
     {
         switch (CurrentSeason)
         {
             case EcosystemSeason.Spring:
-                PlantFoodSpawnMultiplier = 1.45f;
+                FoodSpawnMultiplier = 1.35f;
                 EnergyDrainMultiplier = 0.9f;
-                MutationMultiplier = 1f;
-                MeatRotSpeedMultiplier = 1.1f;
+                MutationMultiplier = 1.0f;
                 break;
 
             case EcosystemSeason.Summer:
-                PlantFoodSpawnMultiplier = 1.1f;
-                EnergyDrainMultiplier = 1f;
-                MutationMultiplier = 1f;
-                MeatRotSpeedMultiplier = 1.25f;
+                FoodSpawnMultiplier = 1.1f;
+                EnergyDrainMultiplier = 1.0f;
+                MutationMultiplier = 1.0f;
                 break;
 
             case EcosystemSeason.Autumn:
-                PlantFoodSpawnMultiplier = 0.8f;
+                FoodSpawnMultiplier = 0.8f;
                 EnergyDrainMultiplier = 1.1f;
                 MutationMultiplier = 1.1f;
-                MeatRotSpeedMultiplier = 1f;
                 break;
 
             case EcosystemSeason.Winter:
-                PlantFoodSpawnMultiplier = 0.45f;
+                FoodSpawnMultiplier = 0.45f;
                 EnergyDrainMultiplier = 1.35f;
                 MutationMultiplier = 1.25f;
-                MeatRotSpeedMultiplier = 0.75f;
                 break;
         }
     }

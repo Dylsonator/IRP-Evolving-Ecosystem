@@ -5,64 +5,101 @@ using UnityEngine;
 public class EvolutionCandidate
 {
     public EvolutionGenome Genome;
-    public string SpeciesKeyAtBirth;
+
+    [Header("Debug Identity")]
+    public int Id;
+    public int ParentId;
+    public int GenerationBorn;
+    public string DisplayName;
+    public CreatureBehaviourType BehaviourType;
 
     [Header("Evaluation")]
     public float SurvivalTime;
     public float EnergyGained;
     public int FoodEaten;
-    public int PlantMeals;
-    public int MeatMeals;
-    public int CarrionMeals;
-    public int Kills;
     public int ReproductionCount;
-    public float DamageDealt;
-    public float DamageTaken;
     public float DistanceTravelled;
+    public float AverageSpeedUsed;
+    public float AverageFoodDistance;
 
     public EvolutionCandidate(EvolutionGenome genome)
     {
         Genome = genome;
-        if (Genome == null)
-        {
-            Genome = EvolutionGenome.CreateRandom();
-        }
+        RefreshDebugIdentity();
+    }
 
-        Genome.ClampValues();
-        SpeciesKeyAtBirth = SpeciesUtility.GetSpeciesKey(Genome);
+    public void AssignRuntimeIdentity(int id, int generationBorn, int parentId = 0)
+    {
+        Id = id;
+        GenerationBorn = generationBorn;
+        ParentId = parentId;
+        RefreshDebugIdentity();
+    }
+
+    public void RefreshDebugIdentity()
+    {
+        BehaviourType = CreatureDebugTypeUtility.GetBehaviourType(Genome);
+
+        if (Id > 0)
+        {
+            DisplayName = CreatureDebugTypeUtility.BuildReadableName(Genome, Id);
+        }
+        else
+        {
+            DisplayName = CreatureDebugTypeUtility.GetTypeName(BehaviourType);
+        }
     }
 
     public float GetFitness()
     {
-        // This is kept as an evaluation value only. The continuous ecosystem does not force a fixed winner each generation.
         float fitness = 0f;
         fitness += SurvivalTime * 1.0f;
-        fitness += EnergyGained * 0.25f;
-        fitness += FoodEaten * 10f;
-        fitness += ReproductionCount * 55f;
-        fitness += Kills * 18f;
-        fitness += DistanceTravelled * 0.01f;
-        fitness -= DamageTaken * 0.1f;
+        fitness += EnergyGained * 0.35f;
+        fitness += FoodEaten * 12f;
+        fitness += ReproductionCount * 45f;
+        fitness += DistanceTravelled * 0.02f;
+
         return Mathf.Max(0f, fitness);
     }
 
-    public Vector2 GetGroupingAggressionDescriptor()
+    public Vector2 GetBehaviourDescriptor()
     {
-        if (Genome == null)
-        {
-            return Vector2.zero;
-        }
+        float movementDescriptor = Mathf.Clamp01(DistanceTravelled / 500f);
+        float feedingDescriptor = Mathf.Clamp01(FoodEaten / 12f);
 
-        return new Vector2(Genome.GroupingChance, Genome.Aggression);
+        return new Vector2(movementDescriptor, feedingDescriptor);
     }
 
     public EvolutionCandidate CreateChild(float mutationMultiplier)
     {
+        EvolutionCandidate child;
+
         if (Genome == null)
         {
-            return new EvolutionCandidate(EvolutionGenome.CreateRandom());
+            child = new EvolutionCandidate(EvolutionGenome.CreateRandom());
+        }
+        else
+        {
+            child = new EvolutionCandidate(Genome.CreateMutatedCopy(mutationMultiplier));
         }
 
-        return new EvolutionCandidate(Genome.CreateMutatedCopy(mutationMultiplier));
+        child.ParentId = Id;
+        return child;
+    }
+
+    public void AddMetricsFrom(EvolutionCandidate other)
+    {
+        if (other == null)
+        {
+            return;
+        }
+
+        SurvivalTime += other.SurvivalTime;
+        EnergyGained += other.EnergyGained;
+        FoodEaten += other.FoodEaten;
+        ReproductionCount += other.ReproductionCount;
+        DistanceTravelled += other.DistanceTravelled;
+        AverageSpeedUsed += other.AverageSpeedUsed;
+        AverageFoodDistance += other.AverageFoodDistance;
     }
 }

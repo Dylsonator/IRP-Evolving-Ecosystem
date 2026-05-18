@@ -10,23 +10,30 @@ public class EcosystemDebugUI : MonoBehaviour
 {
     [Header("Display")]
     public bool ShowUI = true;
-    public Rect WindowRect = new Rect(20f, 20f, 360f, 330f);
+    public Rect WindowRect = new Rect(20f, 20f, 430f, 560f);
 
 #if ENABLE_INPUT_SYSTEM
     [Header("New Input System")]
     public Key ToggleKey = Key.F1;
     public Key ExtinctionEventKey = Key.F2;
+    public Key ToggleMovementRaysKey = Key.F3;
+    public Key ToggleRangeDebugKey = Key.F4;
+    public Key ToggleLabelsKey = Key.F5;
 #endif
 
 #if ENABLE_LEGACY_INPUT_MANAGER
     [Header("Old Input Manager")]
     public KeyCode LegacyToggleKey = KeyCode.F1;
     public KeyCode LegacyExtinctionEventKey = KeyCode.F2;
+    public KeyCode LegacyToggleMovementRaysKey = KeyCode.F3;
+    public KeyCode LegacyToggleRangeDebugKey = KeyCode.F4;
+    public KeyCode LegacyToggleLabelsKey = KeyCode.F5;
 #endif
 
     private MonoBehaviour cachedManager;
     private MonoBehaviour cachedEnvironment;
     private MonoBehaviour cachedStats;
+    private EcosystemDebugSettings cachedDebugSettings;
 
     private void Update()
     {
@@ -42,6 +49,27 @@ public class EcosystemDebugUI : MonoBehaviour
             if (manager != null)
             {
                 InvokeNoArgumentMethod(manager, "TriggerExtinctionEvent");
+            }
+        }
+
+        EcosystemDebugSettings settings = FindDebugSettings();
+        if (settings != null)
+        {
+            if (WasMovementRaysPressed())
+            {
+                settings.DrawCreatureMovementRays = !settings.DrawCreatureMovementRays;
+            }
+
+            if (WasRangeDebugPressed())
+            {
+                bool newState = !(settings.DrawMouthRange || settings.DrawVisionRange);
+                settings.DrawMouthRange = newState;
+                settings.DrawVisionRange = newState;
+            }
+
+            if (WasLabelsPressed())
+            {
+                settings.ShowCreatureLabels = !settings.ShowCreatureLabels;
             }
         }
     }
@@ -84,6 +112,63 @@ public class EcosystemDebugUI : MonoBehaviour
         return false;
     }
 
+    private bool WasMovementRaysPressed()
+    {
+#if ENABLE_INPUT_SYSTEM
+        if (Keyboard.current != null && Keyboard.current[ToggleMovementRaysKey].wasPressedThisFrame)
+        {
+            return true;
+        }
+#endif
+
+#if ENABLE_LEGACY_INPUT_MANAGER
+        if (Input.GetKeyDown(LegacyToggleMovementRaysKey))
+        {
+            return true;
+        }
+#endif
+
+        return false;
+    }
+
+    private bool WasRangeDebugPressed()
+    {
+#if ENABLE_INPUT_SYSTEM
+        if (Keyboard.current != null && Keyboard.current[ToggleRangeDebugKey].wasPressedThisFrame)
+        {
+            return true;
+        }
+#endif
+
+#if ENABLE_LEGACY_INPUT_MANAGER
+        if (Input.GetKeyDown(LegacyToggleRangeDebugKey))
+        {
+            return true;
+        }
+#endif
+
+        return false;
+    }
+
+    private bool WasLabelsPressed()
+    {
+#if ENABLE_INPUT_SYSTEM
+        if (Keyboard.current != null && Keyboard.current[ToggleLabelsKey].wasPressedThisFrame)
+        {
+            return true;
+        }
+#endif
+
+#if ENABLE_LEGACY_INPUT_MANAGER
+        if (Input.GetKeyDown(LegacyToggleLabelsKey))
+        {
+            return true;
+        }
+#endif
+
+        return false;
+    }
+
     private void OnGUI()
     {
         if (!ShowUI)
@@ -109,6 +194,7 @@ public class EcosystemDebugUI : MonoBehaviour
 
         MonoBehaviour environment = FindLinkedComponent(manager, "Environment", "SeasonalEnvironment");
         MonoBehaviour stats = FindLinkedComponent(manager, "StatsTracker", "EvolutionStatsTracker");
+        EcosystemDebugSettings debugSettings = FindDebugSettings();
 
         GUILayout.Label("Manager: " + manager.GetType().Name);
         GUILayout.Space(4f);
@@ -116,31 +202,67 @@ public class EcosystemDebugUI : MonoBehaviour
         DrawValue("Generation", manager, "CurrentGeneration");
         DrawTimer(manager);
         DrawCount("Active Creatures", manager, "GetActiveCreatures", "GetCreatures", "activeCreatures", "creatures");
+        DrawCount("Active Food", manager, "GetActiveFood", null, "activeFood", null);
         DrawCount("Offspring Pool", manager, "GetOffspringPool", null, "offspringPool", null);
         DrawValue("Offspring Count", manager, "OffspringCount");
-        GUILayout.Space(6f);
+        GUILayout.Space(8f);
 
         if (environment != null)
         {
-            GUILayout.Label("Season: " + GetString(environment, "CurrentSeason", "N/A"));
+            GUILayout.Label("<b>Environment Pressure</b>");
+            DrawValue("Season", environment, "CurrentSeason");
             DrawValue("Food Multiplier", environment, "FoodSpawnMultiplier");
             DrawValue("Energy Drain Multiplier", environment, "EnergyDrainMultiplier");
             DrawValue("Mutation Multiplier", environment, "MutationMultiplier");
-            GUILayout.Space(6f);
+            GUILayout.Space(8f);
         }
 
         if (stats != null)
         {
+            GUILayout.Label("<b>Evaluation Averages</b>");
             DrawValue("Average Fitness", stats, "AverageFitness");
             DrawValue("Average Speed", stats, "AverageSpeed");
             DrawFirstAvailableValue("Average Vision", stats, "AverageVisionRange", "AverageSenseRadius");
             DrawFirstAvailableValue("Average Size", stats, "AverageBodySize", "AverageSize");
+            DrawValue("Average Hunger", stats, "AverageHungerDrive");
+            DrawValue("Average Aggression", stats, "AverageAggression");
+            DrawValue("Average Risk", stats, "AverageRiskTolerance");
+            GUILayout.Space(8f);
+
+            GUILayout.Label("<b>Diversity Breakdown</b>");
             DrawValue("Behaviour Diversity", stats, "BehaviourDiversity");
+            DrawValue("Movement Diversity", stats, "MovementDiversity");
+            DrawValue("Feeding Diversity", stats, "FeedingDiversity");
+            DrawValue("Trait Diversity", stats, "TraitDiversity");
+            DrawValue("Type Diversity", stats, "BehaviourTypeDiversity");
+            GUILayout.Space(8f);
+
+            GUILayout.Label("<b>Behaviour Groups</b>");
+            DrawValue("Dominant Group", stats, "DominantBehaviourGroup");
+            DrawValue("Groups", stats, "BehaviourGroupSummary");
+            GUILayout.Space(8f);
         }
 
-        GUILayout.Space(8f);
-        GUILayout.Label("F1: Toggle UI");
-        GUILayout.Label("F2: Manual extinction event");
+        if (debugSettings != null)
+        {
+            GUILayout.Label("<b>Debug Draw Toggles</b>");
+            debugSettings.DrawCreatureMovementRays = GUILayout.Toggle(debugSettings.DrawCreatureMovementRays, "Draw movement rays (F3)");
+            debugSettings.DrawFoodTargetRays = GUILayout.Toggle(debugSettings.DrawFoodTargetRays, "Draw food target rays");
+            debugSettings.DrawSocialTargetRays = GUILayout.Toggle(debugSettings.DrawSocialTargetRays, "Draw social/threat rays");
+            debugSettings.DrawVelocityRays = GUILayout.Toggle(debugSettings.DrawVelocityRays, "Draw velocity rays");
+            debugSettings.DrawWantedDirectionRays = GUILayout.Toggle(debugSettings.DrawWantedDirectionRays, "Draw wanted direction rays");
+            debugSettings.DrawMouthRange = GUILayout.Toggle(debugSettings.DrawMouthRange, "Draw mouth/eat range (F4)");
+            debugSettings.DrawVisionRange = GUILayout.Toggle(debugSettings.DrawVisionRange, "Draw vision/threat range (F4)");
+            debugSettings.DrawBoundaryPush = GUILayout.Toggle(debugSettings.DrawBoundaryPush, "Draw boundary push rays");
+            debugSettings.ShowCreatureLabels = GUILayout.Toggle(debugSettings.ShowCreatureLabels, "Show creature labels (F5)");
+            GUILayout.Space(8f);
+        }
+        else
+        {
+            GUILayout.Label("Add EcosystemDebugSettings to the manager object for ray/label toggles.");
+        }
+
+        GUILayout.Label("F1: Toggle UI | F2: Extinction | F3: Rays | F4: Ranges | F5: Labels");
 
         GUI.DragWindow();
     }
@@ -219,6 +341,17 @@ public class EcosystemDebugUI : MonoBehaviour
         return cachedManager;
     }
 
+    private EcosystemDebugSettings FindDebugSettings()
+    {
+        if (cachedDebugSettings != null)
+        {
+            return cachedDebugSettings;
+        }
+
+        cachedDebugSettings = FindFirstObjectByType<EcosystemDebugSettings>();
+        return cachedDebugSettings;
+    }
+
     private MonoBehaviour FindLinkedComponent(object owner, string fieldOrPropertyName, string fallbackClassName)
     {
         object linked = GetMemberValue(owner, fieldOrPropertyName);
@@ -254,7 +387,7 @@ public class EcosystemDebugUI : MonoBehaviour
 
     private MonoBehaviour FindComponentByClassName(string className)
     {
-        MonoBehaviour[] behaviours = FindObjectsOfType<MonoBehaviour>();
+        MonoBehaviour[] behaviours = FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
 
         for (int i = 0; i < behaviours.Length; i++)
         {
@@ -312,12 +445,6 @@ public class EcosystemDebugUI : MonoBehaviour
 
         value = 0f;
         return false;
-    }
-
-    private string GetString(object target, string memberName, string fallback)
-    {
-        object value = GetMemberValue(target, memberName);
-        return value != null ? value.ToString() : fallback;
     }
 
     private string FormatValue(object value)

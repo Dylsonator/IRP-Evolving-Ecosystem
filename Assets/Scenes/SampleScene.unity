@@ -475,10 +475,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   CurrentSeason: 0
   SeasonLength: 60
-  PlantFoodSpawnMultiplier: 1
+  AutoCycleSeasons: 1
+  FoodSpawnMultiplier: 1
   EnergyDrainMultiplier: 1
   MutationMultiplier: 1
-  MeatRotSpeedMultiplier: 1
 --- !u!114 &1204215838
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -495,29 +495,25 @@ MonoBehaviour:
   FoodPrefab: {fileID: 5059079653024269994, guid: 9112ca78a5748054e971412ab322c1b0, type: 3}
   Environment: {fileID: 1204215837}
   StatsTracker: {fileID: 1204215839}
+  DebugSettings: {fileID: 0}
   SimulationAreaSize: {x: 80, y: 25, z: 80}
   SpawnPaddingFromBounds: 4
   StartingPopulation: 25
-  MaxPopulation: 180
-  AutoReseedIfExtinct: 1
-  ReseedPopulation: 20
+  FixedPopulationSize: 35
+  GenerationDuration: 90
+  Selection: 0
+  TournamentSize: 4
   UseFixedRandomSeed: 0
   RandomSeed: 12345
-  StartingPlantFood: 120
-  TargetPlantFood: 160
-  PlantFoodSpawnInterval: 0.2
-  PlantEnergyValue: 28
-  CreateMeatOnDeath: 1
-  MeatEnergyPerBodySize: 35
-  MinimumMeatEnergy: 20
+  StartingFood: 90
+  TargetFoodAmount: 120
+  FoodSpawnInterval: 0.25
   UseExtinctionEvents: 1
   ExtinctionEventInterval: 120
   ExtinctionKillPercentage: 0.25
-  Runtime: 0
-  CurrentPopulation: 0
-  CurrentPlantFood: 0
-  CurrentFreshMeat: 0
-  CurrentRottenMeat: 0
+  CurrentGeneration: 1
+  GenerationTimer: 0
+  OffspringCount: 0
 --- !u!114 &1204215839
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -530,38 +526,38 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 89a3306792f2b3d4faaad3932c28b5f7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  SampleInterval: 5
+  CurrentGeneration: 0
+  CurrentPopulation: 0
+  OffspringPoolCount: 0
+  AverageFitness: 0
+  AverageSpeed: 0
+  AverageVisionRange: 0
+  AverageBodySize: 0
+  AverageMutationRate: 0
+  AverageFoodEaten: 0
+  AverageSurvivalTime: 0
+  BehaviourDiversity: 0
+  BalancedCount: 0
+  GrazerCount: 0
+  SprinterCount: 0
+  ScoutCount: 0
+  SchoolingCount: 0
+  SkittishCount: 0
+  AggressiveCount: 0
+  HeavyCount: 0
+  DominantBehaviourGroup: 
+  BehaviourGroupSummary: 
+  AverageHungerDrive: 0
+  AverageAggression: 0
+  AverageRiskTolerance: 0
+  AverageGroupingChance: 0
+  AverageThreatRange: 0
+  MovementDiversity: 0
+  FeedingDiversity: 0
+  TraitDiversity: 0
+  BehaviourTypeDiversity: 0
   WriteCsvLog: 1
   CsvFileName: IRP_EvolutionStats.csv
-  SampleIndex: 0
-  TotalBirths: 0
-  TotalDeaths: 0
-  TotalKills: 0
-  TotalFoodEaten: 0
-  TotalPlantsEaten: 0
-  TotalMeatEaten: 0
-  TotalCarrionEaten: 0
-  TotalFoodRotted: 0
-  TotalExtinctionEvents: 0
-  CurrentPopulation: 0
-  CurrentSpeciesCount: 0
-  CurrentPlantFood: 0
-  CurrentFreshMeat: 0
-  CurrentRottenMeat: 0
-  AverageFitness: 0
-  AverageBodySize: 0
-  AverageSpeed: 0
-  AverageVision: 0
-  AverageJawSize: 0
-  AverageTailSize: 0
-  AverageFinSize: 0
-  AverageSensorSize: 0
-  AverageAggression: 0
-  AverageGrouping: 0
-  AveragePlantDiet: 0
-  AverageMeatDiet: 0
-  AverageCarrionDiet: 0
-  SpeciesDiversity: 0
 --- !u!114 &1204215840
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -581,8 +577,11 @@ MonoBehaviour:
     y: 15
     width: 390
     height: 560
-  ToggleKey: 85
+  ToggleKey: 94
   ExtinctionEventKey: 95
+  ToggleMovementRaysKey: 96
+  ToggleRangeDebugKey: 97
+  ToggleLabelsKey: 98
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

@@ -5,169 +5,152 @@ using UnityEngine;
 
 public class EvolutionStatsTracker : MonoBehaviour
 {
-    [Header("Sampling")]
-    public float SampleInterval = 5f;
-    public bool WriteCsvLog = true;
-    public string CsvFileName = "irp_evolution_continuous_stats.csv";
-
-    [Header("Runtime Counters")]
-    public int SampleIndex;
-    public int TotalBirths;
-    public int TotalDeaths;
-    public int TotalKills;
-    public int TotalFoodEaten;
-    public int TotalPlantsEaten;
-    public int TotalMeatEaten;
-    public int TotalCarrionEaten;
-    public int TotalFoodRotted;
-    public int TotalExtinctionEvents;
-
-    [Header("Current Snapshot")]
+    [Header("Current Generation Stats")]
+    public int CurrentGeneration;
     public int CurrentPopulation;
-    public int CurrentSpeciesCount;
-    public int CurrentPlantFood;
-    public int CurrentFreshMeat;
-    public int CurrentRottenMeat;
+    public int OffspringPoolCount;
 
-    [Header("Average Traits")]
     public float AverageFitness;
-    public float AverageBodySize;
     public float AverageSpeed;
-    public float AverageVision;
-    public float AverageJawSize;
-    public float AverageTailSize;
-    public float AverageFinSize;
-    public float AverageSensorSize;
-    public float AverageAggression;
-    public float AverageGrouping;
-    public float AveragePlantDiet;
-    public float AverageMeatDiet;
-    public float AverageCarrionDiet;
-    public float SpeciesDiversity;
+    public float AverageVisionRange;
+    public float AverageBodySize;
+    public float AverageMutationRate;
+    public float AverageFoodEaten;
+    public float AverageSurvivalTime;
+    public float BehaviourDiversity;
 
-    private readonly Dictionary<string, int> speciesCounts = new Dictionary<string, int>();
-    private readonly Dictionary<string, string> speciesNames = new Dictionary<string, string>();
-    private float sampleTimer;
+    [Header("Grouped Behaviour Counts")]
+    public int BalancedCount;
+    public int GrazerCount;
+    public int SprinterCount;
+    public int ScoutCount;
+    public int SchoolingCount;
+    public int SkittishCount;
+    public int AggressiveCount;
+    public int HeavyCount;
+    public string DominantBehaviourGroup;
+    public string BehaviourGroupSummary;
+
+    [Header("Grouped Trait Averages")]
+    public float AverageHungerDrive;
+    public float AverageAggression;
+    public float AverageRiskTolerance;
+    public float AverageGroupingChance;
+    public float AverageThreatRange;
+
+    [Header("Diversity Breakdown")]
+    public float MovementDiversity;
+    public float FeedingDiversity;
+    public float TraitDiversity;
+    public float BehaviourTypeDiversity;
+
+    [Header("Logging")]
+    public bool WriteCsvLog = true;
+    public string CsvFileName = "IRP_EvolutionStats.csv";
+
     private string csvPath;
 
     private void Start()
     {
         csvPath = Path.Combine(Application.persistentDataPath, CsvFileName);
 
-        if (WriteCsvLog)
+        if (WriteCsvLog && !File.Exists(csvPath))
         {
-            CreateCsv();
+            File.WriteAllText(csvPath,
+                "Generation,Population,Offspring,AverageFitness,AverageSpeed,AverageVisionRange,AverageBodySize,AverageMutationRate,AverageFoodEaten,AverageSurvivalTime,BehaviourDiversity,MovementDiversity,FeedingDiversity,TraitDiversity,BehaviourTypeDiversity,DominantGroup,Balanced,Grazer,Sprinter,Scout,Schooling,Skittish,Aggressive,Heavy,AverageHungerDrive,AverageAggression,AverageRiskTolerance,AverageGroupingChance,AverageThreatRange\n");
         }
     }
 
-    private void Update()
+    public void RecordGeneration(int generation, List<EvolutionCandidate> evaluatedCandidates, int population, int offspringCount)
     {
-        sampleTimer += Time.deltaTime;
+        CurrentGeneration = generation;
+        CurrentPopulation = population;
+        OffspringPoolCount = offspringCount;
+        ResetGroupedCounts();
 
-        if (sampleTimer >= SampleInterval)
-        {
-            sampleTimer = 0f;
-            SampleNow();
-        }
-    }
-
-    public void SampleNow()
-    {
-        if (EvolutionEcosystemManager.Instance == null)
-        {
-            return;
-        }
-
-        SampleIndex++;
-        speciesCounts.Clear();
-        speciesNames.Clear();
-
-        IReadOnlyList<MarineCreatureAgent> creatures = EvolutionEcosystemManager.Instance.ActiveCreatures;
-        IReadOnlyList<FoodSource> foodSources = EvolutionEcosystemManager.Instance.ActiveFood;
-
-        CurrentPopulation = creatures.Count;
-        CountFood(foodSources);
-
-        if (creatures.Count == 0)
+        if (evaluatedCandidates == null || evaluatedCandidates.Count == 0)
         {
             ClearAverages();
-            if (WriteCsvLog) AppendCsvLine();
             return;
         }
 
         float totalFitness = 0f;
-        float totalBody = 0f;
         float totalSpeed = 0f;
         float totalVision = 0f;
-        float totalJaw = 0f;
-        float totalTail = 0f;
-        float totalFin = 0f;
-        float totalSensor = 0f;
+        float totalSize = 0f;
+        float totalMutation = 0f;
+        float totalFood = 0f;
+        float totalSurvival = 0f;
+        float totalHunger = 0f;
         float totalAggression = 0f;
+        float totalRisk = 0f;
         float totalGrouping = 0f;
-        float totalPlantDiet = 0f;
-        float totalMeatDiet = 0f;
-        float totalCarrionDiet = 0f;
+        float totalThreat = 0f;
 
-        for (int i = 0; i < creatures.Count; i++)
+        List<Vector2> descriptors = new List<Vector2>();
+        List<EvolutionGenome> genomes = new List<EvolutionGenome>();
+
+        for (int i = 0; i < evaluatedCandidates.Count; i++)
         {
-            MarineCreatureAgent creature = creatures[i];
-            if (creature == null || creature.Candidate == null || creature.Genome == null)
+            EvolutionCandidate candidate = evaluatedCandidates[i];
+
+            if (candidate == null || candidate.Genome == null)
             {
                 continue;
             }
 
-            EvolutionGenome genome = creature.Genome;
+            EvolutionGenome genome = candidate.Genome;
+            CreatureBehaviourType type = CreatureDebugTypeUtility.GetBehaviourType(genome);
+            AddGroupedCount(type);
 
-            totalFitness += creature.Candidate.GetFitness();
-            totalBody += genome.BodySize;
-            totalSpeed += genome.GetEffectiveSpeed();
-            totalVision += genome.GetVisionRange();
-            totalJaw += genome.JawSize;
-            totalTail += genome.TailSize;
-            totalFin += genome.FinSize;
-            totalSensor += genome.SensorSize;
+            totalFitness += candidate.GetFitness();
+            totalSpeed += genome.Speed;
+            totalVision += genome.VisionRange;
+            totalSize += genome.BodySize;
+            totalMutation += genome.MutationRate;
+            totalFood += candidate.FoodEaten;
+            totalSurvival += candidate.SurvivalTime;
+            totalHunger += genome.HungerDrive;
             totalAggression += genome.Aggression;
+            totalRisk += genome.RiskTolerance;
             totalGrouping += genome.GroupingChance;
-            totalPlantDiet += genome.PlantDiet;
-            totalMeatDiet += genome.MeatDiet;
-            totalCarrionDiet += genome.CarrionDiet;
+            totalThreat += genome.ThreatRange;
 
-            string key = SpeciesUtility.GetSpeciesKey(genome);
-            if (!speciesCounts.ContainsKey(key))
-            {
-                speciesCounts.Add(key, 0);
-                speciesNames.Add(key, SpeciesUtility.GetDisplayName(genome));
-            }
-            speciesCounts[key]++;
+            descriptors.Add(candidate.GetBehaviourDescriptor());
+            genomes.Add(genome);
         }
 
-        float count = Mathf.Max(1, creatures.Count);
+        int count = Mathf.Max(1, genomes.Count);
 
         AverageFitness = totalFitness / count;
-        AverageBodySize = totalBody / count;
         AverageSpeed = totalSpeed / count;
-        AverageVision = totalVision / count;
-        AverageJawSize = totalJaw / count;
-        AverageTailSize = totalTail / count;
-        AverageFinSize = totalFin / count;
-        AverageSensorSize = totalSensor / count;
+        AverageVisionRange = totalVision / count;
+        AverageBodySize = totalSize / count;
+        AverageMutationRate = totalMutation / count;
+        AverageFoodEaten = totalFood / count;
+        AverageSurvivalTime = totalSurvival / count;
+        AverageHungerDrive = totalHunger / count;
         AverageAggression = totalAggression / count;
-        AverageGrouping = totalGrouping / count;
-        AveragePlantDiet = totalPlantDiet / count;
-        AverageMeatDiet = totalMeatDiet / count;
-        AverageCarrionDiet = totalCarrionDiet / count;
+        AverageRiskTolerance = totalRisk / count;
+        AverageGroupingChance = totalGrouping / count;
+        AverageThreatRange = totalThreat / count;
 
-        CurrentSpeciesCount = speciesCounts.Count;
-        SpeciesDiversity = CalculateShannonDiversity(speciesCounts, creatures.Count);
+        BehaviourDiversity = CalculateDescriptorSpread(descriptors);
+        MovementDiversity = CalculateSingleAxisSpread(descriptors, true);
+        FeedingDiversity = CalculateSingleAxisSpread(descriptors, false);
+        TraitDiversity = CalculateTraitDiversity(genomes);
+        BehaviourTypeDiversity = CalculateBehaviourTypeDiversity(count);
+        DominantBehaviourGroup = GetDominantGroupName();
+        BehaviourGroupSummary = BuildGroupSummary();
 
         Debug.Log(
-            "Sample " + SampleIndex +
-            " | Pop: " + CurrentPopulation +
-            " | Species: " + CurrentSpeciesCount +
-            " | Avg Aggro: " + AverageAggression.ToString("F2") +
-            " | Avg Group: " + AverageGrouping.ToString("F2") +
-            " | Diversity: " + SpeciesDiversity.ToString("F2")
+            "Generation " + generation +
+            " | Pop: " + population +
+            " | Offspring: " + offspringCount +
+            " | Avg Fit: " + AverageFitness.ToString("F1") +
+            " | Dominant: " + DominantBehaviourGroup +
+            " | Diversity: " + BehaviourDiversity.ToString("F2") +
+            " | Groups: " + BehaviourGroupSummary
         );
 
         if (WriteCsvLog)
@@ -176,187 +159,261 @@ public class EvolutionStatsTracker : MonoBehaviour
         }
     }
 
-    public void RegisterBirth()
+    private void ResetGroupedCounts()
     {
-        TotalBirths++;
-    }
-
-    public void RegisterDeath(bool killedByCreature)
-    {
-        TotalDeaths++;
-
-        if (killedByCreature)
-        {
-            TotalKills++;
-        }
-    }
-
-    public void RegisterFoodEaten(EcosystemFoodType foodType)
-    {
-        TotalFoodEaten++;
-
-        if (foodType == EcosystemFoodType.Plant) TotalPlantsEaten++;
-        else if (foodType == EcosystemFoodType.FreshMeat) TotalMeatEaten++;
-        else TotalCarrionEaten++;
-    }
-
-    public void RegisterFoodRotted()
-    {
-        TotalFoodRotted++;
-    }
-
-    public void RegisterExtinctionEvent()
-    {
-        TotalExtinctionEvents++;
-    }
-
-    public string GetTopSpeciesText(int maxEntries)
-    {
-        if (speciesCounts.Count == 0)
-        {
-            return "No species sampled yet.";
-        }
-
-        List<KeyValuePair<string, int>> entries = new List<KeyValuePair<string, int>>(speciesCounts);
-        entries.Sort((a, b) => b.Value.CompareTo(a.Value));
-
-        StringBuilder builder = new StringBuilder();
-        int amount = Mathf.Min(maxEntries, entries.Count);
-
-        for (int i = 0; i < amount; i++)
-        {
-            string key = entries[i].Key;
-            string name = speciesNames.ContainsKey(key) ? speciesNames[key] : key;
-            builder.Append(i + 1).Append(". ").Append(name).Append(" (").Append(entries[i].Value).Append(")");
-
-            if (i < amount - 1)
-            {
-                builder.Append("\n");
-            }
-        }
-
-        return builder.ToString();
-    }
-
-    public string GetCsvPath()
-    {
-        return csvPath;
-    }
-
-    private void CountFood(IReadOnlyList<FoodSource> foodSources)
-    {
-        CurrentPlantFood = 0;
-        CurrentFreshMeat = 0;
-        CurrentRottenMeat = 0;
-
-        for (int i = 0; i < foodSources.Count; i++)
-        {
-            FoodSource food = foodSources[i];
-            if (food == null || food.IsConsumed)
-            {
-                continue;
-            }
-
-            if (food.FoodType == EcosystemFoodType.Plant) CurrentPlantFood++;
-            else if (food.FoodType == EcosystemFoodType.FreshMeat) CurrentFreshMeat++;
-            else CurrentRottenMeat++;
-        }
-    }
-
-    private float CalculateShannonDiversity(Dictionary<string, int> counts, int total)
-    {
-        if (counts.Count <= 0 || total <= 0)
-        {
-            return 0f;
-        }
-
-        float diversity = 0f;
-
-        foreach (KeyValuePair<string, int> pair in counts)
-        {
-            float p = pair.Value / (float)total;
-            if (p > 0f)
-            {
-                diversity -= p * Mathf.Log(p);
-            }
-        }
-
-        return diversity;
+        BalancedCount = 0;
+        GrazerCount = 0;
+        SprinterCount = 0;
+        ScoutCount = 0;
+        SchoolingCount = 0;
+        SkittishCount = 0;
+        AggressiveCount = 0;
+        HeavyCount = 0;
+        DominantBehaviourGroup = "None";
+        BehaviourGroupSummary = "None";
     }
 
     private void ClearAverages()
     {
         AverageFitness = 0f;
-        AverageBodySize = 0f;
         AverageSpeed = 0f;
-        AverageVision = 0f;
-        AverageJawSize = 0f;
-        AverageTailSize = 0f;
-        AverageFinSize = 0f;
-        AverageSensorSize = 0f;
+        AverageVisionRange = 0f;
+        AverageBodySize = 0f;
+        AverageMutationRate = 0f;
+        AverageFoodEaten = 0f;
+        AverageSurvivalTime = 0f;
+        BehaviourDiversity = 0f;
+        AverageHungerDrive = 0f;
         AverageAggression = 0f;
-        AverageGrouping = 0f;
-        AveragePlantDiet = 0f;
-        AverageMeatDiet = 0f;
-        AverageCarrionDiet = 0f;
-        CurrentSpeciesCount = 0;
-        SpeciesDiversity = 0f;
+        AverageRiskTolerance = 0f;
+        AverageGroupingChance = 0f;
+        AverageThreatRange = 0f;
+        MovementDiversity = 0f;
+        FeedingDiversity = 0f;
+        TraitDiversity = 0f;
+        BehaviourTypeDiversity = 0f;
     }
 
-    private void CreateCsv()
+    private void AddGroupedCount(CreatureBehaviourType type)
     {
-        StringBuilder header = new StringBuilder();
-        header.Append("Sample,Time,Population,SpeciesCount,SpeciesDiversity,");
-        header.Append("PlantFood,FreshMeat,RottenMeat,");
-        header.Append("TotalBirths,TotalDeaths,TotalKills,TotalFoodEaten,PlantsEaten,MeatEaten,CarrionEaten,FoodRotted,ExtinctionEvents,");
-        header.Append("AverageFitness,AverageBodySize,AverageSpeed,AverageVision,AverageJawSize,AverageTailSize,AverageFinSize,AverageSensorSize,");
-        header.Append("AverageAggression,AverageGrouping,AveragePlantDiet,AverageMeatDiet,AverageCarrionDiet\n");
+        switch (type)
+        {
+            case CreatureBehaviourType.Grazer:
+                GrazerCount++;
+                break;
+            case CreatureBehaviourType.Sprinter:
+                SprinterCount++;
+                break;
+            case CreatureBehaviourType.Scout:
+                ScoutCount++;
+                break;
+            case CreatureBehaviourType.Schooling:
+                SchoolingCount++;
+                break;
+            case CreatureBehaviourType.Skittish:
+                SkittishCount++;
+                break;
+            case CreatureBehaviourType.Aggressive:
+                AggressiveCount++;
+                break;
+            case CreatureBehaviourType.Heavy:
+                HeavyCount++;
+                break;
+            default:
+                BalancedCount++;
+                break;
+        }
+    }
 
-        File.WriteAllText(csvPath, header.ToString());
-        Debug.Log("IRP CSV log created at: " + csvPath);
+    private string GetDominantGroupName()
+    {
+        int highest = BalancedCount;
+        string name = "Balanced";
+
+        CheckDominant(GrazerCount, "Grazer", ref highest, ref name);
+        CheckDominant(SprinterCount, "Sprinter", ref highest, ref name);
+        CheckDominant(ScoutCount, "Scout", ref highest, ref name);
+        CheckDominant(SchoolingCount, "Schooling", ref highest, ref name);
+        CheckDominant(SkittishCount, "Skittish", ref highest, ref name);
+        CheckDominant(AggressiveCount, "Aggressive", ref highest, ref name);
+        CheckDominant(HeavyCount, "Heavy", ref highest, ref name);
+
+        return name;
+    }
+
+    private void CheckDominant(int count, string name, ref int highest, ref string currentName)
+    {
+        if (count > highest)
+        {
+            highest = count;
+            currentName = name;
+        }
+    }
+
+    private string BuildGroupSummary()
+    {
+        return "Bal " + BalancedCount +
+               " | Grazer " + GrazerCount +
+               " | Sprint " + SprinterCount +
+               " | Scout " + ScoutCount +
+               " | School " + SchoolingCount +
+               " | Skit " + SkittishCount +
+               " | Agg " + AggressiveCount +
+               " | Heavy " + HeavyCount;
+    }
+
+    private float CalculateDescriptorSpread(List<Vector2> descriptors)
+    {
+        if (descriptors == null || descriptors.Count <= 1)
+        {
+            return 0f;
+        }
+
+        Vector2 average = Vector2.zero;
+
+        for (int i = 0; i < descriptors.Count; i++)
+        {
+            average += descriptors[i];
+        }
+
+        average /= descriptors.Count;
+
+        float spread = 0f;
+
+        for (int i = 0; i < descriptors.Count; i++)
+        {
+            spread += Vector2.Distance(average, descriptors[i]);
+        }
+
+        return spread / descriptors.Count;
+    }
+
+    private float CalculateSingleAxisSpread(List<Vector2> descriptors, bool useX)
+    {
+        if (descriptors == null || descriptors.Count <= 1)
+        {
+            return 0f;
+        }
+
+        float average = 0f;
+
+        for (int i = 0; i < descriptors.Count; i++)
+        {
+            average += useX ? descriptors[i].x : descriptors[i].y;
+        }
+
+        average /= descriptors.Count;
+
+        float spread = 0f;
+
+        for (int i = 0; i < descriptors.Count; i++)
+        {
+            float value = useX ? descriptors[i].x : descriptors[i].y;
+            spread += Mathf.Abs(value - average);
+        }
+
+        return spread / descriptors.Count;
+    }
+
+    private float CalculateTraitDiversity(List<EvolutionGenome> genomes)
+    {
+        if (genomes == null || genomes.Count <= 1)
+        {
+            return 0f;
+        }
+
+        float speed = AverageAbsoluteDeviation(genomes, g => g.Speed / 12f);
+        float vision = AverageAbsoluteDeviation(genomes, g => g.VisionRange / 45f);
+        float size = AverageAbsoluteDeviation(genomes, g => g.BodySize / 2.5f);
+        float hunger = AverageAbsoluteDeviation(genomes, g => g.HungerDrive);
+        float aggression = AverageAbsoluteDeviation(genomes, g => g.Aggression);
+        float risk = AverageAbsoluteDeviation(genomes, g => g.RiskTolerance);
+        float grouping = AverageAbsoluteDeviation(genomes, g => g.GroupingChance);
+        float mutation = AverageAbsoluteDeviation(genomes, g => g.MutationRate / 0.35f);
+
+        return (speed + vision + size + hunger + aggression + risk + grouping + mutation) / 8f;
+    }
+
+    private float AverageAbsoluteDeviation(List<EvolutionGenome> genomes, System.Func<EvolutionGenome, float> getter)
+    {
+        float average = 0f;
+
+        for (int i = 0; i < genomes.Count; i++)
+        {
+            average += getter(genomes[i]);
+        }
+
+        average /= genomes.Count;
+
+        float spread = 0f;
+
+        for (int i = 0; i < genomes.Count; i++)
+        {
+            spread += Mathf.Abs(getter(genomes[i]) - average);
+        }
+
+        return spread / genomes.Count;
+    }
+
+    private float CalculateBehaviourTypeDiversity(int totalCount)
+    {
+        if (totalCount <= 0)
+        {
+            return 0f;
+        }
+
+        int activeGroups = 0;
+        if (BalancedCount > 0) activeGroups++;
+        if (GrazerCount > 0) activeGroups++;
+        if (SprinterCount > 0) activeGroups++;
+        if (ScoutCount > 0) activeGroups++;
+        if (SchoolingCount > 0) activeGroups++;
+        if (SkittishCount > 0) activeGroups++;
+        if (AggressiveCount > 0) activeGroups++;
+        if (HeavyCount > 0) activeGroups++;
+
+        return activeGroups / 8f;
     }
 
     private void AppendCsvLine()
     {
-        if (string.IsNullOrEmpty(csvPath))
-        {
-            return;
-        }
-
-        float time = EvolutionEcosystemManager.Instance != null ? EvolutionEcosystemManager.Instance.Runtime : Time.time;
-
         StringBuilder line = new StringBuilder();
-        line.Append(SampleIndex).Append(",");
-        line.Append(time.ToString("F2")).Append(",");
+
+        line.Append(CurrentGeneration).Append(",");
         line.Append(CurrentPopulation).Append(",");
-        line.Append(CurrentSpeciesCount).Append(",");
-        line.Append(SpeciesDiversity.ToString("F4")).Append(",");
-        line.Append(CurrentPlantFood).Append(",");
-        line.Append(CurrentFreshMeat).Append(",");
-        line.Append(CurrentRottenMeat).Append(",");
-        line.Append(TotalBirths).Append(",");
-        line.Append(TotalDeaths).Append(",");
-        line.Append(TotalKills).Append(",");
-        line.Append(TotalFoodEaten).Append(",");
-        line.Append(TotalPlantsEaten).Append(",");
-        line.Append(TotalMeatEaten).Append(",");
-        line.Append(TotalCarrionEaten).Append(",");
-        line.Append(TotalFoodRotted).Append(",");
-        line.Append(TotalExtinctionEvents).Append(",");
+        line.Append(OffspringPoolCount).Append(",");
         line.Append(AverageFitness.ToString("F3")).Append(",");
-        line.Append(AverageBodySize.ToString("F3")).Append(",");
         line.Append(AverageSpeed.ToString("F3")).Append(",");
-        line.Append(AverageVision.ToString("F3")).Append(",");
-        line.Append(AverageJawSize.ToString("F3")).Append(",");
-        line.Append(AverageTailSize.ToString("F3")).Append(",");
-        line.Append(AverageFinSize.ToString("F3")).Append(",");
-        line.Append(AverageSensorSize.ToString("F3")).Append(",");
+        line.Append(AverageVisionRange.ToString("F3")).Append(",");
+        line.Append(AverageBodySize.ToString("F3")).Append(",");
+        line.Append(AverageMutationRate.ToString("F4")).Append(",");
+        line.Append(AverageFoodEaten.ToString("F3")).Append(",");
+        line.Append(AverageSurvivalTime.ToString("F3")).Append(",");
+        line.Append(BehaviourDiversity.ToString("F4")).Append(",");
+        line.Append(MovementDiversity.ToString("F4")).Append(",");
+        line.Append(FeedingDiversity.ToString("F4")).Append(",");
+        line.Append(TraitDiversity.ToString("F4")).Append(",");
+        line.Append(BehaviourTypeDiversity.ToString("F4")).Append(",");
+        line.Append(DominantBehaviourGroup).Append(",");
+        line.Append(BalancedCount).Append(",");
+        line.Append(GrazerCount).Append(",");
+        line.Append(SprinterCount).Append(",");
+        line.Append(ScoutCount).Append(",");
+        line.Append(SchoolingCount).Append(",");
+        line.Append(SkittishCount).Append(",");
+        line.Append(AggressiveCount).Append(",");
+        line.Append(HeavyCount).Append(",");
+        line.Append(AverageHungerDrive.ToString("F3")).Append(",");
         line.Append(AverageAggression.ToString("F3")).Append(",");
-        line.Append(AverageGrouping.ToString("F3")).Append(",");
-        line.Append(AveragePlantDiet.ToString("F3")).Append(",");
-        line.Append(AverageMeatDiet.ToString("F3")).Append(",");
-        line.Append(AverageCarrionDiet.ToString("F3")).Append("\n");
+        line.Append(AverageRiskTolerance.ToString("F3")).Append(",");
+        line.Append(AverageGroupingChance.ToString("F3")).Append(",");
+        line.Append(AverageThreatRange.ToString("F3")).Append("\n");
 
         File.AppendAllText(csvPath, line.ToString());
+    }
+
+    public string GetCsvPath()
+    {
+        return csvPath;
     }
 }
