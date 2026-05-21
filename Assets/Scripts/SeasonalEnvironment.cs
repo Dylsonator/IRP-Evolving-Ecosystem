@@ -63,27 +63,27 @@ public class SeasonalEnvironment : MonoBehaviour
         switch (CurrentSeason)
         {
             case EcosystemSeason.Spring:
-                FoodSpawnMultiplier = 1.35f;
-                EnergyDrainMultiplier = 0.9f;
+                FoodSpawnMultiplier = 1.45f;
+                EnergyDrainMultiplier = 0.82f;
                 MutationMultiplier = 1.0f;
                 break;
 
             case EcosystemSeason.Summer:
-                FoodSpawnMultiplier = 1.1f;
-                EnergyDrainMultiplier = 1.0f;
+                FoodSpawnMultiplier = 1.2f;
+                EnergyDrainMultiplier = 0.95f;
                 MutationMultiplier = 1.0f;
                 break;
 
             case EcosystemSeason.Autumn:
-                FoodSpawnMultiplier = 0.8f;
-                EnergyDrainMultiplier = 1.1f;
+                FoodSpawnMultiplier = 0.9f;
+                EnergyDrainMultiplier = 1.05f;
                 MutationMultiplier = 1.1f;
                 break;
 
             case EcosystemSeason.Winter:
-                FoodSpawnMultiplier = 0.45f;
-                EnergyDrainMultiplier = 1.35f;
-                MutationMultiplier = 1.25f;
+                FoodSpawnMultiplier = 0.65f;
+                EnergyDrainMultiplier = 1.15f;
+                MutationMultiplier = 1.18f;
                 break;
         }
     }

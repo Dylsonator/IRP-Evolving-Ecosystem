@@ -4,6 +4,9 @@ public enum CreatureBehaviourType
 {
     Balanced,
     Grazer,
+    Predator,
+    Scavenger,
+    Omnivore,
     Sprinter,
     Scout,
     Schooling,
@@ -19,6 +22,21 @@ public static class CreatureDebugTypeUtility
         if (genome == null)
         {
             return CreatureBehaviourType.Balanced;
+        }
+
+        if (genome.MeatDiet >= 0.45f && genome.Aggression >= 0.28f)
+        {
+            return CreatureBehaviourType.Predator;
+        }
+
+        if (genome.CarrionDiet >= 0.45f)
+        {
+            return CreatureBehaviourType.Scavenger;
+        }
+
+        if (genome.PlantDiet >= 0.25f && genome.MeatDiet >= 0.25f && genome.CarrionDiet >= 0.15f)
+        {
+            return CreatureBehaviourType.Omnivore;
         }
 
         if (genome.Aggression >= 0.65f && genome.RiskTolerance >= 0.45f)
@@ -51,7 +69,7 @@ public static class CreatureDebugTypeUtility
             return CreatureBehaviourType.Heavy;
         }
 
-        if (genome.HungerDrive >= 0.72f && genome.Aggression <= 0.45f)
+        if (genome.HungerDrive >= 0.72f && genome.PlantDiet >= 0.45f && genome.Aggression <= 0.45f)
         {
             return CreatureBehaviourType.Grazer;
         }
@@ -65,6 +83,12 @@ public static class CreatureDebugTypeUtility
         {
             case CreatureBehaviourType.Grazer:
                 return "Grazer";
+            case CreatureBehaviourType.Predator:
+                return "Predator";
+            case CreatureBehaviourType.Scavenger:
+                return "Scavenger";
+            case CreatureBehaviourType.Omnivore:
+                return "Omnivore";
             case CreatureBehaviourType.Sprinter:
                 return "Sprinter";
             case CreatureBehaviourType.Scout:
@@ -88,6 +112,12 @@ public static class CreatureDebugTypeUtility
         {
             case CreatureBehaviourType.Grazer:
                 return new Color(0.35f, 0.95f, 0.45f, 1f);
+            case CreatureBehaviourType.Predator:
+                return new Color(1f, 0.08f, 0.08f, 1f);
+            case CreatureBehaviourType.Scavenger:
+                return new Color(0.65f, 0.35f, 0.12f, 1f);
+            case CreatureBehaviourType.Omnivore:
+                return new Color(0.4f, 1f, 0.85f, 1f);
             case CreatureBehaviourType.Sprinter:
                 return new Color(0.95f, 0.85f, 0.25f, 1f);
             case CreatureBehaviourType.Scout:

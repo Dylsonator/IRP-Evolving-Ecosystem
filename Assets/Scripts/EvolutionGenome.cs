@@ -76,8 +76,8 @@ public class EvolutionGenome
         genome.JawSize = UnityEngine.Random.Range(0.65f, 1.6f);
 
         genome.PlantDiet = UnityEngine.Random.Range(0.45f, 1f);
-        genome.MeatDiet = UnityEngine.Random.Range(0f, 0.45f);
-        genome.CarrionDiet = UnityEngine.Random.Range(0f, 0.35f);
+        genome.MeatDiet = UnityEngine.Random.Range(0f, 0.65f);
+        genome.CarrionDiet = UnityEngine.Random.Range(0f, 0.55f);
         genome.NormaliseDietTraits();
 
         genome.HungerDrive = UnityEngine.Random.Range(0.35f, 1f);
@@ -87,7 +87,7 @@ public class EvolutionGenome
         genome.Aggression = UnityEngine.Random.Range(0f, 0.8f);
         genome.RiskTolerance = UnityEngine.Random.Range(0.15f, 1f);
 
-        genome.ReproductionEnergyThreshold = UnityEngine.Random.Range(65f, 110f);
+        genome.ReproductionEnergyThreshold = UnityEngine.Random.Range(55f, 95f);
         genome.MutationRate = UnityEngine.Random.Range(0.04f, 0.14f);
         genome.MutationStrength = UnityEngine.Random.Range(0.65f, 1.4f);
 
@@ -118,9 +118,9 @@ public class EvolutionGenome
         child.TailSize = MutateFloat(TailSize, 0.18f, finalMutationRate, finalMutationStrength);
         child.JawSize = MutateFloat(JawSize, 0.18f, finalMutationRate, finalMutationStrength);
 
-        child.PlantDiet = MutateFloat(PlantDiet, 0.12f, finalMutationRate, finalMutationStrength);
-        child.MeatDiet = MutateFloat(MeatDiet, 0.12f, finalMutationRate, finalMutationStrength);
-        child.CarrionDiet = MutateFloat(CarrionDiet, 0.12f, finalMutationRate, finalMutationStrength);
+        child.PlantDiet = MutateFloat(PlantDiet, 0.18f, finalMutationRate, finalMutationStrength);
+        child.MeatDiet = MutateFloat(MeatDiet, 0.18f, finalMutationRate, finalMutationStrength);
+        child.CarrionDiet = MutateFloat(CarrionDiet, 0.18f, finalMutationRate, finalMutationStrength);
 
         child.HungerDrive = MutateFloat(HungerDrive, 0.12f, finalMutationRate, finalMutationStrength);
         child.AttractionRange = MutateFloat(AttractionRange, 0.12f, finalMutationRate, finalMutationStrength);
@@ -179,7 +179,7 @@ public class EvolutionGenome
         Aggression = Mathf.Clamp01(Aggression);
         RiskTolerance = Mathf.Clamp01(RiskTolerance);
 
-        ReproductionEnergyThreshold = Mathf.Clamp(ReproductionEnergyThreshold, 30f, EnergyCapacity);
+        ReproductionEnergyThreshold = Mathf.Clamp(ReproductionEnergyThreshold, 25f, EnergyCapacity * 0.95f);
         MutationRate = Mathf.Clamp(MutationRate, 0.005f, 0.35f);
         MutationStrength = Mathf.Clamp(MutationStrength, 0.1f, 3f);
 
@@ -212,12 +212,12 @@ public class EvolutionGenome
 
     public float GetEnergyDrainMultiplier()
     {
-        float speedCost = Speed / 4f;
-        float visionCost = VisionRange / 15f;
-        float sizeCost = BodySize;
-        float aggressionCost = 1f + Aggression * 0.35f;
-        float phenotypeCost = 1f + (Armour * 0.18f) + (Muscle * 0.08f) + (JawSize * 0.04f);
-        float meatCost = 1f + (MeatDiet * 0.08f);
+        float speedCost = Mathf.Lerp(0.75f, 1.2f, Mathf.InverseLerp(0.75f, 12f, Speed));
+        float visionCost = Mathf.Lerp(0.85f, 1.15f, Mathf.InverseLerp(3f, 45f, VisionRange));
+        float sizeCost = Mathf.Lerp(0.75f, 1.25f, Mathf.InverseLerp(0.4f, 2.5f, BodySize));
+        float aggressionCost = 1f + Aggression * 0.12f;
+        float phenotypeCost = 1f + (Armour * 0.08f) + (Muscle * 0.04f) + (JawSize * 0.025f);
+        float meatCost = 1f + (MeatDiet * 0.04f);
 
         return Mathf.Max(0.1f, (speedCost + visionCost + sizeCost) / 3f * aggressionCost * phenotypeCost * meatCost);
     }

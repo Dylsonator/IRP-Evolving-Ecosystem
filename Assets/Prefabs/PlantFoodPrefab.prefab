@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: 7228186923828327965}
   - component: {fileID: 5059079653024269994}
   m_Layer: 0
-  m_Name: FoodPrefab
+  m_Name: PlantFoodPrefab
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

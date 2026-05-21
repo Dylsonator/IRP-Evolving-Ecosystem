@@ -11,10 +11,10 @@ GameObject:
   - component: {fileID: 6787818732762232436}
   - component: {fileID: 4747516596455326366}
   - component: {fileID: 3413949385805013038}
-  - component: {fileID: 3687400044241324804}
   - component: {fileID: 2075440987222123123}
   - component: {fileID: 4206938082564389894}
   - component: {fileID: 1879219479675903565}
+  - component: {fileID: 591571836615219157}
   m_Layer: 0
   m_Name: CreaturePrefab
   m_TagString: Untagged
@@ -31,8 +31,8 @@ Transform:
   m_GameObject: {fileID: 1169779037587707263}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.2400856, y: -0.32117558, z: -0.4985695}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalPosition: {x: 0.2401, y: -0.32117558, z: -0.722}
+  m_LocalScale: {x: 0.6, y: 0.6, z: 1.5}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -90,27 +90,6 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!135 &3687400044241324804
-SphereCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1169779037587707263}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Radius: 0.5
-  m_Center: {x: 0, y: 0, z: 0}
 --- !u!54 &2075440987222123123
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -152,26 +131,27 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Candidate:
     Genome:
-      BaseSpeed: 4
+      Speed: 4
       Acceleration: 8
       TurnRate: 180
       BodySize: 1
+      VisionRange: 15
       EnergyCapacity: 100
-      TailSize: 1
-      FinSize: 1
-      JawSize: 1
       SensorSize: 1
-      Armour: 0.2
       Muscle: 1
-      DigestiveEfficiency: 1
+      Armour: 0.2
+      FinSize: 1
+      TailSize: 1
+      JawSize: 1
       PlantDiet: 0.7
       MeatDiet: 0.2
       CarrionDiet: 0.2
       HungerDrive: 0.7
+      AttractionRange: 0.3
+      ThreatRange: 0.3
       GroupingChance: 0.2
       Aggression: 0.2
       RiskTolerance: 0.5
-      SeparationDrive: 0.45
       ReproductionEnergyThreshold: 80
       MutationRate: 0.08
       MutationStrength: 1
@@ -183,35 +163,55 @@ MonoBehaviour:
         HiddenOutputWeights: []
         HiddenBiases: []
         OutputBiases: []
-    SpeciesKeyAtBirth: 
+    Id: 0
+    ParentId: 0
+    GenerationBorn: 0
+    DisplayName: 
+    BehaviourType: 0
     SurvivalTime: 0
     EnergyGained: 0
     FoodEaten: 0
-    PlantMeals: 0
-    MeatMeals: 0
-    CarrionMeals: 0
-    Kills: 0
+    CarrionEaten: 0
+    PreyBites: 0
+    PreyKills: 0
+    BiteDamageDealt: 0
     ReproductionCount: 0
-    DamageDealt: 0
-    DamageTaken: 0
     DistanceTravelled: 0
+    AverageSpeedUsed: 0
+    AverageFoodDistance: 0
+    AveragePreyDistance: 0
+    AverageCarrionDistance: 0
   CurrentEnergy: 0
-  CurrentHealth: 0
-  IsAlive: 1
-  BaseEnergyDrainPerSecond: 3.5
+  DebugName: 
+  DebugBehaviourType: 0
+  BaseEnergyDrainPerSecond: 1.8
   ReproductionCooldown: 5
-  MinimumAgeBeforeReproduction: 8
   FoodEatDistance: 1.25
-  CreatureSeparationDistance: 2
+  SeparationDistance: 1.8
   SwimNoiseStrength: 0.15
-  BaseAttackCooldown: 1.35
-  MinimumHunterScoreToChase: 0.34
-  SameSpeciesAttackPenalty: 0.35
+  UseMouthBasedEating: 1
+  MouthForwardOffset: 0.85
+  MouthRadius: 0.32
+  MouthAngle: 75
+  BiteCooldown: 1.65
+  BaseBiteDamage: 8
+  ArmourDamageReductionPerPoint: 0.16
+  SurvivalFoodPullMultiplier: 2.4
+  BrainWeightWhenHungry: 0.22
+  BrainWeightWhenFull: 0.9
+  SocialWeightWhenHungry: 0.08
+  SocialWeightWhenFull: 0.65
+  PreyPullMultiplier: 0.75
+  WanderTargetRefreshTime: 4.5
+  WanderStrength: 0.18
   BoundaryAvoidanceDistance: 7
   BoundaryAvoidanceStrength: 6
   BoundaryHardStopMargin: 0.4
   BoundaryVelocityDamping: 0.15
   DebugBoundaryAvoidance: 0
+  ApplyTypeColour: 1
+  LocalDebugRays: 0
+  LocalDebugLabels: 0
 --- !u!114 &1879219479675903565
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -226,3 +226,26 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   AutoBuildPrimitiveBody: 1
   HideOriginalRenderer: 1
+--- !u!136 &591571836615219157
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1169779037587707263}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 0.43573844
+  m_Height: 1.0332726
+  m_Direction: 2
+  m_Center: {x: 0, y: 0.06966481, z: 0}

@@ -19,6 +19,7 @@ public class EcosystemDebugUI : MonoBehaviour
     public Key ToggleMovementRaysKey = Key.F3;
     public Key ToggleRangeDebugKey = Key.F4;
     public Key ToggleLabelsKey = Key.F5;
+    public Key ToggleDietLabelsKey = Key.F6;
 #endif
 
 #if ENABLE_LEGACY_INPUT_MANAGER
@@ -28,6 +29,7 @@ public class EcosystemDebugUI : MonoBehaviour
     public KeyCode LegacyToggleMovementRaysKey = KeyCode.F3;
     public KeyCode LegacyToggleRangeDebugKey = KeyCode.F4;
     public KeyCode LegacyToggleLabelsKey = KeyCode.F5;
+    public KeyCode LegacyToggleDietLabelsKey = KeyCode.F6;
 #endif
 
     private MonoBehaviour cachedManager;
@@ -62,14 +64,20 @@ public class EcosystemDebugUI : MonoBehaviour
 
             if (WasRangeDebugPressed())
             {
-                bool newState = !(settings.DrawMouthRange || settings.DrawVisionRange);
+                bool newState = !(settings.DrawMouthRange || settings.DrawVisionRange || settings.DrawBiteRange);
                 settings.DrawMouthRange = newState;
+                settings.DrawBiteRange = newState;
                 settings.DrawVisionRange = newState;
             }
 
             if (WasLabelsPressed())
             {
                 settings.ShowCreatureLabels = !settings.ShowCreatureLabels;
+            }
+
+            if (WasDietLabelsPressed())
+            {
+                settings.ShowDietInLabels = !settings.ShowDietInLabels;
             }
         }
     }
@@ -169,6 +177,26 @@ public class EcosystemDebugUI : MonoBehaviour
         return false;
     }
 
+
+    private bool WasDietLabelsPressed()
+    {
+#if ENABLE_INPUT_SYSTEM
+        if (Keyboard.current != null && Keyboard.current[ToggleDietLabelsKey].wasPressedThisFrame)
+        {
+            return true;
+        }
+#endif
+
+#if ENABLE_LEGACY_INPUT_MANAGER
+        if (Input.GetKeyDown(LegacyToggleDietLabelsKey))
+        {
+            return true;
+        }
+#endif
+
+        return false;
+    }
+
     private void OnGUI()
     {
         if (!ShowUI)
@@ -203,6 +231,7 @@ public class EcosystemDebugUI : MonoBehaviour
         DrawTimer(manager);
         DrawCount("Active Creatures", manager, "GetActiveCreatures", "GetCreatures", "activeCreatures", "creatures");
         DrawCount("Active Food", manager, "GetActiveFood", null, "activeFood", null);
+        DrawCount("Active Carrion", manager, "GetActiveCarrion", null, "activeCarrion", null);
         DrawCount("Offspring Pool", manager, "GetOffspringPool", null, "offspringPool", null);
         DrawValue("Offspring Count", manager, "OffspringCount");
         GUILayout.Space(8f);
@@ -227,14 +256,23 @@ public class EcosystemDebugUI : MonoBehaviour
             DrawValue("Average Hunger", stats, "AverageHungerDrive");
             DrawValue("Average Aggression", stats, "AverageAggression");
             DrawValue("Average Risk", stats, "AverageRiskTolerance");
+            DrawValue("Average Carrion Eaten", stats, "AverageCarrionEaten");
+            DrawValue("Average Prey Bites", stats, "AveragePreyBites");
+            DrawValue("Average Prey Kills", stats, "AveragePreyKills");
+            DrawValue("Average Plant Diet", stats, "AveragePlantDiet");
+            DrawValue("Average Meat Diet", stats, "AverageMeatDiet");
+            DrawValue("Average Carrion Diet", stats, "AverageCarrionDiet");
+            DrawValue("Dominant Diet", stats, "DominantDietMode");
             GUILayout.Space(8f);
 
             GUILayout.Label("<b>Diversity Breakdown</b>");
             DrawValue("Behaviour Diversity", stats, "BehaviourDiversity");
             DrawValue("Movement Diversity", stats, "MovementDiversity");
             DrawValue("Feeding Diversity", stats, "FeedingDiversity");
+            DrawValue("Diet Diversity", stats, "DietDiversity");
             DrawValue("Trait Diversity", stats, "TraitDiversity");
             DrawValue("Type Diversity", stats, "BehaviourTypeDiversity");
+            DrawValue("Active Niches", stats, "ActiveNicheCount");
             GUILayout.Space(8f);
 
             GUILayout.Label("<b>Behaviour Groups</b>");
@@ -248,13 +286,17 @@ public class EcosystemDebugUI : MonoBehaviour
             GUILayout.Label("<b>Debug Draw Toggles</b>");
             debugSettings.DrawCreatureMovementRays = GUILayout.Toggle(debugSettings.DrawCreatureMovementRays, "Draw movement rays (F3)");
             debugSettings.DrawFoodTargetRays = GUILayout.Toggle(debugSettings.DrawFoodTargetRays, "Draw food target rays");
+            debugSettings.DrawCarrionTargetRays = GUILayout.Toggle(debugSettings.DrawCarrionTargetRays, "Draw carrion target rays");
+            debugSettings.DrawPreyTargetRays = GUILayout.Toggle(debugSettings.DrawPreyTargetRays, "Draw prey/hunt target rays");
             debugSettings.DrawSocialTargetRays = GUILayout.Toggle(debugSettings.DrawSocialTargetRays, "Draw social/threat rays");
             debugSettings.DrawVelocityRays = GUILayout.Toggle(debugSettings.DrawVelocityRays, "Draw velocity rays");
             debugSettings.DrawWantedDirectionRays = GUILayout.Toggle(debugSettings.DrawWantedDirectionRays, "Draw wanted direction rays");
             debugSettings.DrawMouthRange = GUILayout.Toggle(debugSettings.DrawMouthRange, "Draw mouth/eat range (F4)");
+            debugSettings.DrawBiteRange = GUILayout.Toggle(debugSettings.DrawBiteRange, "Draw bite range (F4)");
             debugSettings.DrawVisionRange = GUILayout.Toggle(debugSettings.DrawVisionRange, "Draw vision/threat range (F4)");
             debugSettings.DrawBoundaryPush = GUILayout.Toggle(debugSettings.DrawBoundaryPush, "Draw boundary push rays");
             debugSettings.ShowCreatureLabels = GUILayout.Toggle(debugSettings.ShowCreatureLabels, "Show creature labels (F5)");
+            debugSettings.ShowDietInLabels = GUILayout.Toggle(debugSettings.ShowDietInLabels, "Show diet values in labels (F6)");
             GUILayout.Space(8f);
         }
         else
@@ -262,7 +304,7 @@ public class EcosystemDebugUI : MonoBehaviour
             GUILayout.Label("Add EcosystemDebugSettings to the manager object for ray/label toggles.");
         }
 
-        GUILayout.Label("F1: Toggle UI | F2: Extinction | F3: Rays | F4: Ranges | F5: Labels");
+        GUILayout.Label("F1 UI | F2 Extinction | F3 Rays | F4 Ranges | F5 Labels | F6 Diet labels");
 
         GUI.DragWindow();
     }

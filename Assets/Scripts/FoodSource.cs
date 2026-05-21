@@ -3,7 +3,7 @@ using UnityEngine;
 public class FoodSource : MonoBehaviour
 {
     [Header("Food")]
-    public float EnergyValue = 25f;
+    public float EnergyValue = 40f;
 
     public bool IsConsumed { get; private set; }
 

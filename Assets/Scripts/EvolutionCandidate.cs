@@ -17,10 +17,16 @@ public class EvolutionCandidate
     public float SurvivalTime;
     public float EnergyGained;
     public int FoodEaten;
+    public int CarrionEaten;
+    public int PreyBites;
+    public int PreyKills;
+    public float BiteDamageDealt;
     public int ReproductionCount;
     public float DistanceTravelled;
     public float AverageSpeedUsed;
     public float AverageFoodDistance;
+    public float AveragePreyDistance;
+    public float AverageCarrionDistance;
 
     public EvolutionCandidate(EvolutionGenome genome)
     {
@@ -52,10 +58,16 @@ public class EvolutionCandidate
 
     public float GetFitness()
     {
+        // Fitness is intentionally multi-factor. This avoids selecting only one "best" stat.
+        // It rewards survival, energy collection, reproduction, movement and successful feeding strategy.
         float fitness = 0f;
         fitness += SurvivalTime * 1.0f;
         fitness += EnergyGained * 0.35f;
         fitness += FoodEaten * 12f;
+        fitness += CarrionEaten * 10f;
+        fitness += PreyBites * 6f;
+        fitness += PreyKills * 28f;
+        fitness += BiteDamageDealt * 0.18f;
         fitness += ReproductionCount * 45f;
         fitness += DistanceTravelled * 0.02f;
 
@@ -65,9 +77,24 @@ public class EvolutionCandidate
     public Vector2 GetBehaviourDescriptor()
     {
         float movementDescriptor = Mathf.Clamp01(DistanceTravelled / 500f);
-        float feedingDescriptor = Mathf.Clamp01(FoodEaten / 12f);
+        float feedingScore = FoodEaten + CarrionEaten + PreyBites + PreyKills * 2f;
+        float feedingDescriptor = Mathf.Clamp01(feedingScore / 14f);
 
         return new Vector2(movementDescriptor, feedingDescriptor);
+    }
+
+    public Vector2 GetDietDescriptor()
+    {
+        if (Genome == null)
+        {
+            return Vector2.zero;
+        }
+
+        // X = plant to meat axis, Y = scavenger tendency.
+        return new Vector2(
+            Mathf.Clamp01(Genome.MeatDiet),
+            Mathf.Clamp01(Genome.CarrionDiet)
+        );
     }
 
     public EvolutionCandidate CreateChild(float mutationMultiplier)
@@ -97,9 +124,15 @@ public class EvolutionCandidate
         SurvivalTime += other.SurvivalTime;
         EnergyGained += other.EnergyGained;
         FoodEaten += other.FoodEaten;
+        CarrionEaten += other.CarrionEaten;
+        PreyBites += other.PreyBites;
+        PreyKills += other.PreyKills;
+        BiteDamageDealt += other.BiteDamageDealt;
         ReproductionCount += other.ReproductionCount;
         DistanceTravelled += other.DistanceTravelled;
         AverageSpeedUsed += other.AverageSpeedUsed;
         AverageFoodDistance += other.AverageFoodDistance;
+        AveragePreyDistance += other.AveragePreyDistance;
+        AverageCarrionDistance += other.AverageCarrionDistance;
     }
 }

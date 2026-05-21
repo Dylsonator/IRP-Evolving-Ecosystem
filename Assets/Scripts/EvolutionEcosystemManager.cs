@@ -4,7 +4,8 @@ using UnityEngine;
 public enum SelectionMode
 {
     Tournament,
-    Elite
+    Elite,
+    QualityDiversityLite
 }
 
 public class EvolutionEcosystemManager : MonoBehaviour
@@ -14,6 +15,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
     [Header("Prefabs")]
     public MarineCreatureAgent CreaturePrefab;
     public FoodSource FoodPrefab;
+    public CarrionSource CarrionPrefab;
 
     [Header("References")]
     public SeasonalEnvironment Environment;
@@ -28,28 +30,41 @@ public class EvolutionEcosystemManager : MonoBehaviour
     public int StartingPopulation = 35;
     public int FixedPopulationSize = 35;
     public float GenerationDuration = 90f;
-    public SelectionMode Selection = SelectionMode.Tournament;
+    public SelectionMode Selection = SelectionMode.QualityDiversityLite;
     public int TournamentSize = 4;
     public bool UseFixedRandomSeed = false;
     public int RandomSeed = 12345;
 
     [Header("Food Settings")]
-    public int StartingFood = 90;
-    public int TargetFoodAmount = 120;
-    public float FoodSpawnInterval = 0.25f;
+    public int StartingFood = 130;
+    public int TargetFoodAmount = 165;
+    public float FoodSpawnInterval = 0.18f;
+
+    [Header("Predation / Carrion")]
+    public bool EnablePredation = true;
+    [Range(0f, 1f)] public float MinimumMeatDietToHunt = 0.48f;
+    [Range(0f, 1f)] public float MinimumAggressionToHunt = 0.35f;
+    public float MaxPreySizeRatio = 1.15f;
+    public float BiteEnergyGainMultiplier = 0.35f;
+    public bool SpawnCarrionFromDeaths = true;
+    public bool SpawnCarrionFromExtinctionEvents = false;
+    public float CarrionEnergyFromBodySize = 32f;
+    public int MaxCarrionSources = 80;
 
     [Header("Extinction Pressure")]
     public bool UseExtinctionEvents = true;
-    public float ExtinctionEventInterval = 120f;
-    [Range(0f, 1f)] public float ExtinctionKillPercentage = 0.25f;
+    public float ExtinctionEventInterval = 150f;
+    [Range(0f, 1f)] public float ExtinctionKillPercentage = 0.18f;
 
     [Header("Debug")]
     public int CurrentGeneration = 1;
     public float GenerationTimer;
     public int OffspringCount;
+    public int ActiveCarrionCount;
 
     private readonly List<MarineCreatureAgent> activeCreatures = new List<MarineCreatureAgent>();
     private readonly List<FoodSource> activeFood = new List<FoodSource>();
+    private readonly List<CarrionSource> activeCarrion = new List<CarrionSource>();
     private readonly List<EvolutionCandidate> offspringPool = new List<EvolutionCandidate>();
     private readonly List<EvolutionCandidate> lastGenerationCandidates = new List<EvolutionCandidate>();
 
@@ -89,6 +104,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         HandleExtinctionEvents();
 
         OffspringCount = offspringPool.Count;
+        ActiveCarrionCount = activeCarrion.Count;
 
         if (GenerationTimer >= GenerationDuration)
         {
@@ -238,7 +254,80 @@ public class EvolutionEcosystemManager : MonoBehaviour
             return selected;
         }
 
+        if (Selection == SelectionMode.QualityDiversityLite)
+        {
+            return SelectQualityDiversityLite(evaluated, target);
+        }
+
         for (int i = 0; i < target; i++)
+        {
+            EvolutionCandidate parent = RunTournament(evaluated);
+            selected.Add(parent.CreateChild(GetEnvironmentMutationMultiplier()));
+        }
+
+        return selected;
+    }
+
+    private List<EvolutionCandidate> SelectQualityDiversityLite(List<EvolutionCandidate> evaluated, int target)
+    {
+        List<EvolutionCandidate> selected = new List<EvolutionCandidate>();
+        Dictionary<CreatureBehaviourType, List<EvolutionCandidate>> buckets = new Dictionary<CreatureBehaviourType, List<EvolutionCandidate>>();
+
+        for (int i = 0; i < evaluated.Count; i++)
+        {
+            EvolutionCandidate candidate = evaluated[i];
+            if (candidate == null || candidate.Genome == null)
+            {
+                continue;
+            }
+
+            CreatureBehaviourType type = CreatureDebugTypeUtility.GetBehaviourType(candidate.Genome);
+            if (!buckets.ContainsKey(type))
+            {
+                buckets[type] = new List<EvolutionCandidate>();
+            }
+
+            buckets[type].Add(candidate);
+        }
+
+        foreach (KeyValuePair<CreatureBehaviourType, List<EvolutionCandidate>> pair in buckets)
+        {
+            pair.Value.Sort((a, b) => b.GetFitness().CompareTo(a.GetFitness()));
+        }
+
+        int roundIndex = 0;
+        int safety = 0;
+        while (selected.Count < target && safety < target * 16)
+        {
+            safety++;
+            bool addedThisRound = false;
+
+            foreach (KeyValuePair<CreatureBehaviourType, List<EvolutionCandidate>> pair in buckets)
+            {
+                if (selected.Count >= target)
+                {
+                    break;
+                }
+
+                if (roundIndex >= pair.Value.Count)
+                {
+                    continue;
+                }
+
+                EvolutionCandidate parent = pair.Value[roundIndex];
+                selected.Add(parent.CreateChild(GetEnvironmentMutationMultiplier()));
+                addedThisRound = true;
+            }
+
+            if (!addedThisRound)
+            {
+                break;
+            }
+
+            roundIndex++;
+        }
+
+        while (selected.Count < target)
         {
             EvolutionCandidate parent = RunTournament(evaluated);
             selected.Add(parent.CreateChild(GetEnvironmentMutationMultiplier()));
@@ -306,6 +395,88 @@ public class EvolutionEcosystemManager : MonoBehaviour
         activeFood.Add(food);
     }
 
+    public void SpawnCarrionFromDeath(MarineCreatureAgent creature, bool causedByExtinctionEvent)
+    {
+        if (creature == null || creature.Candidate == null || creature.Candidate.Genome == null)
+        {
+            return;
+        }
+
+        if (!SpawnCarrionFromDeaths)
+        {
+            return;
+        }
+
+        if (causedByExtinctionEvent && !SpawnCarrionFromExtinctionEvents)
+        {
+            return;
+        }
+
+        CleanLists();
+
+        if (activeCarrion.Count >= MaxCarrionSources)
+        {
+            RemoveOldestCarrion();
+        }
+
+        float energyValue = 10f + creature.Candidate.Genome.BodySize * CarrionEnergyFromBodySize;
+        energyValue += Mathf.Max(0f, creature.CurrentEnergy) * 0.15f;
+
+        CarrionSource carrion;
+
+        if (CarrionPrefab != null)
+        {
+            carrion = Instantiate(CarrionPrefab, creature.transform.position, Quaternion.identity);
+        }
+        else
+        {
+            GameObject carrionObject = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            carrionObject.name = "Carrion_Source";
+            carrionObject.transform.position = creature.transform.position;
+            carrionObject.transform.localScale = Vector3.one * Mathf.Clamp(creature.Candidate.Genome.BodySize * 0.45f, 0.25f, 1.4f);
+
+            Collider collider = carrionObject.GetComponent<Collider>();
+            if (collider != null)
+            {
+                Destroy(collider);
+            }
+
+            carrion = carrionObject.AddComponent<CarrionSource>();
+        }
+
+        carrion.EnergyValue = energyValue;
+        activeCarrion.Add(carrion);
+    }
+
+    private void RemoveOldestCarrion()
+    {
+        CleanLists();
+
+        CarrionSource oldest = null;
+        float oldestAge = float.MinValue;
+
+        for (int i = 0; i < activeCarrion.Count; i++)
+        {
+            CarrionSource carrion = activeCarrion[i];
+            if (carrion == null)
+            {
+                continue;
+            }
+
+            if (carrion.Age > oldestAge)
+            {
+                oldestAge = carrion.Age;
+                oldest = carrion;
+            }
+        }
+
+        if (oldest != null)
+        {
+            UnregisterCarrion(oldest);
+            Destroy(oldest.gameObject);
+        }
+    }
+
     public void RegisterOffspring(EvolutionCandidate offspring)
     {
         if (offspring == null)
@@ -324,6 +495,11 @@ public class EvolutionEcosystemManager : MonoBehaviour
     public void UnregisterFood(FoodSource food)
     {
         activeFood.Remove(food);
+    }
+
+    public void UnregisterCarrion(CarrionSource carrion)
+    {
+        activeCarrion.Remove(carrion);
     }
 
     public FoodSource GetNearestFood(Vector3 position, float searchRadius)
@@ -352,6 +528,32 @@ public class EvolutionEcosystemManager : MonoBehaviour
         return nearest;
     }
 
+    public CarrionSource GetNearestCarrion(Vector3 position, float searchRadius)
+    {
+        CarrionSource nearest = null;
+        float bestDistanceSqr = searchRadius * searchRadius;
+
+        for (int i = 0; i < activeCarrion.Count; i++)
+        {
+            CarrionSource carrion = activeCarrion[i];
+
+            if (carrion == null || carrion.IsConsumed)
+            {
+                continue;
+            }
+
+            float distanceSqr = (carrion.transform.position - position).sqrMagnitude;
+
+            if (distanceSqr < bestDistanceSqr)
+            {
+                bestDistanceSqr = distanceSqr;
+                nearest = carrion;
+            }
+        }
+
+        return nearest;
+    }
+
     public MarineCreatureAgent GetNearestCreature(MarineCreatureAgent requester, Vector3 position, float searchRadius)
     {
         MarineCreatureAgent nearest = null;
@@ -362,6 +564,42 @@ public class EvolutionEcosystemManager : MonoBehaviour
             MarineCreatureAgent creature = activeCreatures[i];
 
             if (creature == null || creature == requester)
+            {
+                continue;
+            }
+
+            float distanceSqr = (creature.transform.position - position).sqrMagnitude;
+
+            if (distanceSqr < bestDistanceSqr)
+            {
+                bestDistanceSqr = distanceSqr;
+                nearest = creature;
+            }
+        }
+
+        return nearest;
+    }
+
+    public MarineCreatureAgent GetNearestPrey(MarineCreatureAgent requester, Vector3 position, float searchRadius)
+    {
+        if (!EnablePredation || requester == null)
+        {
+            return null;
+        }
+
+        MarineCreatureAgent nearest = null;
+        float bestDistanceSqr = searchRadius * searchRadius;
+
+        for (int i = 0; i < activeCreatures.Count; i++)
+        {
+            MarineCreatureAgent creature = activeCreatures[i];
+
+            if (creature == null || creature == requester)
+            {
+                continue;
+            }
+
+            if (!requester.CanAttackPrey(creature))
             {
                 continue;
             }
@@ -453,7 +691,16 @@ public class EvolutionEcosystemManager : MonoBehaviour
             }
         }
 
+        for (int i = activeCarrion.Count - 1; i >= 0; i--)
+        {
+            if (activeCarrion[i] != null)
+            {
+                Destroy(activeCarrion[i].gameObject);
+            }
+        }
+
         activeFood.Clear();
+        activeCarrion.Clear();
         offspringPool.Clear();
     }
 
@@ -474,6 +721,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
     {
         activeCreatures.RemoveAll(creature => creature == null);
         activeFood.RemoveAll(food => food == null);
+        activeCarrion.RemoveAll(carrion => carrion == null);
     }
 
     public List<MarineCreatureAgent> GetActiveCreatures()
@@ -489,6 +737,11 @@ public class EvolutionEcosystemManager : MonoBehaviour
     public List<FoodSource> GetActiveFood()
     {
         return activeFood;
+    }
+
+    public List<CarrionSource> GetActiveCarrion()
+    {
+        return activeCarrion;
     }
 
     private void OnDrawGizmosSelected()
