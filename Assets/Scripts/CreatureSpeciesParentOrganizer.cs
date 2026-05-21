@@ -6,13 +6,14 @@ public class CreatureSpeciesParentOrganizer : MonoBehaviour
     [Header("Organisation")]
     public bool AutoOrganiseCreatures = true;
     public bool UseManagerCreatureList = true;
+    public bool GroupByRoleAndMorphology = true;
     public string RootParentName = "Runtime Creature Species Groups";
     public float RefreshInterval = 0.5f;
 
     [Header("Debug")]
     public bool LogCreatedGroups;
 
-    private readonly Dictionary<CreatureBehaviourType, Transform> groupParents = new Dictionary<CreatureBehaviourType, Transform>();
+    private readonly Dictionary<string, Transform> groupParents = new Dictionary<string, Transform>();
     private Transform rootParent;
     private float refreshTimer;
 
@@ -43,7 +44,6 @@ public class CreatureSpeciesParentOrganizer : MonoBehaviour
     public void OrganiseNow()
     {
         EnsureRootParent();
-
         List<MarineCreatureAgent> creatures = GetCreatures();
 
         for (int i = 0; i < creatures.Count; i++)
@@ -55,15 +55,19 @@ public class CreatureSpeciesParentOrganizer : MonoBehaviour
                 continue;
             }
 
-            CreatureBehaviourType type = creature.DebugBehaviourType;
+            string groupName = "Uninitialised Group";
 
             if (creature.Candidate != null && creature.Candidate.Genome != null)
             {
-                type = CreatureDebugTypeUtility.GetBehaviourType(creature.Candidate.Genome);
+                CreatureBehaviourType type = CreatureDebugTypeUtility.GetBehaviourType(creature.Candidate.Genome);
                 creature.DebugBehaviourType = type;
+
+                groupName = GroupByRoleAndMorphology
+                    ? CreatureDebugTypeUtility.GetSpeciesGroupName(creature.Candidate.Genome) + " Group"
+                    : CreatureDebugTypeUtility.GetTypeName(type) + " Group";
             }
 
-            Transform groupParent = GetOrCreateGroupParent(type);
+            Transform groupParent = GetOrCreateGroupParent(groupName);
 
             if (creature.transform.parent != groupParent)
             {
@@ -103,28 +107,26 @@ public class CreatureSpeciesParentOrganizer : MonoBehaviour
         rootParent = rootObject.transform;
     }
 
-    private Transform GetOrCreateGroupParent(CreatureBehaviourType type)
+    private Transform GetOrCreateGroupParent(string groupName)
     {
-        if (groupParents.TryGetValue(type, out Transform parent) && parent != null)
+        if (groupParents.TryGetValue(groupName, out Transform parent) && parent != null)
         {
             return parent;
         }
 
         EnsureRootParent();
-
-        string groupName = CreatureDebugTypeUtility.GetTypeName(type) + " Group";
         Transform existing = rootParent.Find(groupName);
 
         if (existing != null)
         {
-            groupParents[type] = existing;
+            groupParents[groupName] = existing;
             return existing;
         }
 
         GameObject groupObject = new GameObject(groupName);
         groupObject.transform.SetParent(rootParent, false);
         parent = groupObject.transform;
-        groupParents[type] = parent;
+        groupParents[groupName] = parent;
 
         if (LogCreatedGroups)
         {

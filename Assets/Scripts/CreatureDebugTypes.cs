@@ -12,7 +12,11 @@ public enum CreatureBehaviourType
     Schooling,
     Skittish,
     Aggressive,
-    Heavy
+    Heavy,
+    ArmouredGrazer,
+    StreamlinedHunter,
+    DefensiveHerbivore,
+    SensorScavenger
 }
 
 public static class CreatureDebugTypeUtility
@@ -24,7 +28,36 @@ public static class CreatureDebugTypeUtility
             return CreatureBehaviourType.Balanced;
         }
 
-        if (genome.MeatDiet >= 0.45f && genome.Aggression >= 0.28f)
+        CreatureEffectiveStats stats = CreatureEffectiveStats.Build(genome, CreatureMorphLibrary.ActiveLibrary);
+
+        bool meatFocused = genome.MeatDiet >= genome.PlantDiet && genome.MeatDiet >= genome.CarrionDiet;
+        bool plantFocused = genome.PlantDiet >= genome.MeatDiet && genome.PlantDiet >= genome.CarrionDiet;
+        bool carrionFocused = genome.CarrionDiet >= genome.PlantDiet && genome.CarrionDiet >= genome.MeatDiet;
+        bool streamlined = !string.IsNullOrEmpty(genome.BodyMorphId) && genome.BodyMorphId.Contains("streamlined");
+        bool armoured = stats.Defence >= 1.25f || (!string.IsNullOrEmpty(genome.ArmourMorphId) && !genome.ArmourMorphId.Contains("none"));
+        bool spiked = stats.DangerFactor >= 1.15f || (!string.IsNullOrEmpty(genome.SpikeMorphId) && !genome.SpikeMorphId.Contains("none"));
+
+        if (meatFocused && streamlined && stats.Speed >= 5.3f)
+        {
+            return CreatureBehaviourType.StreamlinedHunter;
+        }
+
+        if (plantFocused && armoured)
+        {
+            return CreatureBehaviourType.ArmouredGrazer;
+        }
+
+        if (plantFocused && spiked)
+        {
+            return CreatureBehaviourType.DefensiveHerbivore;
+        }
+
+        if (carrionFocused && stats.VisionRange >= 24f)
+        {
+            return CreatureBehaviourType.SensorScavenger;
+        }
+
+        if (genome.MeatDiet >= 0.45f && genome.Aggression >= 0.24f)
         {
             return CreatureBehaviourType.Predator;
         }
@@ -54,22 +87,22 @@ public static class CreatureDebugTypeUtility
             return CreatureBehaviourType.Schooling;
         }
 
-        if (genome.Speed >= 7f)
+        if (stats.Speed >= 7f)
         {
             return CreatureBehaviourType.Sprinter;
         }
 
-        if (genome.VisionRange >= 25f)
+        if (stats.VisionRange >= 27f)
         {
             return CreatureBehaviourType.Scout;
         }
 
-        if (genome.BodySize >= 1.55f || genome.EnergyCapacity >= 155f)
+        if (stats.BodySize >= 1.65f || stats.EnergyCapacity >= 170f)
         {
             return CreatureBehaviourType.Heavy;
         }
 
-        if (genome.HungerDrive >= 0.72f && genome.PlantDiet >= 0.45f && genome.Aggression <= 0.45f)
+        if (genome.HungerDrive >= 0.7f && genome.PlantDiet >= 0.45f && genome.Aggression <= 0.45f)
         {
             return CreatureBehaviourType.Grazer;
         }
@@ -101,9 +134,65 @@ public static class CreatureDebugTypeUtility
                 return "Aggressive";
             case CreatureBehaviourType.Heavy:
                 return "Heavy";
+            case CreatureBehaviourType.ArmouredGrazer:
+                return "Armoured Grazer";
+            case CreatureBehaviourType.StreamlinedHunter:
+                return "Streamlined Hunter";
+            case CreatureBehaviourType.DefensiveHerbivore:
+                return "Defensive Herbivore";
+            case CreatureBehaviourType.SensorScavenger:
+                return "Sensor Scavenger";
             default:
                 return "Balanced";
         }
+    }
+
+    public static string GetMorphologyName(EvolutionGenome genome)
+    {
+        if (genome == null)
+        {
+            return "Unknown Morph";
+        }
+
+        CreatureEffectiveStats stats = CreatureEffectiveStats.Build(genome, CreatureMorphLibrary.ActiveLibrary);
+
+        if (stats.DangerFactor >= 1.4f && genome.PlantDiet >= genome.MeatDiet)
+        {
+            return "Defensive";
+        }
+
+        if (!string.IsNullOrEmpty(genome.BodyMorphId) && genome.BodyMorphId.Contains("streamlined"))
+        {
+            return "Streamlined";
+        }
+
+        if (stats.Defence >= 1.2f || (!string.IsNullOrEmpty(genome.ArmourMorphId) && !genome.ArmourMorphId.Contains("none")))
+        {
+            return "Armoured";
+        }
+
+        if (stats.VisionRange >= 27f || (!string.IsNullOrEmpty(genome.SensorMorphId) && !genome.SensorMorphId.Contains("basic")))
+        {
+            return "Sensor";
+        }
+
+        if (genome.BodySize >= 1.45f || (!string.IsNullOrEmpty(genome.BodyMorphId) && genome.BodyMorphId.Contains("bulky")))
+        {
+            return "Bulky";
+        }
+
+        if (stats.TurnRate >= 235f || genome.FinWidth > 1.3f)
+        {
+            return "Agile";
+        }
+
+        return "Basic";
+    }
+
+    public static string GetSpeciesGroupName(EvolutionGenome genome)
+    {
+        CreatureBehaviourType type = GetBehaviourType(genome);
+        return GetTypeName(type) + " - " + GetMorphologyName(genome);
     }
 
     public static Color GetTypeColour(CreatureBehaviourType type)
@@ -130,6 +219,14 @@ public static class CreatureDebugTypeUtility
                 return new Color(1f, 0.25f, 0.25f, 1f);
             case CreatureBehaviourType.Heavy:
                 return new Color(0.75f, 0.75f, 0.75f, 1f);
+            case CreatureBehaviourType.ArmouredGrazer:
+                return new Color(0.55f, 0.95f, 0.55f, 1f);
+            case CreatureBehaviourType.StreamlinedHunter:
+                return new Color(1f, 0.18f, 0.15f, 1f);
+            case CreatureBehaviourType.DefensiveHerbivore:
+                return new Color(0.35f, 0.8f, 0.35f, 1f);
+            case CreatureBehaviourType.SensorScavenger:
+                return new Color(0.75f, 0.45f, 0.2f, 1f);
             default:
                 return new Color(0.95f, 0.95f, 0.95f, 1f);
         }

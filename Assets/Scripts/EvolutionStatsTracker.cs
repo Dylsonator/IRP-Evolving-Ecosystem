@@ -60,7 +60,7 @@ public class EvolutionStatsTracker : MonoBehaviour
 
     [Header("Logging")]
     public bool WriteCsvLog = true;
-    public string CsvFileName = "IRP_EvolutionStats_v10.csv";
+    public string CsvFileName = "IRP_EvolutionStats_v11.csv";
 
     private string csvPath;
 
@@ -251,12 +251,16 @@ public class EvolutionStatsTracker : MonoBehaviour
         switch (type)
         {
             case CreatureBehaviourType.Grazer:
+            case CreatureBehaviourType.ArmouredGrazer:
+            case CreatureBehaviourType.DefensiveHerbivore:
                 GrazerCount++;
                 break;
             case CreatureBehaviourType.Predator:
+            case CreatureBehaviourType.StreamlinedHunter:
                 PredatorCount++;
                 break;
             case CreatureBehaviourType.Scavenger:
+            case CreatureBehaviourType.SensorScavenger:
                 ScavengerCount++;
                 break;
             case CreatureBehaviourType.Omnivore:

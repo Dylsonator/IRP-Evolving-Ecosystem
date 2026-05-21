@@ -17,44 +17,56 @@ public class EvolutionEcosystemManager : MonoBehaviour
     public FoodSource FoodPrefab;
     public CarrionSource CarrionPrefab;
 
+    [Header("Libraries")]
+    public CreatureMorphLibrary MorphLibrary;
+
     [Header("References")]
     public SeasonalEnvironment Environment;
     public EvolutionStatsTracker StatsTracker;
     public EcosystemDebugSettings DebugSettings;
 
     [Header("Simulation Area")]
-    public Vector3 SimulationAreaSize = new Vector3(80f, 25f, 80f);
-    public float SpawnPaddingFromBounds = 3f;
+    public Vector3 SimulationAreaSize = new Vector3(100f, 35f, 100f);
+    public float SpawnPaddingFromBounds = 4f;
 
     [Header("Generation Settings")]
-    public int StartingPopulation = 35;
-    public int FixedPopulationSize = 35;
-    public float GenerationDuration = 90f;
+    public int StartingPopulation = 60;
+    public int FixedPopulationSize = 60;
+    public float GenerationDuration = 100f;
     public SelectionMode Selection = SelectionMode.QualityDiversityLite;
     public int TournamentSize = 4;
     public bool UseFixedRandomSeed = false;
     public int RandomSeed = 12345;
 
+    [Header("Initial Genome")]
+    [Tooltip("If true, generation 1 starts from the same base genome so roles emerge through mutation/selection instead of being predefined.")]
+    public bool StartFromUniformBaseline = true;
+    [Range(0f, 0.15f)] public float InitialGenomeVariation = 0f;
+
     [Header("Food Settings")]
-    public int StartingFood = 130;
-    public int TargetFoodAmount = 165;
-    public float FoodSpawnInterval = 0.18f;
+    public int StartingFood = 240;
+    public int TargetFoodAmount = 280;
+    public float FoodSpawnInterval = 0.12f;
 
     [Header("Predation / Carrion")]
     public bool EnablePredation = true;
-    [Range(0f, 1f)] public float MinimumMeatDietToHunt = 0.48f;
-    [Range(0f, 1f)] public float MinimumAggressionToHunt = 0.35f;
+    [Range(0f, 1f)] public float MinimumMeatDietToHunt = 0.46f;
+    [Range(0f, 1f)] public float MinimumAggressionToHunt = 0.28f;
     public float MaxPreySizeRatio = 1.15f;
-    public float BiteEnergyGainMultiplier = 0.35f;
+    public float BiteEnergyGainMultiplier = 0.32f;
     public bool SpawnCarrionFromDeaths = true;
     public bool SpawnCarrionFromExtinctionEvents = false;
-    public float CarrionEnergyFromBodySize = 32f;
-    public int MaxCarrionSources = 80;
+    public float CarrionEnergyFromBodySize = 34f;
+    public int MaxCarrionSources = 130;
+
+    [Header("Defensive Morphology")]
+    [Tooltip("Higher values make spiked/armoured herbivores more able to discourage predators.")]
+    public float PredatorFearOfDangerFactor = 0.85f;
 
     [Header("Extinction Pressure")]
     public bool UseExtinctionEvents = true;
-    public float ExtinctionEventInterval = 150f;
-    [Range(0f, 1f)] public float ExtinctionKillPercentage = 0.18f;
+    public float ExtinctionEventInterval = 160f;
+    [Range(0f, 1f)] public float ExtinctionKillPercentage = 0.16f;
 
     [Header("Debug")]
     public int CurrentGeneration = 1;
@@ -66,11 +78,11 @@ public class EvolutionEcosystemManager : MonoBehaviour
     private readonly List<FoodSource> activeFood = new List<FoodSource>();
     private readonly List<CarrionSource> activeCarrion = new List<CarrionSource>();
     private readonly List<EvolutionCandidate> offspringPool = new List<EvolutionCandidate>();
-    private readonly List<EvolutionCandidate> lastGenerationCandidates = new List<EvolutionCandidate>();
 
     private float foodSpawnTimer;
     private float extinctionTimer;
     private int nextCreatureId = 1;
+    private EvolutionGenome baselineGenome;
 
     private void Awake()
     {
@@ -85,6 +97,8 @@ public class EvolutionEcosystemManager : MonoBehaviour
         {
             DebugSettings = FindFirstObjectByType<EcosystemDebugSettings>();
         }
+
+        CreatureMorphLibrary.SetActiveLibrary(MorphLibrary);
     }
 
     private void Start()
@@ -120,12 +134,18 @@ public class EvolutionEcosystemManager : MonoBehaviour
     private void SpawnInitialGeneration()
     {
         ClearSimulation();
+        CreatureMorphLibrary.SetActiveLibrary(MorphLibrary);
+        baselineGenome = EvolutionGenome.CreateBaseline();
 
         int amount = Mathf.Max(1, StartingPopulation);
 
         for (int i = 0; i < amount; i++)
         {
-            EvolutionCandidate candidate = new EvolutionCandidate(EvolutionGenome.CreateRandom());
+            EvolutionGenome genome = StartFromUniformBaseline
+                ? baselineGenome.CreateInitialVariant(InitialGenomeVariation)
+                : EvolutionGenome.CreateRandom();
+
+            EvolutionCandidate candidate = new EvolutionCandidate(genome);
             SpawnCreature(candidate, GetRandomPointInSimulationArea());
         }
     }
@@ -146,7 +166,6 @@ public class EvolutionEcosystemManager : MonoBehaviour
         }
 
         foodSpawnTimer = 0f;
-
         float multiplier = Environment != null ? Environment.FoodSpawnMultiplier : 1f;
         int targetFood = Mathf.RoundToInt(TargetFoodAmount * multiplier);
 
@@ -178,29 +197,23 @@ public class EvolutionEcosystemManager : MonoBehaviour
 
         if (StatsTracker != null)
         {
-            StatsTracker.RecordGeneration(
-                CurrentGeneration,
-                evaluated,
-                activeCreatures.Count,
-                offspringPool.Count
-            );
+            StatsTracker.RecordGeneration(CurrentGeneration, evaluated, activeCreatures.Count, offspringPool.Count);
         }
 
         List<EvolutionCandidate> nextGeneration = SelectNextGeneration(evaluated);
 
         ClearCreaturesOnly();
-
         CurrentGeneration++;
         GenerationTimer = 0f;
         offspringPool.Clear();
-        lastGenerationCandidates.Clear();
+        CreatureMorphLibrary.SetActiveLibrary(MorphLibrary);
 
         for (int i = 0; i < nextGeneration.Count; i++)
         {
             SpawnCreature(nextGeneration[i], GetRandomPointInSimulationArea());
         }
 
-        Debug.Log("Started generation " + CurrentGeneration);
+        Debug.Log("Started generation " + CurrentGeneration + " with " + nextGeneration.Count + " creatures.");
     }
 
     private List<EvolutionCandidate> GatherEvaluationCandidates()
@@ -229,7 +242,8 @@ public class EvolutionEcosystemManager : MonoBehaviour
         {
             for (int i = 0; i < FixedPopulationSize; i++)
             {
-                evaluated.Add(new EvolutionCandidate(EvolutionGenome.CreateRandom()));
+                EvolutionGenome fallback = StartFromUniformBaseline ? EvolutionGenome.CreateBaseline() : EvolutionGenome.CreateRandom();
+                evaluated.Add(new EvolutionCandidate(fallback));
             }
         }
 
@@ -271,7 +285,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
     private List<EvolutionCandidate> SelectQualityDiversityLite(List<EvolutionCandidate> evaluated, int target)
     {
         List<EvolutionCandidate> selected = new List<EvolutionCandidate>();
-        Dictionary<CreatureBehaviourType, List<EvolutionCandidate>> buckets = new Dictionary<CreatureBehaviourType, List<EvolutionCandidate>>();
+        Dictionary<string, List<EvolutionCandidate>> buckets = new Dictionary<string, List<EvolutionCandidate>>();
 
         for (int i = 0; i < evaluated.Count; i++)
         {
@@ -281,28 +295,28 @@ public class EvolutionEcosystemManager : MonoBehaviour
                 continue;
             }
 
-            CreatureBehaviourType type = CreatureDebugTypeUtility.GetBehaviourType(candidate.Genome);
-            if (!buckets.ContainsKey(type))
+            string key = CreatureDebugTypeUtility.GetSpeciesGroupName(candidate.Genome);
+            if (!buckets.ContainsKey(key))
             {
-                buckets[type] = new List<EvolutionCandidate>();
+                buckets[key] = new List<EvolutionCandidate>();
             }
 
-            buckets[type].Add(candidate);
+            buckets[key].Add(candidate);
         }
 
-        foreach (KeyValuePair<CreatureBehaviourType, List<EvolutionCandidate>> pair in buckets)
+        foreach (KeyValuePair<string, List<EvolutionCandidate>> pair in buckets)
         {
             pair.Value.Sort((a, b) => b.GetFitness().CompareTo(a.GetFitness()));
         }
 
         int roundIndex = 0;
         int safety = 0;
-        while (selected.Count < target && safety < target * 16)
+        while (selected.Count < target && safety < target * 20)
         {
             safety++;
             bool addedThisRound = false;
 
-            foreach (KeyValuePair<CreatureBehaviourType, List<EvolutionCandidate>> pair in buckets)
+            foreach (KeyValuePair<string, List<EvolutionCandidate>> pair in buckets)
             {
                 if (selected.Count >= target)
                 {
@@ -369,7 +383,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
 
         if (candidate == null)
         {
-            candidate = new EvolutionCandidate(EvolutionGenome.CreateRandom());
+            candidate = new EvolutionCandidate(StartFromUniformBaseline ? EvolutionGenome.CreateBaseline() : EvolutionGenome.CreateRandom());
         }
 
         int parentId = candidate.ParentId;
@@ -377,6 +391,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         nextCreatureId++;
 
         MarineCreatureAgent creature = Instantiate(CreaturePrefab, position, Quaternion.identity);
+        creature.MorphLibrary = MorphLibrary;
         creature.Initialise(candidate);
 
         activeCreatures.Add(creature);
@@ -419,7 +434,8 @@ public class EvolutionEcosystemManager : MonoBehaviour
             RemoveOldestCarrion();
         }
 
-        float energyValue = 10f + creature.Candidate.Genome.BodySize * CarrionEnergyFromBodySize;
+        float size = creature.EffectiveStats != null ? creature.EffectiveStats.BodySize : creature.Candidate.Genome.BodySize;
+        float energyValue = 10f + size * CarrionEnergyFromBodySize;
         energyValue += Mathf.Max(0f, creature.CurrentEnergy) * 0.15f;
 
         CarrionSource carrion;
@@ -433,14 +449,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
             GameObject carrionObject = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             carrionObject.name = "Carrion_Source";
             carrionObject.transform.position = creature.transform.position;
-            carrionObject.transform.localScale = Vector3.one * Mathf.Clamp(creature.Candidate.Genome.BodySize * 0.45f, 0.25f, 1.4f);
-
-            Collider collider = carrionObject.GetComponent<Collider>();
-            if (collider != null)
-            {
-                Destroy(collider);
-            }
-
+            carrionObject.transform.localScale = Vector3.one * Mathf.Clamp(size * 0.45f, 0.25f, 1.4f);
             carrion = carrionObject.AddComponent<CarrionSource>();
         }
 
@@ -451,7 +460,6 @@ public class EvolutionEcosystemManager : MonoBehaviour
     private void RemoveOldestCarrion()
     {
         CleanLists();
-
         CarrionSource oldest = null;
         float oldestAge = float.MinValue;
 
@@ -627,7 +635,6 @@ public class EvolutionEcosystemManager : MonoBehaviour
 
         int killCount = Mathf.RoundToInt(activeCreatures.Count * ExtinctionKillPercentage);
         killCount = Mathf.Clamp(killCount, 1, activeCreatures.Count);
-
         List<MarineCreatureAgent> copy = new List<MarineCreatureAgent>(activeCreatures);
 
         for (int i = 0; i < killCount; i++)
@@ -654,7 +661,6 @@ public class EvolutionEcosystemManager : MonoBehaviour
     {
         Vector3 half = SimulationAreaSize * 0.5f;
         Vector3 centre = transform.position;
-
         float padding = Mathf.Max(0f, SpawnPaddingFromBounds);
         float xPadding = Mathf.Min(padding, Mathf.Max(0f, half.x - 0.1f));
         float yPadding = Mathf.Min(padding, Mathf.Max(0f, half.y - 0.1f));

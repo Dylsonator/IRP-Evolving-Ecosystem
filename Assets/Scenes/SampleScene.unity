@@ -438,9 +438,9 @@ GameObject:
   - component: {fileID: 1204215838}
   - component: {fileID: 1204215837}
   - component: {fileID: 1204215839}
+  - component: {fileID: 1204215842}
   - component: {fileID: 1204215840}
   - component: {fileID: 1204215841}
-  - component: {fileID: 1204215842}
   m_Layer: 0
   m_Name: Ecosystem
   m_TagString: Untagged
@@ -496,6 +496,7 @@ MonoBehaviour:
   CreaturePrefab: {fileID: 4206938082564389894, guid: 0ffd650424504294986080b1bbb79698, type: 3}
   FoodPrefab: {fileID: 5059079653024269994, guid: 9112ca78a5748054e971412ab322c1b0, type: 3}
   CarrionPrefab: {fileID: -5347416078334886398, guid: 599380e90fe75714fb910501c7cff0c7, type: 3}
+  MorphLibrary: {fileID: 11400000, guid: 5620c6424db82e1419e7de0466d7ae80, type: 2}
   Environment: {fileID: 1204215837}
   StatsTracker: {fileID: 1204215839}
   DebugSettings: {fileID: 1204215842}
@@ -508,6 +509,8 @@ MonoBehaviour:
   TournamentSize: 4
   UseFixedRandomSeed: 0
   RandomSeed: 12345
+  StartFromUniformBaseline: 1
+  InitialGenomeVariation: 0
   StartingFood: 90
   TargetFoodAmount: 120
   FoodSpawnInterval: 0.25
@@ -520,6 +523,7 @@ MonoBehaviour:
   SpawnCarrionFromExtinctionEvents: 0
   CarrionEnergyFromBodySize: 32
   MaxCarrionSources: 80
+  PredatorFearOfDangerFactor: 0.85
   UseExtinctionEvents: 1
   ExtinctionEventInterval: 120
   ExtinctionKillPercentage: 0.25
@@ -622,6 +626,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   AutoOrganiseCreatures: 1
   UseManagerCreatureList: 1
+  GroupByRoleAndMorphology: 1
   RootParentName: Creature Species Groups
   RefreshInterval: 0.5
   LogCreatedGroups: 0
@@ -637,10 +642,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 37e6c8cfd076e4443b1fe1dd5b70419f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  DrawCreatureMovementRays: 0
-  DrawFoodTargetRays: 1
-  DrawCarrionTargetRays: 1
-  DrawPreyTargetRays: 1
+  DrawCreatureMovementRays: 1
+  DrawFoodTargetRays: 0
+  DrawCarrionTargetRays: 0
+  DrawPreyTargetRays: 0
   DrawSocialTargetRays: 1
   DrawVelocityRays: 1
   DrawWantedDirectionRays: 1
