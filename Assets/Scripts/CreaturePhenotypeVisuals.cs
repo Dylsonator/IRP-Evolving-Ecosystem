@@ -16,7 +16,7 @@ public class CreaturePhenotypeVisuals : MonoBehaviour
     public Transform RightSensor;
 
     [Header("Visual Settings")]
-    public bool AutoCreateParts = true;
+    public bool AutoCreateParts = false; // Legacy fallback visuals disabled by default. v16 uses CreatureMorphBuilder.
     public bool ApplyGenomeShapeOnStart;
     public bool UseTypeColour = true;
     public Color FallbackColour = Color.white;

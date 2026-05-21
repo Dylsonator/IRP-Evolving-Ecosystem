@@ -60,8 +60,26 @@ public class MarineCreatureAgent : MonoBehaviour
     public float BoundaryVelocityDamping = 0.15f;
     public bool DebugBoundaryAvoidance;
 
+    [Header("Collision / Anti Stacking")]
+    [Tooltip("The ecosystem uses script checks for eating/biting, so visual colliders can be disabled to stop creatures body-blocking each other.")]
+    public bool DisableBlockingCreatureColliders = true;
+    [Tooltip("How far creatures try to keep away from each other. This is multiplied by body size.")]
+    public float NeighbourUnstickDistance = 2.25f;
+    public float NeighbourUnstickStrength = 3.6f;
+    public int MaxNeighboursForUnstick = 8;
+    [Range(0f, 1f)] public float VerticalUnstickInfluence = 0.25f;
+    [Tooltip("Pushes creatures gently back toward the middle depth when they have no strong vertical target.")]
+    public float DepthStabilityStrength = 0.22f;
+    [Range(0f, 1f)] public float VerticalDampingWhenCrowded = 0.35f;
+    public bool DebugNeighbourUnstick;
+
     [Header("Debug Visuals")]
     public bool ApplyTypeColour = true;
+
+    [Header("Visual Scale Safety")]
+    public bool ScaleCreatureRootByEffectiveBodySize = true;
+    public bool DisableLegacyPhenotypeVisuals = true;
+
     public bool LocalDebugRays;
     public bool LocalDebugLabels;
 
@@ -82,6 +100,7 @@ public class MarineCreatureAgent : MonoBehaviour
     private Vector3 lastCreatureDirection;
     private Vector3 lastPreyDirection;
     private Vector3 lastBoundaryPush;
+    private Vector3 lastNeighbourPush;
     private Vector3 wanderDirection;
     private float wanderTimer;
     private float aliveTimer;
@@ -115,7 +134,7 @@ public class MarineCreatureAgent : MonoBehaviour
         gameObject.name = "Creature_" + DebugName;
 
         CurrentEnergy = EffectiveStats.EnergyCapacity * 0.9f;
-        transform.localScale = Vector3.one * EffectiveStats.BodySize;
+        transform.localScale = ScaleCreatureRootByEffectiveBodySize ? Vector3.one * EffectiveStats.BodySize : Vector3.one;
         lastPosition = transform.position;
         aliveTimer = 0f;
         lowSpeedNearTargetTimer = 0f;
@@ -129,10 +148,18 @@ public class MarineCreatureAgent : MonoBehaviour
         }
 
         rb.useGravity = false;
-        rb.linearDamping = 1.8f;
-        rb.angularDamping = 4.5f;
+        rb.linearDamping = 2.4f;
+        rb.angularDamping = 5.5f;
+        rb.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
+        rb.interpolation = RigidbodyInterpolation.Interpolate;
 
         ApplyMorphVisuals();
+
+        if (DisableBlockingCreatureColliders)
+        {
+            DisableBlockingCollidersOnCreature();
+        }
+
         CacheRenderers(true);
         ApplyDebugColour();
     }
@@ -203,6 +230,11 @@ public class MarineCreatureAgent : MonoBehaviour
             return;
         }
 
+        if (DisableLegacyPhenotypeVisuals)
+        {
+            RemoveLegacyPhenotypeVisuals();
+        }
+
         CreatureMorphBuilder builder = GetComponent<CreatureMorphBuilder>();
         if (builder == null)
         {
@@ -213,6 +245,65 @@ public class MarineCreatureAgent : MonoBehaviour
         builder.UseTypeColour = ApplyTypeColour;
         Color colour = CreatureDebugTypeUtility.GetTypeColour(Candidate.BehaviourType);
         builder.Build(Candidate.Genome, EffectiveStats, colour);
+    }
+
+
+    private void DisableBlockingCollidersOnCreature()
+    {
+        Collider[] colliders = GetComponentsInChildren<Collider>(true);
+
+        for (int i = 0; i < colliders.Length; i++)
+        {
+            Collider creatureCollider = colliders[i];
+
+            if (creatureCollider == null)
+            {
+                continue;
+            }
+
+            // Eating, carrion and predation are all script-driven in this prototype.
+            // Physical colliders on visual morph parts make creatures wedge into each other.
+            creatureCollider.enabled = false;
+        }
+    }
+
+    private void RemoveLegacyPhenotypeVisuals()
+    {
+        CreaturePhenotypeVisuals legacyVisuals = GetComponent<CreaturePhenotypeVisuals>();
+        if (legacyVisuals != null)
+        {
+            legacyVisuals.AutoCreateParts = false;
+            legacyVisuals.enabled = false;
+        }
+
+        string[] legacyNames =
+        {
+            "Phenotype_Body",
+            "Phenotype_Tail",
+            "Phenotype_LeftFin",
+            "Phenotype_RightFin",
+            "Phenotype_Mouth",
+            "Phenotype_LeftSensor",
+            "Phenotype_RightSensor"
+        };
+
+        for (int i = 0; i < legacyNames.Length; i++)
+        {
+            Transform child = transform.Find(legacyNames[i]);
+            if (child == null)
+            {
+                continue;
+            }
+
+            if (Application.isPlaying)
+            {
+                Destroy(child.gameObject);
+            }
+            else
+            {
+                DestroyImmediate(child.gameObject);
+            }
+        }
     }
 
     private void ApplyDebugColour()
@@ -310,14 +401,19 @@ public class MarineCreatureAgent : MonoBehaviour
         brainDirection *= brainWeight;
 
         Vector3 separationPush = GetSocialSeparationPush(toCreature, socialWeight);
+        Vector3 neighbourUnstickPush = GetNeighbourUnstickPush(hungerPressure);
+        lastNeighbourPush = neighbourUnstickPush;
+
         Vector3 noise = Random.insideUnitSphere * SwimNoiseStrength;
-        noise.y *= 0.7f;
+        noise.y *= 0.45f;
 
         Vector3 boundaryPush = GetBoundaryAvoidanceDirection();
         lastBoundaryPush = boundaryPush;
 
-        wantedDirection = brainDirection + foodPull + carrionPull + preyPull + groupingPull + separationPush + boundaryPush + wanderPull + noise;
+        wantedDirection = brainDirection + foodPull + carrionPull + preyPull + groupingPull + separationPush + neighbourUnstickPush + boundaryPush + wanderPull + noise;
         wantedDirection += GetCloseTargetCorrection(hungerPressure);
+        wantedDirection += GetDepthStabilityCorrection();
+        StabiliseVerticalMovementWhenCrowded(ref wantedDirection, neighbourUnstickPush);
         PreventOutwardDirectionAtBounds(ref wantedDirection);
 
         if (wantedDirection.sqrMagnitude < 0.05f)
@@ -358,6 +454,145 @@ public class MarineCreatureAgent : MonoBehaviour
         }
 
         return separationPush;
+    }
+
+    private Vector3 GetNeighbourUnstickPush(float hungerPressure)
+    {
+        EvolutionEcosystemManager manager = EvolutionEcosystemManager.Instance;
+
+        if (manager == null || EffectiveStats == null)
+        {
+            return Vector3.zero;
+        }
+
+        System.Collections.Generic.List<MarineCreatureAgent> creatures = manager.GetActiveCreatures();
+
+        if (creatures == null || creatures.Count <= 1)
+        {
+            return Vector3.zero;
+        }
+
+        Vector3 push = Vector3.zero;
+        Vector3 ownPosition = rb != null ? rb.position : transform.position;
+        float ownSize = Mathf.Max(0.1f, EffectiveStats.BodySize);
+        int neighboursUsed = 0;
+        int maxNeighbours = Mathf.Max(1, MaxNeighboursForUnstick);
+
+        for (int i = 0; i < creatures.Count; i++)
+        {
+            MarineCreatureAgent other = creatures[i];
+
+            if (other == null || other == this || other.EffectiveStats == null)
+            {
+                continue;
+            }
+
+            Vector3 away = ownPosition - other.transform.position;
+            float distance = away.magnitude;
+            float otherSize = Mathf.Max(0.1f, other.EffectiveStats.BodySize);
+            float wantedSpace = NeighbourUnstickDistance * (ownSize + otherSize) * 0.5f;
+
+            if (distance > wantedSpace)
+            {
+                continue;
+            }
+
+            if (distance <= 0.001f)
+            {
+                Vector2 randomFlat = Random.insideUnitCircle.normalized;
+                if (randomFlat.sqrMagnitude < 0.01f)
+                {
+                    randomFlat = Vector2.right;
+                }
+
+                away = new Vector3(randomFlat.x, 0f, randomFlat.y);
+                distance = 0.001f;
+            }
+
+            Vector3 awayDirection = away / distance;
+
+            // Creature clumps should break sideways first. Too much vertical separation made them bounce up/down and starve.
+            awayDirection.y *= VerticalUnstickInfluence;
+
+            if (awayDirection.sqrMagnitude <= 0.0001f)
+            {
+                continue;
+            }
+
+            awayDirection.Normalize();
+            float strength = 1f - Mathf.Clamp01(distance / Mathf.Max(0.01f, wantedSpace));
+            push += awayDirection * strength * strength;
+            neighboursUsed++;
+
+            if (neighboursUsed >= maxNeighbours)
+            {
+                break;
+            }
+        }
+
+        if (push.sqrMagnitude <= 0.0001f)
+        {
+            return Vector3.zero;
+        }
+
+        float hungerReduction = Mathf.Lerp(1f, 0.55f, Mathf.Clamp01(hungerPressure));
+        Vector3 result = push.normalized * NeighbourUnstickStrength * hungerReduction;
+
+        if (DebugNeighbourUnstick || ShouldDrawBoundaryDebug())
+        {
+            Debug.DrawRay(ownPosition, result, Color.cyan, Time.fixedDeltaTime);
+        }
+
+        return result;
+    }
+
+    private Vector3 GetDepthStabilityCorrection()
+    {
+        if (EvolutionEcosystemManager.Instance == null || DepthStabilityStrength <= 0f)
+        {
+            return Vector3.zero;
+        }
+
+        Vector3? target = GetPrimaryFoodTargetPosition();
+
+        if (target.HasValue)
+        {
+            float verticalTargetDistance = Mathf.Abs(target.Value.y - transform.position.y);
+
+            if (verticalTargetDistance > 1.2f)
+            {
+                return Vector3.zero;
+            }
+        }
+
+        float centreY = EvolutionEcosystemManager.Instance.transform.position.y;
+        float halfHeight = Mathf.Max(0.1f, EvolutionEcosystemManager.Instance.SimulationAreaSize.y * 0.5f);
+        float offset = Mathf.Clamp((centreY - transform.position.y) / halfHeight, -1f, 1f);
+
+        return Vector3.up * offset * DepthStabilityStrength;
+    }
+
+    private void StabiliseVerticalMovementWhenCrowded(ref Vector3 direction, Vector3 neighbourUnstickPush)
+    {
+        if (direction.sqrMagnitude <= 0.0001f || neighbourUnstickPush.sqrMagnitude <= 0.0001f)
+        {
+            return;
+        }
+
+        Vector3? target = GetPrimaryFoodTargetPosition();
+        bool hasImportantVerticalTarget = false;
+
+        if (target.HasValue)
+        {
+            hasImportantVerticalTarget = Mathf.Abs(target.Value.y - transform.position.y) > 1.2f;
+        }
+
+        if (hasImportantVerticalTarget)
+        {
+            return;
+        }
+
+        direction.y *= Mathf.Clamp01(1f - VerticalDampingWhenCrowded);
     }
 
     private Vector3 GetCloseTargetCorrection(float hungerPressure)
@@ -949,6 +1184,11 @@ public class MarineCreatureAgent : MonoBehaviour
         if ((settings == null || settings.DrawBoundaryPush) && lastBoundaryPush.sqrMagnitude > 0.001f)
         {
             Debug.DrawRay(transform.position, lastBoundaryPush, Color.yellow, duration);
+        }
+
+        if (lastNeighbourPush.sqrMagnitude > 0.001f)
+        {
+            Debug.DrawRay(transform.position, lastNeighbourPush, Color.cyan, duration);
         }
     }
 

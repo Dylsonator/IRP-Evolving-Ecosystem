@@ -23,6 +23,13 @@ MonoBehaviour:
   MirrorOnX: 0
   DebugColour: {r: 1, g: 1, b: 1, a: 1}
   OverrideTypeColour: 0
+  SocketNodes: []
+  UseBodySocket: 1
+  PreferredSocketName: SpikeSocket
+  AddLocalOffsetToSocket: 1
+  AddLocalRotationToSocket: 1
+  MultiplyLocalScaleBySocketScale: 0
+  ApplyGenomeShapeScale: 0
   SpeedModifier: 0
   AccelerationModifier: 0
   TurnRateModifier: 0
