@@ -612,6 +612,9 @@ MonoBehaviour:
   ToggleRangeDebugKey: 97
   ToggleLabelsKey: 98
   ToggleDietLabelsKey: 99
+  TogglePredationDebugKey: 88
+  ToggleHarmlessAvoidanceKey: 89
+  ToggleVerticalAvoidanceKey: 90
 --- !u!114 &1204215841
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -657,6 +660,11 @@ MonoBehaviour:
   ShowDietInLabels: 1
   LabelMaxDistance: 80
   LabelOffset: {x: 0, y: -14}
+  DisablePredationForDebug: 0
+  EnableHarmlessNeighbourAvoidance: 1
+  EnableVerticalAvoidance: 1
+  ShowMovementStateInLabels: 1
+  ShowVerticalReasonInLabels: 1
   WantedDirectionRayLength: 4
   VelocityRayScale: 0.4
   FoodRayDuration: 0

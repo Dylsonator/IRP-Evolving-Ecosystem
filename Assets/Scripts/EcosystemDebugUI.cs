@@ -20,6 +20,10 @@ public class EcosystemDebugUI : MonoBehaviour
     public Key ToggleRangeDebugKey = Key.F4;
     public Key ToggleLabelsKey = Key.F5;
     public Key ToggleDietLabelsKey = Key.F6;
+    public Key TogglePredationDebugKey = Key.F7;
+    public Key ToggleHarmlessAvoidanceKey = Key.F8;
+    public Key ToggleVerticalAvoidanceKey = Key.F9;
+    public Key ToggleBoidsKey = Key.F10;
 #endif
 
 #if ENABLE_LEGACY_INPUT_MANAGER
@@ -30,6 +34,10 @@ public class EcosystemDebugUI : MonoBehaviour
     public KeyCode LegacyToggleRangeDebugKey = KeyCode.F4;
     public KeyCode LegacyToggleLabelsKey = KeyCode.F5;
     public KeyCode LegacyToggleDietLabelsKey = KeyCode.F6;
+    public KeyCode LegacyTogglePredationDebugKey = KeyCode.F7;
+    public KeyCode LegacyToggleHarmlessAvoidanceKey = KeyCode.F8;
+    public KeyCode LegacyToggleVerticalAvoidanceKey = KeyCode.F9;
+    public KeyCode LegacyToggleBoidsKey = KeyCode.F10;
 #endif
 
     private MonoBehaviour cachedManager;
@@ -78,6 +86,26 @@ public class EcosystemDebugUI : MonoBehaviour
             if (WasDietLabelsPressed())
             {
                 settings.ShowDietInLabels = !settings.ShowDietInLabels;
+            }
+
+            if (WasPredationDebugPressed())
+            {
+                settings.DisablePredationForDebug = !settings.DisablePredationForDebug;
+            }
+
+            if (WasHarmlessAvoidancePressed())
+            {
+                settings.EnableHarmlessNeighbourAvoidance = !settings.EnableHarmlessNeighbourAvoidance;
+            }
+
+            if (WasVerticalAvoidancePressed())
+            {
+                settings.EnableVerticalAvoidance = !settings.EnableVerticalAvoidance;
+            }
+
+            if (WasBoidsPressed())
+            {
+                settings.EnableBoidMovement = !settings.EnableBoidMovement;
             }
         }
     }
@@ -197,6 +225,83 @@ public class EcosystemDebugUI : MonoBehaviour
         return false;
     }
 
+    private bool WasPredationDebugPressed()
+    {
+#if ENABLE_INPUT_SYSTEM
+        if (Keyboard.current != null && Keyboard.current[TogglePredationDebugKey].wasPressedThisFrame)
+        {
+            return true;
+        }
+#endif
+
+#if ENABLE_LEGACY_INPUT_MANAGER
+        if (Input.GetKeyDown(LegacyTogglePredationDebugKey))
+        {
+            return true;
+        }
+#endif
+
+        return false;
+    }
+
+    private bool WasHarmlessAvoidancePressed()
+    {
+#if ENABLE_INPUT_SYSTEM
+        if (Keyboard.current != null && Keyboard.current[ToggleHarmlessAvoidanceKey].wasPressedThisFrame)
+        {
+            return true;
+        }
+#endif
+
+#if ENABLE_LEGACY_INPUT_MANAGER
+        if (Input.GetKeyDown(LegacyToggleHarmlessAvoidanceKey))
+        {
+            return true;
+        }
+#endif
+
+        return false;
+    }
+
+    private bool WasVerticalAvoidancePressed()
+    {
+#if ENABLE_INPUT_SYSTEM
+        if (Keyboard.current != null && Keyboard.current[ToggleVerticalAvoidanceKey].wasPressedThisFrame)
+        {
+            return true;
+        }
+#endif
+
+#if ENABLE_LEGACY_INPUT_MANAGER
+        if (Input.GetKeyDown(LegacyToggleVerticalAvoidanceKey))
+        {
+            return true;
+        }
+#endif
+
+        return false;
+    }
+
+
+    private bool WasBoidsPressed()
+    {
+#if ENABLE_INPUT_SYSTEM
+        if (Keyboard.current != null && Keyboard.current[ToggleBoidsKey].wasPressedThisFrame)
+        {
+            return true;
+        }
+#endif
+
+#if ENABLE_LEGACY_INPUT_MANAGER
+        if (Input.GetKeyDown(LegacyToggleBoidsKey))
+        {
+            return true;
+        }
+#endif
+
+        return false;
+    }
+
     private void OnGUI()
     {
         if (!ShowUI)
@@ -295,8 +400,19 @@ public class EcosystemDebugUI : MonoBehaviour
             debugSettings.DrawBiteRange = GUILayout.Toggle(debugSettings.DrawBiteRange, "Draw bite range (F4)");
             debugSettings.DrawVisionRange = GUILayout.Toggle(debugSettings.DrawVisionRange, "Draw vision/threat range (F4)");
             debugSettings.DrawBoundaryPush = GUILayout.Toggle(debugSettings.DrawBoundaryPush, "Draw boundary push rays");
+            debugSettings.DrawBoidRays = GUILayout.Toggle(debugSettings.DrawBoidRays, "Draw boid rays");
+            debugSettings.DrawBoidGroupCentreRays = GUILayout.Toggle(debugSettings.DrawBoidGroupCentreRays, "Draw boid group-centre rays");
             debugSettings.ShowCreatureLabels = GUILayout.Toggle(debugSettings.ShowCreatureLabels, "Show creature labels (F5)");
             debugSettings.ShowDietInLabels = GUILayout.Toggle(debugSettings.ShowDietInLabels, "Show diet values in labels (F6)");
+            debugSettings.ShowMovementStateInLabels = GUILayout.Toggle(debugSettings.ShowMovementStateInLabels, "Show target/move state in labels");
+            debugSettings.ShowVerticalReasonInLabels = GUILayout.Toggle(debugSettings.ShowVerticalReasonInLabels, "Show vertical reason in labels");
+            debugSettings.ShowBoidStateInLabels = GUILayout.Toggle(debugSettings.ShowBoidStateInLabels, "Show boid group counts in labels");
+            GUILayout.Space(6f);
+            GUILayout.Label("<b>Behaviour Toggles</b>");
+            debugSettings.DisablePredationForDebug = GUILayout.Toggle(debugSettings.DisablePredationForDebug, "Disable predation for debug (F7)");
+            debugSettings.EnableHarmlessNeighbourAvoidance = GUILayout.Toggle(debugSettings.EnableHarmlessNeighbourAvoidance, "Harmless neighbour slide (F8)");
+            debugSettings.EnableVerticalAvoidance = GUILayout.Toggle(debugSettings.EnableVerticalAvoidance, "Vertical avoidance allowed (F9)");
+            debugSettings.EnableBoidMovement = GUILayout.Toggle(debugSettings.EnableBoidMovement, "Boids schooling movement (F10)");
             GUILayout.Space(8f);
         }
         else
@@ -304,7 +420,7 @@ public class EcosystemDebugUI : MonoBehaviour
             GUILayout.Label("Add EcosystemDebugSettings to the manager object for ray/label toggles.");
         }
 
-        GUILayout.Label("F1 UI | F2 Extinction | F3 Rays | F4 Ranges | F5 Labels | F6 Diet labels");
+        GUILayout.Label("F1 UI | F2 Extinction | F3 Rays | F4 Ranges | F5 Labels | F6 Diet | F7 Predation | F8 Slide | F9 Vertical | F10 Boids");
 
         GUI.DragWindow();
     }
