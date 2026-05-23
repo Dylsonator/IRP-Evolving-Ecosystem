@@ -20,6 +20,8 @@ public class EvolutionStatsTracker : MonoBehaviour
     public float AveragePreyBites;
     public float AveragePreyKills;
     public float AverageSurvivalTime;
+    public float AverageHealth;
+    public float AverageStomachFullness;
     public float BehaviourDiversity;
 
     [Header("Diet Averages")]
@@ -60,7 +62,7 @@ public class EvolutionStatsTracker : MonoBehaviour
 
     [Header("Logging")]
     public bool WriteCsvLog = true;
-    public string CsvFileName = "IRP_EvolutionStats_v21.csv";
+    public string CsvFileName = "IRP_EvolutionStats.csv";
 
     public readonly List<int> GenerationHistory = new List<int>();
     public readonly List<float> AverageFitnessHistory = new List<float>();
@@ -78,7 +80,7 @@ public class EvolutionStatsTracker : MonoBehaviour
         if (WriteCsvLog && !File.Exists(csvPath))
         {
             File.WriteAllText(csvPath,
-                "Generation,Population,Offspring,AverageFitness,AverageSpeed,AverageVisionRange,AverageBodySize,AverageMutationRate,AverageFoodEaten,AverageCarrionEaten,AveragePreyBites,AveragePreyKills,AverageSurvivalTime,BehaviourDiversity,MovementDiversity,FeedingDiversity,DietDiversity,TraitDiversity,BehaviourTypeDiversity,ActiveNicheCount,DominantGroup,DominantDietMode,Balanced,Grazer,Predator,Scavenger,Omnivore,Sprinter,Scout,Schooling,Skittish,Aggressive,Heavy,AveragePlantDiet,AverageMeatDiet,AverageCarrionDiet,AverageHungerDrive,AverageAggression,AverageRiskTolerance,AverageGroupingChance,AverageThreatRange\n");
+                "Generation,Population,Offspring,AverageFitness,AverageSpeed,AverageVisionRange,AverageBodySize,AverageMutationRate,AverageFoodEaten,AverageCarrionEaten,AveragePreyBites,AveragePreyKills,AverageSurvivalTime,AverageHealth,AverageStomachFullness,BehaviourDiversity,MovementDiversity,FeedingDiversity,DietDiversity,TraitDiversity,BehaviourTypeDiversity,ActiveNicheCount,DominantGroup,DominantDietMode,Balanced,Grazer,Predator,Scavenger,Omnivore,Sprinter,Scout,Schooling,Skittish,Aggressive,Heavy,AveragePlantDiet,AverageMeatDiet,AverageCarrionDiet,AverageHungerDrive,AverageAggression,AverageRiskTolerance,AverageGroupingChance,AverageThreatRange\n");
         }
     }
 
@@ -105,6 +107,8 @@ public class EvolutionStatsTracker : MonoBehaviour
         float totalPreyBites = 0f;
         float totalPreyKills = 0f;
         float totalSurvival = 0f;
+        float totalHealth = 0f;
+        float totalStomach = 0f;
         float totalPlantDiet = 0f;
         float totalMeatDiet = 0f;
         float totalCarrionDiet = 0f;
@@ -141,6 +145,8 @@ public class EvolutionStatsTracker : MonoBehaviour
             totalPreyBites += candidate.PreyBites;
             totalPreyKills += candidate.PreyKills;
             totalSurvival += candidate.SurvivalTime;
+            totalHealth += candidate.FinalHealth;
+            totalStomach += candidate.FinalStomachFullness;
             totalPlantDiet += genome.PlantDiet;
             totalMeatDiet += genome.MeatDiet;
             totalCarrionDiet += genome.CarrionDiet;
@@ -167,6 +173,8 @@ public class EvolutionStatsTracker : MonoBehaviour
         AveragePreyBites = totalPreyBites / count;
         AveragePreyKills = totalPreyKills / count;
         AverageSurvivalTime = totalSurvival / count;
+        AverageHealth = totalHealth / count;
+        AverageStomachFullness = totalStomach / count;
         AveragePlantDiet = totalPlantDiet / count;
         AverageMeatDiet = totalMeatDiet / count;
         AverageCarrionDiet = totalCarrionDiet / count;
@@ -243,6 +251,8 @@ public class EvolutionStatsTracker : MonoBehaviour
         AveragePreyBites = 0f;
         AveragePreyKills = 0f;
         AverageSurvivalTime = 0f;
+        AverageHealth = 0f;
+        AverageStomachFullness = 0f;
         BehaviourDiversity = 0f;
         AveragePlantDiet = 0f;
         AverageMeatDiet = 0f;
@@ -502,6 +512,8 @@ public class EvolutionStatsTracker : MonoBehaviour
         line.Append(AveragePreyBites.ToString("F3")).Append(",");
         line.Append(AveragePreyKills.ToString("F3")).Append(",");
         line.Append(AverageSurvivalTime.ToString("F3")).Append(",");
+        line.Append(AverageHealth.ToString("F3")).Append(",");
+        line.Append(AverageStomachFullness.ToString("F3")).Append(",");
         line.Append(BehaviourDiversity.ToString("F4")).Append(",");
         line.Append(MovementDiversity.ToString("F4")).Append(",");
         line.Append(FeedingDiversity.ToString("F4")).Append(",");

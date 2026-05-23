@@ -120,6 +120,13 @@ MonoBehaviour:
       Aggression: 0.2
       RiskTolerance: 0.5
       DangerFactor: 0.15
+      PreferredDepth01: 0.5
+      DepthFlexibility: 0.35
+      SchoolTightness: 0.45
+      Leadership: 0.35
+      FoodSharing: 0.45
+      Territoriality: 0.08
+      ActivityCycle: 0.65
       ReproductionEnergyThreshold: 80
       MutationRate: 0.08
       MutationStrength: 1
@@ -138,10 +145,14 @@ MonoBehaviour:
     DisplayName: 
     BehaviourType: 0
     SurvivalTime: 0
+    FinalEnergy: 0
     EnergyGained: 0
     FoodEaten: 0
     CarrionEaten: 0
     PreyBites: 0
+    PlantEnergyConsumed: 0
+    MeatEnergyConsumed: 0
+    CarrionEnergyConsumed: 0
     PreyKills: 0
     BiteDamageDealt: 0
     ReproductionCount: 0
@@ -178,41 +189,97 @@ MonoBehaviour:
   DebugBehaviourType: 0
   BaseEnergyDrainPerSecond: 1.8
   ReproductionCooldown: 5
+  LowEnergyRatio: 0.35
+  MinimumCruiseSpeedScale: 0.28
+  NormalCruiseSpeedScale: 0.78
+  HungryCruiseSpeedScale: 1.08
+  SharpTurnSpeedLoss: 0.55
+  SteeringAcceleration: 7.5
+  RotationResponsiveness: 4.5
+  MaxBankAngle: 34
+  WanderStrength: 0.18
+  WanderRefreshMin: 2.5
+  WanderRefreshMax: 6.5
+  BrainInfluence: 0.08
+  SchoolPerceptionRadius: 10
+  FriendlySeparationRadius: 1.55
+  MaxSchoolNeighbours: 34
+  SeparationWeight: 1.35
+  AlignmentWeight: 1.1
+  CohesionWeight: 1.05
+  DifferentMorphSpacingWeight: 0.45
+  FoodPrioritySchoolReduction: 0.18
+  MorphSimilarityForSchool: 0.72
+  HorizontalSeparationBias: 0.04
+  DenseCrowdRadius: 2.65
+  DenseCrowdHorizontalWeight: 3.25
+  DenseCrowdVerticalInfluence: 0.04
+  FeedingCrowdRadius: 3.25
+  FeedingCrowdSideStepWeight: 2.15
+  FeedingCrowdSoftLimit: 3
+  MaxSocialVerticalComponent: 0.025
+  GroupDangerRadius: 8
+  GroupDangerWeight: 0.18
   FoodEatDistance: 1.25
-  SeparationDistance: 1.8
-  SwimNoiseStrength: 0.15
-  EnableFull3DRoll: 1
-  MaxRollAngle: 42
-  RollResponsiveness: 5
-  VerticalSwimMultiplier: 1.25
-  MinimumApproachSpeedScale: 0.28
   CloseTargetSlowdownDistance: 2.4
-  StuckNudgeSpeed: 0.08
-  StuckNudgeTime: 1.2
-  UseMouthBasedEating: 1
+  CloseTargetPull: 2.6
+  FoodQueueRadius: 2.05
+  FoodQueueStrength: 0.25
   MouthForwardOffset: 0.85
   MouthRadius: 0.42
   MouthAngle: 75
   CloseContactEatForgiveness: 0.2
+  FeedingCommitDistance: 4
+  StaticFoodContactConsumeDistance: 1.45
+  CloseFeedingDirectMotionDistance: 4.5
+  FeedingSocialSuppression: 0.04
+  TargetRetainTime: 2
+  ResourceCrowdRadius: 5.25
+  MinComfortableFeeders: 1
+  MaxComfortableFeeders: 5
+  ResourceCrowdPenaltyLowSharing: 32
+  ResourceCrowdPenaltyHighSharing: 7
+  CrowdedFeedingSchoolSuppression: 0.02
   BiteCooldown: 1.65
   BaseBiteDamage: 8
   ArmourDamageReductionPerPoint: 0.16
-  SurvivalFoodPullMultiplier: 2.4
-  BrainWeightWhenHungry: 0.22
-  BrainWeightWhenFull: 0.9
-  SocialWeightWhenHungry: 0.08
-  SocialWeightWhenFull: 0.65
-  PreyPullMultiplier: 0.75
-  WanderTargetRefreshTime: 4.5
-  WanderStrength: 0.18
+  MissedAttackEnergyCost: 1.4
+  SameMorphAttackAggressionRequired: 0.7
+  SameMorphAttackMeatRequired: 0.72
+  StarvingAttackEnergyRatio: 0.26
+  StarvingAttackAggressionRequired: 0.38
+  StarvingAttackMeatRequired: 0.64
+  DepthPreferenceStrength: 0.95
+  DepthPadding: 3
   BoundaryAvoidanceDistance: 7
   BoundaryAvoidanceStrength: 6
   BoundaryHardStopMargin: 0.4
   BoundaryVelocityDamping: 0.15
-  DebugBoundaryAvoidance: 0
+  MaxNormalPitchAngle: 58
+  FeedingPitchAllowance: 18
+  CrowdedBankReduction: 0.35
+  SuppressPhysicsSpin: 1
+  UseKinematicSwimming: 1
+  UprightCorrectionStrength: 5.5
+  UseRootLogicCollider: 1
+  RootColliderIsTrigger: 1
+  RootColliderRadius: 0.95
+  DisableVisualColliders: 1
+  PersonalSpaceMultiplier: 1.25
+  EmergencyUnstickRadiusMultiplier: 0.85
+  EmergencyUnstickWeight: 2.75
+  StuckSpeedThreshold: 0.12
+  StuckCheckTime: 1.2
+  StuckEscapeDuration: 1.8
+  StuckEscapeWeight: 2.4
+  StuckPositionDeltaThreshold: 0.12
+  DietLearningRate: 0.028
+  BehaviourDecayRate: 0.0015
   ApplyTypeColour: 1
   LocalDebugRays: 0
   LocalDebugLabels: 0
+  ScaleCreatureRootByEffectiveBodySize: 1
+  DisableLegacyPhenotypeVisuals: 1
 --- !u!114 &1879219479675903565
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -242,7 +309,7 @@ SphereCollider:
     serializedVersion: 2
     m_Bits: 0
   m_LayerOverridePriority: 0
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3

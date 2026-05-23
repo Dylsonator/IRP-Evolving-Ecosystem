@@ -64,7 +64,7 @@ public class EvolutionGenome
 
 
 
-    [Header("v21 Emergent Schooling / Habitat Traits")]
+    [Header("Emergent Schooling / Habitat Traits")]
     [Range(0f, 1f)] public float PreferredDepth01 = 0.5f;
     [Range(0f, 1f)] public float DepthFlexibility = 0.35f;
     [Range(0f, 1f)] public float SchoolTightness = 0.45f;
@@ -72,6 +72,18 @@ public class EvolutionGenome
     [Range(0f, 1f)] public float FoodSharing = 0.45f;
     [Range(0f, 1f)] public float Territoriality = 0.08f;
     [Range(0f, 1f)] public float ActivityCycle = 0.65f;
+
+    [Header("Digestion / Memory / Autonomous Group Traits")]
+    [Range(0f, 1f)] public float HungerThreshold = 0.48f;
+    [Range(0.25f, 2.5f)] public float StomachSize = 1f;
+    [Range(0.25f, 2.5f)] public float Metabolism = 1f;
+    [Range(0f, 1f)] public float Bravery = 0.45f;
+    [Range(0f, 1f)] public float Selfishness = 0.18f;
+    [Range(0f, 1f)] public float ExplorationDrive = 0.45f;
+    [Range(0f, 1f)] public float FoodMemoryStrength = 0.55f;
+    public bool PlantDietLocked;
+    public bool MeatDietLocked;
+    public bool CarrionDietLocked;
 
     [Header("Reproduction / Mutation")]
     public float ReproductionEnergyThreshold = 80f;
@@ -139,6 +151,16 @@ public class EvolutionGenome
         genome.FoodSharing = 0.55f;
         genome.Territoriality = 0.08f;
         genome.ActivityCycle = 0.65f;
+        genome.HungerThreshold = 0.48f;
+        genome.StomachSize = 1f;
+        genome.Metabolism = 1f;
+        genome.Bravery = 0.45f;
+        genome.Selfishness = 0.18f;
+        genome.ExplorationDrive = 0.45f;
+        genome.FoodMemoryStrength = 0.55f;
+        genome.PlantDietLocked = false;
+        genome.MeatDietLocked = false;
+        genome.CarrionDietLocked = false;
         genome.ReproductionEnergyThreshold = 82f;
         genome.MutationRate = 0.08f;
         genome.MutationStrength = 1f;
@@ -206,6 +228,13 @@ public class EvolutionGenome
         genome.FoodSharing = UnityEngine.Random.Range(0.05f, 0.95f);
         genome.Territoriality = UnityEngine.Random.Range(0f, 0.75f);
         genome.ActivityCycle = UnityEngine.Random.Range(0.15f, 1f);
+        genome.HungerThreshold = UnityEngine.Random.Range(0.35f, 0.72f);
+        genome.StomachSize = UnityEngine.Random.Range(0.65f, 1.45f);
+        genome.Metabolism = UnityEngine.Random.Range(0.65f, 1.45f);
+        genome.Bravery = UnityEngine.Random.Range(0.1f, 0.9f);
+        genome.Selfishness = UnityEngine.Random.Range(0f, 0.45f);
+        genome.ExplorationDrive = UnityEngine.Random.Range(0.15f, 0.85f);
+        genome.FoodMemoryStrength = UnityEngine.Random.Range(0.15f, 0.85f);
         genome.ReproductionEnergyThreshold = UnityEngine.Random.Range(60f, 105f);
         genome.MutationRate = UnityEngine.Random.Range(0.04f, 0.14f);
         genome.MutationStrength = UnityEngine.Random.Range(0.65f, 1.4f);
@@ -303,6 +332,16 @@ public class EvolutionGenome
         child.FoodSharing = MutateFloat(FoodSharing, 0.10f, finalMutationRate, finalMutationStrength);
         child.Territoriality = MutateFloat(Territoriality, 0.10f, finalMutationRate, finalMutationStrength);
         child.ActivityCycle = MutateFloat(ActivityCycle, 0.10f, finalMutationRate, finalMutationStrength);
+        child.HungerThreshold = MutateFloat(HungerThreshold, 0.08f, finalMutationRate, finalMutationStrength);
+        child.StomachSize = MutateFloat(StomachSize, 0.16f, finalMutationRate, finalMutationStrength);
+        child.Metabolism = MutateFloat(Metabolism, 0.14f, finalMutationRate, finalMutationStrength);
+        child.Bravery = MutateFloat(Bravery, 0.10f, finalMutationRate, finalMutationStrength);
+        child.Selfishness = MutateFloat(Selfishness, 0.10f, finalMutationRate, finalMutationStrength);
+        child.ExplorationDrive = MutateFloat(ExplorationDrive, 0.10f, finalMutationRate, finalMutationStrength);
+        child.FoodMemoryStrength = MutateFloat(FoodMemoryStrength, 0.10f, finalMutationRate, finalMutationStrength);
+        child.PlantDietLocked = PlantDietLocked;
+        child.MeatDietLocked = MeatDietLocked;
+        child.CarrionDietLocked = CarrionDietLocked;
         child.ReproductionEnergyThreshold = MutateFloat(ReproductionEnergyThreshold, 10f, finalMutationRate, finalMutationStrength);
         child.MutationRate = MutateFloat(MutationRate, 0.02f, finalMutationRate, finalMutationStrength);
         child.MutationStrength = MutateFloat(MutationStrength, 0.15f, finalMutationRate, finalMutationStrength);
@@ -386,6 +425,14 @@ public class EvolutionGenome
         FoodSharing = Mathf.Clamp01(FoodSharing);
         Territoriality = Mathf.Clamp01(Territoriality);
         ActivityCycle = Mathf.Clamp01(ActivityCycle);
+        HungerThreshold = Mathf.Clamp01(HungerThreshold);
+        StomachSize = Mathf.Clamp(StomachSize, 0.25f, 3.5f);
+        Metabolism = Mathf.Clamp(Metabolism, 0.25f, 3.5f);
+        Bravery = Mathf.Clamp01(Bravery);
+        Selfishness = Mathf.Clamp01(Selfishness);
+        ExplorationDrive = Mathf.Clamp01(ExplorationDrive);
+        FoodMemoryStrength = Mathf.Clamp01(FoodMemoryStrength);
+        ApplyDietLocks();
         ReproductionEnergyThreshold = Mathf.Clamp(ReproductionEnergyThreshold, 25f, EnergyCapacity * 0.95f);
         MutationRate = Mathf.Clamp(MutationRate, 0.005f, 0.35f);
         MutationStrength = Mathf.Clamp(MutationStrength, 0.1f, 3f);
@@ -436,10 +483,67 @@ public class EvolutionGenome
         float total = Mathf.Max(0.0001f, Mathf.Abs(plantAmount) + Mathf.Abs(meatAmount) + Mathf.Abs(carrionAmount));
         float rate = Mathf.Clamp01(learningRate);
 
-        PlantDiet = Mathf.Lerp(PlantDiet, Mathf.Clamp01(plantAmount / total), rate);
-        MeatDiet = Mathf.Lerp(MeatDiet, Mathf.Clamp01(meatAmount / total), rate);
-        CarrionDiet = Mathf.Lerp(CarrionDiet, Mathf.Clamp01(carrionAmount / total), rate);
-        NormaliseDietTraits();
+        if (!PlantDietLocked && !MeatDietLocked && !CarrionDietLocked)
+        {
+            PlantDiet = Mathf.Lerp(PlantDiet, Mathf.Clamp01(plantAmount / total), rate);
+            MeatDiet = Mathf.Lerp(MeatDiet, Mathf.Clamp01(meatAmount / total), rate);
+            CarrionDiet = Mathf.Lerp(CarrionDiet, Mathf.Clamp01(carrionAmount / total), rate);
+            NormaliseDietTraits();
+        }
+
+        TryLockDiet(total);
+        ApplyDietLocks();
+    }
+
+    private void TryLockDiet(float lifetimeConsumed)
+    {
+        if (PlantDietLocked || MeatDietLocked || CarrionDietLocked)
+        {
+            return;
+        }
+
+        // Locks are deliberately conservative. A fish must be strongly biased and have actually
+        // lived on that diet before the lineage becomes specialised. Once locked, evolution pushes
+        // supportive traits instead of unlocking randomly.
+        if (lifetimeConsumed < 120f)
+        {
+            return;
+        }
+
+        float strongest = Mathf.Max(PlantDiet, Mathf.Max(MeatDiet, CarrionDiet));
+        if (strongest < 0.82f)
+        {
+            return;
+        }
+
+        PlantDietLocked = PlantDiet >= strongest;
+        MeatDietLocked = MeatDiet >= strongest && !PlantDietLocked;
+        CarrionDietLocked = CarrionDiet >= strongest && !PlantDietLocked && !MeatDietLocked;
+    }
+
+    public void ApplyDietLocks()
+    {
+        if (PlantDietLocked)
+        {
+            PlantDiet = Mathf.Max(0.88f, PlantDiet);
+            MeatDiet = Mathf.Min(MeatDiet, 0.07f);
+            CarrionDiet = Mathf.Min(CarrionDiet, 0.08f);
+        }
+        else if (MeatDietLocked)
+        {
+            MeatDiet = Mathf.Max(0.88f, MeatDiet);
+            PlantDiet = Mathf.Min(PlantDiet, 0.07f);
+            CarrionDiet = Mathf.Min(CarrionDiet, 0.10f);
+            Aggression = Mathf.Max(Aggression, 0.35f);
+            Selfishness = Mathf.Max(Selfishness, 0.35f);
+        }
+        else if (CarrionDietLocked)
+        {
+            CarrionDiet = Mathf.Max(0.88f, CarrionDiet);
+            PlantDiet = Mathf.Min(PlantDiet, 0.08f);
+            MeatDiet = Mathf.Min(MeatDiet, 0.12f);
+            FoodMemoryStrength = Mathf.Max(FoodMemoryStrength, 0.55f);
+        }
     }
 
     public void DecayUnusedBehaviourTraits(float rate)

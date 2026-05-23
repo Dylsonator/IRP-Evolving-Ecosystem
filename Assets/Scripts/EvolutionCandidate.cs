@@ -16,6 +16,8 @@ public class EvolutionCandidate
     [Header("Evaluation")]
     public float SurvivalTime;
     public float FinalEnergy;
+    public float FinalHealth;
+    public float FinalStomachFullness;
     public float EnergyGained;
     public int FoodEaten;
     public int CarrionEaten;
@@ -23,6 +25,9 @@ public class EvolutionCandidate
     public float PlantEnergyConsumed;
     public float MeatEnergyConsumed;
     public float CarrionEnergyConsumed;
+    public float StarvationDamageTaken;
+    public int FoodMemoryUses;
+    public int LeaderFollowEvents;
     public int PreyKills;
     public float BiteDamageDealt;
     public int ReproductionCount;
@@ -67,6 +72,8 @@ public class EvolutionCandidate
         float fitness = 0f;
         fitness += SurvivalTime * 1.0f;
         fitness += EnergyGained * 0.35f;
+        fitness += FinalHealth * 0.25f;
+        fitness += FinalStomachFullness * 8f;
         fitness += FoodEaten * 12f;
         fitness += CarrionEaten * 10f;
         fitness += PreyBites * 6f;
@@ -132,6 +139,9 @@ public class EvolutionCandidate
         PlantEnergyConsumed += other.PlantEnergyConsumed;
         MeatEnergyConsumed += other.MeatEnergyConsumed;
         CarrionEnergyConsumed += other.CarrionEnergyConsumed;
+        StarvationDamageTaken += other.StarvationDamageTaken;
+        FoodMemoryUses += other.FoodMemoryUses;
+        LeaderFollowEvents += other.LeaderFollowEvents;
         PreyBites += other.PreyBites;
         PreyKills += other.PreyKills;
         BiteDamageDealt += other.BiteDamageDealt;

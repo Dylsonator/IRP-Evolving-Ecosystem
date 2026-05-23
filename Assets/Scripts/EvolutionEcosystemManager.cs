@@ -481,6 +481,14 @@ public class EvolutionEcosystemManager : MonoBehaviour
         }
 
         FoodSource food = Instantiate(FoodPrefab, GetRandomPointInSimulationArea(), Quaternion.identity);
+        if (food.MaxMass <= 0f)
+        {
+            food.MaxMass = Mathf.Max(1f, food.EnergyValue);
+        }
+        if (food.RemainingMass < 0f)
+        {
+            food.RemainingMass = food.MaxMass;
+        }
         activeFood.Add(food);
     }
 
@@ -528,6 +536,8 @@ public class EvolutionEcosystemManager : MonoBehaviour
         }
 
         carrion.EnergyValue = energyValue;
+        carrion.MaxMass = Mathf.Max(1f, energyValue);
+        carrion.RemainingMass = carrion.MaxMass;
         activeCarrion.Add(carrion);
     }
 
@@ -582,6 +592,109 @@ public class EvolutionEcosystemManager : MonoBehaviour
     public void UnregisterCarrion(CarrionSource carrion)
     {
         activeCarrion.Remove(carrion);
+    }
+
+
+    public FoodSource GetBestFoodForCreature(MarineCreatureAgent requester, Vector3 position, float searchRadius, float crowdRadius, int comfortableCrowdLimit, float crowdPenalty)
+    {
+        FoodSource best = null;
+        float bestScore = float.MaxValue;
+        float searchRadiusSqr = searchRadius * searchRadius;
+        float crowdRadiusSafe = Mathf.Max(0.25f, crowdRadius);
+        int comfort = Mathf.Max(0, comfortableCrowdLimit);
+
+        for (int i = 0; i < activeFood.Count; i++)
+        {
+            FoodSource food = activeFood[i];
+            if (food == null || food.IsConsumed)
+            {
+                continue;
+            }
+
+            Vector3 foodPosition = food.transform.position;
+            float distanceSqr = (foodPosition - position).sqrMagnitude;
+            if (distanceSqr > searchRadiusSqr)
+            {
+                continue;
+            }
+
+            int crowd = CountCreaturesNearPoint(foodPosition, crowdRadiusSafe, requester);
+            int excessCrowd = Mathf.Max(0, crowd - comfort);
+            float distance = Mathf.Sqrt(distanceSqr);
+            float score = distance + excessCrowd * Mathf.Max(0f, crowdPenalty);
+
+            // If two resources are close in score, prefer the less crowded one.
+            score += crowd * 0.35f;
+
+            if (score < bestScore)
+            {
+                bestScore = score;
+                best = food;
+            }
+        }
+
+        return best;
+    }
+
+    public CarrionSource GetBestCarrionForCreature(MarineCreatureAgent requester, Vector3 position, float searchRadius, float crowdRadius, int comfortableCrowdLimit, float crowdPenalty)
+    {
+        CarrionSource best = null;
+        float bestScore = float.MaxValue;
+        float searchRadiusSqr = searchRadius * searchRadius;
+        float crowdRadiusSafe = Mathf.Max(0.25f, crowdRadius);
+        int comfort = Mathf.Max(0, comfortableCrowdLimit);
+
+        for (int i = 0; i < activeCarrion.Count; i++)
+        {
+            CarrionSource carrion = activeCarrion[i];
+            if (carrion == null || carrion.IsConsumed)
+            {
+                continue;
+            }
+
+            Vector3 carrionPosition = carrion.transform.position;
+            float distanceSqr = (carrionPosition - position).sqrMagnitude;
+            if (distanceSqr > searchRadiusSqr)
+            {
+                continue;
+            }
+
+            int crowd = CountCreaturesNearPoint(carrionPosition, crowdRadiusSafe, requester);
+            int excessCrowd = Mathf.Max(0, crowd - comfort);
+            float distance = Mathf.Sqrt(distanceSqr);
+            float score = distance + excessCrowd * Mathf.Max(0f, crowdPenalty);
+            score += crowd * 0.35f;
+
+            if (score < bestScore)
+            {
+                bestScore = score;
+                best = carrion;
+            }
+        }
+
+        return best;
+    }
+
+    public int CountCreaturesNearPoint(Vector3 point, float radius, MarineCreatureAgent ignoredCreature = null)
+    {
+        float radiusSqr = radius * radius;
+        int count = 0;
+
+        for (int i = 0; i < activeCreatures.Count; i++)
+        {
+            MarineCreatureAgent creature = activeCreatures[i];
+            if (creature == null || creature == ignoredCreature)
+            {
+                continue;
+            }
+
+            if ((creature.transform.position - point).sqrMagnitude <= radiusSqr)
+            {
+                count++;
+            }
+        }
+
+        return count;
     }
 
     public FoodSource GetNearestFood(Vector3 position, float searchRadius)

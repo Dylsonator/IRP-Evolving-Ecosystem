@@ -116,11 +116,16 @@ public class FishSelectionDebugPanel : MonoBehaviour
         GUILayout.Label("Schoolmates: " + SelectedFish.GetFriendlySchoolmateCount() + " | Threats: " + SelectedFish.GetThreatCount());
         GUILayout.Space(4f);
         GUILayout.Label("Energy: " + SelectedFish.CurrentEnergy.ToString("F1") + " / " + (s != null ? s.EnergyCapacity.ToString("F1") : g.EnergyCapacity.ToString("F1")));
+        GUILayout.Label("Health: " + SelectedFish.CurrentHealth.ToString("F1") + " | Stomach: " + SelectedFish.GetStomachFullness01().ToString("P0"));
+        GUILayout.Label("Stomach P/M/C: " + SelectedFish.StomachPlant.ToString("F1") + " / " + SelectedFish.StomachMeat.ToString("F1") + " / " + SelectedFish.StomachCarrion.ToString("F1"));
         GUILayout.Label("Fitness: " + c.GetFitness().ToString("F2") + " | Survival: " + c.SurvivalTime.ToString("F1"));
         GUILayout.Space(4f);
         GUILayout.Label("Diet P/M/C: " + g.PlantDiet.ToString("F2") + " / " + g.MeatDiet.ToString("F2") + " / " + g.CarrionDiet.ToString("F2"));
         GUILayout.Label("Aggression: " + g.Aggression.ToString("F2") + " | Risk: " + g.RiskTolerance.ToString("F2") + " | Danger: " + (s != null ? s.DangerFactor.ToString("F2") : g.DangerFactor.ToString("F2")));
         GUILayout.Label("Grouping: " + g.GroupingChance.ToString("F2") + " | Tightness: " + g.SchoolTightness.ToString("F2") + " | Leader: " + g.Leadership.ToString("F2"));
+        GUILayout.Label("Hunger T: " + g.HungerThreshold.ToString("F2") + " | Metabolism: " + g.Metabolism.ToString("F2") + " | Stomach Size: " + g.StomachSize.ToString("F2"));
+        GUILayout.Label("Bravery: " + g.Bravery.ToString("F2") + " | Selfish: " + g.Selfishness.ToString("F2") + " | Memory: " + g.FoodMemoryStrength.ToString("F2"));
+        GUILayout.Label("Diet Lock P/M/C: " + g.PlantDietLocked + " / " + g.MeatDietLocked + " / " + g.CarrionDietLocked);
         GUILayout.Label("Depth: " + g.PreferredDepth01.ToString("F2") + " | Flexibility: " + g.DepthFlexibility.ToString("F2"));
         GUILayout.Space(4f);
         GUILayout.Label("Speed: " + (s != null ? s.Speed.ToString("F2") : g.Speed.ToString("F2")) + " | Turn: " + (s != null ? s.TurnRate.ToString("F1") : g.TurnRate.ToString("F1")) + " | Vision: " + (s != null ? s.VisionRange.ToString("F1") : g.VisionRange.ToString("F1")));
@@ -175,6 +180,8 @@ public class FishSelectionDebugPanel : MonoBehaviour
         AppendJson(sb, "morphology", CreatureDebugTypeUtility.GetMorphologyName(g), true);
         AppendJson(sb, "fitness", c.GetFitness(), true);
         AppendJson(sb, "energy", fish.CurrentEnergy, true);
+        AppendJson(sb, "health", fish.CurrentHealth, true);
+        AppendJson(sb, "stomachFullness", fish.GetStomachFullness01(), true);
         AppendJson(sb, "plantDiet", g.PlantDiet, true);
         AppendJson(sb, "meatDiet", g.MeatDiet, true);
         AppendJson(sb, "carrionDiet", g.CarrionDiet, true);
@@ -182,6 +189,12 @@ public class FishSelectionDebugPanel : MonoBehaviour
         AppendJson(sb, "groupingChance", g.GroupingChance, true);
         AppendJson(sb, "schoolTightness", g.SchoolTightness, true);
         AppendJson(sb, "preferredDepth", g.PreferredDepth01, true);
+        AppendJson(sb, "hungerThreshold", g.HungerThreshold, true);
+        AppendJson(sb, "metabolism", g.Metabolism, true);
+        AppendJson(sb, "stomachSize", g.StomachSize, true);
+        AppendJson(sb, "bravery", g.Bravery, true);
+        AppendJson(sb, "selfishness", g.Selfishness, true);
+        AppendJson(sb, "foodMemoryStrength", g.FoodMemoryStrength, true);
         AppendJson(sb, "bodyMorph", g.BodyMorphId, true);
         AppendJson(sb, "tailMorph", g.TailMorphId, true);
         AppendJson(sb, "finMorph", g.FinMorphId, true);

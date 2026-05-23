@@ -530,6 +530,9 @@ MonoBehaviour:
   UseExtinctionEvents: 1
   ExtinctionEventInterval: 120
   ExtinctionKillPercentage: 0.25
+  StaggerInitialSpawn: 1
+  CreatureSpawnsPerFrame: 16
+  FoodSpawnsPerFrame: 45
   CurrentGeneration: 1
   GenerationTimer: 0
   OffspringCount: 0
@@ -602,23 +605,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5648f718e3468b847a568c313f59b02a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  ShowUI: 1
-  WindowRect:
-    serializedVersion: 2
-    x: 15
-    y: 15
-    width: 390
-    height: 560
-  ToggleKey: 94
-  ExtinctionEventKey: 95
-  ToggleMovementRaysKey: 96
-  ToggleRangeDebugKey: 97
-  ToggleLabelsKey: 98
-  ToggleDietLabelsKey: 99
-  TogglePredationDebugKey: 100
-  ToggleHarmlessAvoidanceKey: 101
-  ToggleVerticalAvoidanceKey: 102
-  ToggleBoidsKey: 103
+  ShowOverview: 1
+  Position: {x: 12, y: 12}
+  Size: {x: 420, y: 210}
 --- !u!114 &1204215841
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -649,39 +638,33 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 37e6c8cfd076e4443b1fe1dd5b70419f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  DrawCreatureMovementRays: 0
-  DrawFoodTargetRays: 0
+  DrawCreatureMovementRays: 1
+  DrawFoodTargetRays: 1
   DrawCarrionTargetRays: 0
   DrawPreyTargetRays: 0
   DrawSocialTargetRays: 0
   DrawVelocityRays: 0
-  DrawWantedDirectionRays: 0
+  DrawWantedDirectionRays: 1
   DrawMouthRange: 0
   DrawBiteRange: 1
   DrawVisionRange: 0
   DrawBoundaryPush: 0
   DrawBoidRays: 0
-  DrawBoidGroupCentreRays: 0
   ShowCreatureLabels: 0
   ShowDietInLabels: 1
-  LabelMaxDistance: 80
-  LabelOffset: {x: 0, y: -14}
-  DisablePredationForDebug: 0
-  EnableHarmlessNeighbourAvoidance: 1
-  EnableVerticalAvoidance: 1
-  EnableBoidMovement: 1
   ShowSelectedFishPanel: 1
   HighlightSelectedFish: 1
+  ShowMovementStateInLabels: 1
+  ShowVerticalReasonInLabels: 1
+  LabelMaxDistance: 80
+  LabelOffset: {x: 0, y: -14}
+  MaxLabelCount: 80
   AutoCaptureGenerationScreenshots: 0
   DrawPreferredDepthLine: 0
   MaxGraphPoints: 120
-  ShowMovementStateInLabels: 1
-  ShowVerticalReasonInLabels: 1
-  ShowBoidStateInLabels: 1
   WantedDirectionRayLength: 4
   VelocityRayScale: 0.4
   FoodRayDuration: 0
-  MaxLabelCount: 80
 --- !u!114 &1204215843
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -728,21 +711,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 687d600a99330ac4d96db2351b071ada, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  CameraOverride: {fileID: 330585545}
+  SelectedFish: {fileID: 0}
+  ShowPanel: 1
+  SelectionCamera: {fileID: 0}
   SelectionMask:
     serializedVersion: 2
     m_Bits: 4294967295
-  SelectionRayDistance: 500
-  SelectedFish: {fileID: 0}
-  ShowPanel: 1
-  PanelRect:
-    serializedVersion: 2
-    x: 470
-    y: 20
-    width: 420
-    height: 520
-  SaveSelectedKey: 104
-  ResetSimulationKey: 105
+  SelectionDistance: 500
+  PanelPosition: {x: 12, y: 235}
+  PanelSize: {x: 430, y: 520}
+  SnapshotFolder: IRP_SelectedFishSnapshots
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
