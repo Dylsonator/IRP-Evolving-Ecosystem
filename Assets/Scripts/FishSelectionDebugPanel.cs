@@ -1,0 +1,213 @@
+using System.IO;
+using System.Text;
+using UnityEngine;
+#if ENABLE_INPUT_SYSTEM
+using UnityEngine.InputSystem;
+#endif
+
+public class FishSelectionDebugPanel : MonoBehaviour
+{
+    [Header("Selection")]
+    public MarineCreatureAgent SelectedFish;
+    public bool ShowPanel = true;
+    public Camera SelectionCamera;
+    public LayerMask SelectionMask = ~0;
+    public float SelectionDistance = 500f;
+
+    [Header("Panel")]
+    public Vector2 PanelPosition = new Vector2(12f, 235f);
+    public Vector2 PanelSize = new Vector2(430f, 520f);
+
+    [Header("Saving")]
+    public string SnapshotFolder = "IRP_SelectedFishSnapshots";
+
+    private void Awake()
+    {
+        if (SelectionCamera == null)
+        {
+            SelectionCamera = Camera.main;
+        }
+    }
+
+    private void Update()
+    {
+        TrySelectFishFromMouse();
+    }
+
+    private void TrySelectFishFromMouse()
+    {
+        if (!WasLeftMousePressedThisFrame())
+        {
+            return;
+        }
+
+        if (SelectionCamera == null)
+        {
+            SelectionCamera = Camera.main;
+        }
+
+        if (SelectionCamera == null)
+        {
+            return;
+        }
+
+        Vector2 mousePosition = GetMouseScreenPosition();
+        Ray ray = SelectionCamera.ScreenPointToRay(mousePosition);
+        if (!Physics.Raycast(ray, out RaycastHit hit, SelectionDistance, SelectionMask, QueryTriggerInteraction.Collide))
+        {
+            return;
+        }
+
+        MarineCreatureAgent creature = hit.collider.GetComponentInParent<MarineCreatureAgent>();
+        if (creature != null)
+        {
+            SelectedFish = creature;
+        }
+    }
+
+    private bool WasLeftMousePressedThisFrame()
+    {
+#if ENABLE_INPUT_SYSTEM
+        return Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame;
+#elif ENABLE_LEGACY_INPUT_MANAGER
+        return Input.GetMouseButtonDown(0);
+#else
+        return false;
+#endif
+    }
+
+    private Vector2 GetMouseScreenPosition()
+    {
+#if ENABLE_INPUT_SYSTEM
+        return Mouse.current != null ? Mouse.current.position.ReadValue() : Vector2.zero;
+#elif ENABLE_LEGACY_INPUT_MANAGER
+        return Input.mousePosition;
+#else
+        return Vector2.zero;
+#endif
+    }
+
+    private void OnGUI()
+    {
+        EcosystemDebugSettings settings = EcosystemDebugSettings.Instance;
+        if (!ShowPanel || (settings != null && !settings.ShowSelectedFishPanel))
+        {
+            return;
+        }
+
+        GUILayout.BeginArea(new Rect(PanelPosition.x, PanelPosition.y, PanelSize.x, PanelSize.y), GUI.skin.box);
+        GUILayout.Label("Selected Fish");
+
+        if (SelectedFish == null || SelectedFish.Candidate == null || SelectedFish.Candidate.Genome == null)
+        {
+            GUILayout.Label("Click a fish to inspect its evolved genome and behaviour.");
+            GUILayout.EndArea();
+            return;
+        }
+
+        EvolutionGenome g = SelectedFish.Candidate.Genome;
+        EvolutionCandidate c = SelectedFish.Candidate;
+        CreatureEffectiveStats s = SelectedFish.EffectiveStats;
+
+        GUILayout.Label("Name: " + SelectedFish.DebugName);
+        GUILayout.Label("Group: " + CreatureDebugTypeUtility.GetSpeciesGroupName(g));
+        GUILayout.Label("Morph: " + CreatureDebugTypeUtility.GetMorphologyName(g));
+        GUILayout.Label("Move: " + SelectedFish.GetDebugMoveState() + " | Vertical: " + SelectedFish.GetDebugVerticalReason());
+        GUILayout.Label("Schoolmates: " + SelectedFish.GetFriendlySchoolmateCount() + " | Threats: " + SelectedFish.GetThreatCount());
+        GUILayout.Space(4f);
+        GUILayout.Label("Energy: " + SelectedFish.CurrentEnergy.ToString("F1") + " / " + (s != null ? s.EnergyCapacity.ToString("F1") : g.EnergyCapacity.ToString("F1")));
+        GUILayout.Label("Fitness: " + c.GetFitness().ToString("F2") + " | Survival: " + c.SurvivalTime.ToString("F1"));
+        GUILayout.Space(4f);
+        GUILayout.Label("Diet P/M/C: " + g.PlantDiet.ToString("F2") + " / " + g.MeatDiet.ToString("F2") + " / " + g.CarrionDiet.ToString("F2"));
+        GUILayout.Label("Aggression: " + g.Aggression.ToString("F2") + " | Risk: " + g.RiskTolerance.ToString("F2") + " | Danger: " + (s != null ? s.DangerFactor.ToString("F2") : g.DangerFactor.ToString("F2")));
+        GUILayout.Label("Grouping: " + g.GroupingChance.ToString("F2") + " | Tightness: " + g.SchoolTightness.ToString("F2") + " | Leader: " + g.Leadership.ToString("F2"));
+        GUILayout.Label("Depth: " + g.PreferredDepth01.ToString("F2") + " | Flexibility: " + g.DepthFlexibility.ToString("F2"));
+        GUILayout.Space(4f);
+        GUILayout.Label("Speed: " + (s != null ? s.Speed.ToString("F2") : g.Speed.ToString("F2")) + " | Turn: " + (s != null ? s.TurnRate.ToString("F1") : g.TurnRate.ToString("F1")) + " | Vision: " + (s != null ? s.VisionRange.ToString("F1") : g.VisionRange.ToString("F1")));
+        GUILayout.Label("Body: " + g.BodyMorphId + " | Tail: " + g.TailMorphId);
+        GUILayout.Label("Fins: " + g.FinMorphId + " | Jaw: " + g.JawMorphId);
+        GUILayout.Label("Sensors: " + g.SensorMorphId + " | Armour: " + g.ArmourMorphId);
+        GUILayout.Label("Dorsal: " + g.DorsalFinMorphId + " | Spikes: " + g.SpikeMorphId + " | Gills: " + g.GillMorphId);
+
+        GUILayout.Space(8f);
+        if (GUILayout.Button("Save Selected Fish Snapshot"))
+        {
+            SaveSelectedFishSnapshot();
+        }
+
+        if (GUILayout.Button("Reset Simulation"))
+        {
+            if (EvolutionEcosystemManager.Instance != null)
+            {
+                EvolutionEcosystemManager.Instance.ResetSimulation();
+            }
+        }
+
+        GUILayout.EndArea();
+    }
+
+    public void SaveSelectedFishSnapshot()
+    {
+        if (SelectedFish == null || SelectedFish.Candidate == null || SelectedFish.Candidate.Genome == null)
+        {
+            Debug.LogWarning("No selected fish to save.");
+            return;
+        }
+
+        string folder = Path.Combine(Application.persistentDataPath, SnapshotFolder);
+        Directory.CreateDirectory(folder);
+        string fileName = "selected_fish_gen" + SelectedFish.Candidate.GenerationBorn + "_id" + SelectedFish.Candidate.Id + "_" + System.DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".json";
+        string path = Path.Combine(folder, fileName);
+        File.WriteAllText(path, BuildJsonSnapshot(SelectedFish));
+        Debug.Log("Saved selected fish snapshot: " + path);
+    }
+
+    private string BuildJsonSnapshot(MarineCreatureAgent fish)
+    {
+        EvolutionGenome g = fish.Candidate.Genome;
+        EvolutionCandidate c = fish.Candidate;
+        StringBuilder sb = new StringBuilder();
+        sb.AppendLine("{");
+        AppendJson(sb, "id", c.Id, true);
+        AppendJson(sb, "generation", c.GenerationBorn, true);
+        AppendJson(sb, "name", fish.DebugName, true);
+        AppendJson(sb, "group", CreatureDebugTypeUtility.GetSpeciesGroupName(g), true);
+        AppendJson(sb, "morphology", CreatureDebugTypeUtility.GetMorphologyName(g), true);
+        AppendJson(sb, "fitness", c.GetFitness(), true);
+        AppendJson(sb, "energy", fish.CurrentEnergy, true);
+        AppendJson(sb, "plantDiet", g.PlantDiet, true);
+        AppendJson(sb, "meatDiet", g.MeatDiet, true);
+        AppendJson(sb, "carrionDiet", g.CarrionDiet, true);
+        AppendJson(sb, "aggression", g.Aggression, true);
+        AppendJson(sb, "groupingChance", g.GroupingChance, true);
+        AppendJson(sb, "schoolTightness", g.SchoolTightness, true);
+        AppendJson(sb, "preferredDepth", g.PreferredDepth01, true);
+        AppendJson(sb, "bodyMorph", g.BodyMorphId, true);
+        AppendJson(sb, "tailMorph", g.TailMorphId, true);
+        AppendJson(sb, "finMorph", g.FinMorphId, true);
+        AppendJson(sb, "jawMorph", g.JawMorphId, true);
+        AppendJson(sb, "sensorMorph", g.SensorMorphId, true);
+        AppendJson(sb, "armourMorph", g.ArmourMorphId, true);
+        AppendJson(sb, "spikeMorph", g.SpikeMorphId, false);
+        sb.AppendLine("}");
+        return sb.ToString();
+    }
+
+    private void AppendJson(StringBuilder sb, string key, string value, bool comma)
+    {
+        sb.Append("  \"").Append(key).Append("\": \"").Append(value).Append("\"");
+        sb.AppendLine(comma ? "," : string.Empty);
+    }
+
+    private void AppendJson(StringBuilder sb, string key, int value, bool comma)
+    {
+        sb.Append("  \"").Append(key).Append("\": ").Append(value);
+        sb.AppendLine(comma ? "," : string.Empty);
+    }
+
+    private void AppendJson(StringBuilder sb, string key, float value, bool comma)
+    {
+        sb.Append("  \"").Append(key).Append("\": ").Append(value.ToString("F4"));
+        sb.AppendLine(comma ? "," : string.Empty);
+    }
+}

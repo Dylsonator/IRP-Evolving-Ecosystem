@@ -4,7 +4,7 @@ public class EcosystemDebugSettings : MonoBehaviour
 {
     public static EcosystemDebugSettings Instance { get; private set; }
 
-    [Header("Creature Debug Drawing")]
+    [Header("Observation Debug Drawing")]
     public bool DrawCreatureMovementRays = false;
     public bool DrawFoodTargetRays = true;
     public bool DrawCarrionTargetRays = true;
@@ -17,34 +17,27 @@ public class EcosystemDebugSettings : MonoBehaviour
     public bool DrawVisionRange = false;
     public bool DrawBoundaryPush = false;
     public bool DrawBoidRays = true;
-    public bool DrawBoidGroupCentreRays = false;
 
-    [Header("Labels")]
+    [Header("Labels / Panels")]
     public bool ShowCreatureLabels = false;
     public bool ShowDietInLabels = true;
-    public float LabelMaxDistance = 80f;
-    public Vector2 LabelOffset = new Vector2(0f, -14f);
-
-    [Header("v18 Behaviour Debug Toggles")]
-    public bool DisablePredationForDebug = false;
-    public bool EnableHarmlessNeighbourAvoidance = true;
-    public bool EnableVerticalAvoidance = true;
-
-    [Header("v19 Boid Toggles")]
-    public bool EnableBoidMovement = true;
-
-    [Header("v18/v19 Label Detail")]
+    public bool ShowSelectedFishPanel = true;
+    public bool HighlightSelectedFish = true;
     public bool ShowMovementStateInLabels = true;
     public bool ShowVerticalReasonInLabels = true;
-    public bool ShowBoidStateInLabels = true;
+    public float LabelMaxDistance = 80f;
+    public Vector2 LabelOffset = new Vector2(0f, -14f);
+    public int MaxLabelCount = 80;
+
+    [Header("Screenshots / Graphs")]
+    public bool AutoCaptureGenerationScreenshots = false;
+    public bool DrawPreferredDepthLine = false;
+    public int MaxGraphPoints = 120;
 
     [Header("Ray Lengths")]
     public float WantedDirectionRayLength = 4f;
     public float VelocityRayScale = 0.4f;
     public float FoodRayDuration = 0f;
-
-    [Header("Performance")]
-    public int MaxLabelCount = 80;
 
     private void Awake()
     {

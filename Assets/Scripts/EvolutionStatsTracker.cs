@@ -60,7 +60,14 @@ public class EvolutionStatsTracker : MonoBehaviour
 
     [Header("Logging")]
     public bool WriteCsvLog = true;
-    public string CsvFileName = "IRP_EvolutionStats_v11.csv";
+    public string CsvFileName = "IRP_EvolutionStats_v21.csv";
+
+    public readonly List<int> GenerationHistory = new List<int>();
+    public readonly List<float> AverageFitnessHistory = new List<float>();
+    public readonly List<float> AveragePlantDietHistory = new List<float>();
+    public readonly List<float> AverageMeatDietHistory = new List<float>();
+    public readonly List<float> AverageCarrionDietHistory = new List<float>();
+    public readonly List<float> BehaviourDiversityHistory = new List<float>();
 
     private string csvPath;
 
@@ -191,6 +198,13 @@ public class EvolutionStatsTracker : MonoBehaviour
             " | Diversity: " + BehaviourDiversity.ToString("F2") +
             " | Groups: " + BehaviourGroupSummary
         );
+
+        GenerationHistory.Add(generation);
+        AverageFitnessHistory.Add(AverageFitness);
+        AveragePlantDietHistory.Add(AveragePlantDiet);
+        AverageMeatDietHistory.Add(AverageMeatDiet);
+        AverageCarrionDietHistory.Add(AverageCarrionDiet);
+        BehaviourDiversityHistory.Add(BehaviourDiversity);
 
         if (WriteCsvLog)
         {

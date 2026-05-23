@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -68,6 +69,12 @@ public class EvolutionEcosystemManager : MonoBehaviour
     public float ExtinctionEventInterval = 160f;
     [Range(0f, 1f)] public float ExtinctionKillPercentage = 0.16f;
 
+    [Header("Performance / Startup")]
+    [Tooltip("Spreads initial spawning across several frames to avoid a large first-frame spike.")]
+    public bool StaggerInitialSpawn = true;
+    public int CreatureSpawnsPerFrame = 6;
+    public int FoodSpawnsPerFrame = 25;
+
     [Header("Debug")]
     public int CurrentGeneration = 1;
     public float GenerationTimer;
@@ -83,6 +90,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
     private float extinctionTimer;
     private int nextCreatureId = 1;
     private EvolutionGenome baselineGenome;
+    private Coroutine bootstrapRoutine;
 
     private void Awake()
     {
@@ -103,12 +111,62 @@ public class EvolutionEcosystemManager : MonoBehaviour
 
     private void Start()
     {
-        SpawnInitialGeneration();
-        SpawnStartingFood();
+        StartBootstrap();
+    }
+
+    private void StartBootstrap()
+    {
+        if (bootstrapRoutine != null)
+        {
+            StopCoroutine(bootstrapRoutine);
+        }
+
+        bootstrapRoutine = StartCoroutine(BootstrapSimulationRoutine());
+    }
+
+    private IEnumerator BootstrapSimulationRoutine()
+    {
+        ClearSimulation();
+        CreatureMorphLibrary.SetActiveLibrary(MorphLibrary);
+        baselineGenome = EvolutionGenome.CreateBaseline();
+
+        int creatureAmount = Mathf.Max(1, StartingPopulation);
+        int creatureBudget = Mathf.Max(1, CreatureSpawnsPerFrame);
+        for (int i = 0; i < creatureAmount; i++)
+        {
+            EvolutionGenome genome = StartFromUniformBaseline
+                ? baselineGenome.CreateInitialVariant(InitialGenomeVariation)
+                : EvolutionGenome.CreateRandom();
+
+            SpawnCreature(new EvolutionCandidate(genome), GetRandomPointInSimulationArea());
+
+            if (StaggerInitialSpawn && i % creatureBudget == creatureBudget - 1)
+            {
+                yield return null;
+            }
+        }
+
+        int foodBudget = Mathf.Max(1, FoodSpawnsPerFrame);
+        for (int i = 0; i < StartingFood; i++)
+        {
+            SpawnFood();
+
+            if (StaggerInitialSpawn && i % foodBudget == foodBudget - 1)
+            {
+                yield return null;
+            }
+        }
+
+        bootstrapRoutine = null;
     }
 
     private void Update()
     {
+        if (bootstrapRoutine != null)
+        {
+            return;
+        }
+
         GenerationTimer += Time.deltaTime;
         foodSpawnTimer += Time.deltaTime;
         extinctionTimer += Time.deltaTime;
@@ -202,17 +260,33 @@ public class EvolutionEcosystemManager : MonoBehaviour
 
         List<EvolutionCandidate> nextGeneration = SelectNextGeneration(evaluated);
 
+        if (bootstrapRoutine != null)
+        {
+            StopCoroutine(bootstrapRoutine);
+        }
+
+        bootstrapRoutine = StartCoroutine(SpawnNextGenerationRoutine(nextGeneration));
+    }
+
+    private IEnumerator SpawnNextGenerationRoutine(List<EvolutionCandidate> nextGeneration)
+    {
         ClearCreaturesOnly();
         CurrentGeneration++;
         GenerationTimer = 0f;
         offspringPool.Clear();
         CreatureMorphLibrary.SetActiveLibrary(MorphLibrary);
 
+        int budget = Mathf.Max(1, CreatureSpawnsPerFrame);
         for (int i = 0; i < nextGeneration.Count; i++)
         {
             SpawnCreature(nextGeneration[i], GetRandomPointInSimulationArea());
+            if (StaggerInitialSpawn && i % budget == budget - 1)
+            {
+                yield return null;
+            }
         }
 
+        bootstrapRoutine = null;
         Debug.Log("Started generation " + CurrentGeneration + " with " + nextGeneration.Count + " creatures.");
     }
 
@@ -721,6 +795,22 @@ public class EvolutionEcosystemManager : MonoBehaviour
         }
 
         activeCreatures.Clear();
+    }
+
+    [ContextMenu("Reset Simulation")]
+    public void ResetSimulation()
+    {
+        CurrentGeneration = 1;
+        GenerationTimer = 0f;
+        extinctionTimer = 0f;
+        foodSpawnTimer = 0f;
+        nextCreatureId = 1;
+        StartBootstrap();
+    }
+
+    public void ForceEndGeneration()
+    {
+        EndGenerationAndSpawnNext();
     }
 
     private void CleanLists()

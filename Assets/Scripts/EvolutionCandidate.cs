@@ -15,10 +15,14 @@ public class EvolutionCandidate
 
     [Header("Evaluation")]
     public float SurvivalTime;
+    public float FinalEnergy;
     public float EnergyGained;
     public int FoodEaten;
     public int CarrionEaten;
     public int PreyBites;
+    public float PlantEnergyConsumed;
+    public float MeatEnergyConsumed;
+    public float CarrionEnergyConsumed;
     public int PreyKills;
     public float BiteDamageDealt;
     public int ReproductionCount;
@@ -125,6 +129,9 @@ public class EvolutionCandidate
         EnergyGained += other.EnergyGained;
         FoodEaten += other.FoodEaten;
         CarrionEaten += other.CarrionEaten;
+        PlantEnergyConsumed += other.PlantEnergyConsumed;
+        MeatEnergyConsumed += other.MeatEnergyConsumed;
+        CarrionEnergyConsumed += other.CarrionEnergyConsumed;
         PreyBites += other.PreyBites;
         PreyKills += other.PreyKills;
         BiteDamageDealt += other.BiteDamageDealt;

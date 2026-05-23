@@ -62,6 +62,17 @@ public class EvolutionGenome
     [Range(0f, 1f)] public float RiskTolerance = 0.5f;
     [Range(0f, 5f)] public float DangerFactor = 0.15f;
 
+
+
+    [Header("v21 Emergent Schooling / Habitat Traits")]
+    [Range(0f, 1f)] public float PreferredDepth01 = 0.5f;
+    [Range(0f, 1f)] public float DepthFlexibility = 0.35f;
+    [Range(0f, 1f)] public float SchoolTightness = 0.45f;
+    [Range(0f, 1f)] public float Leadership = 0.35f;
+    [Range(0f, 1f)] public float FoodSharing = 0.45f;
+    [Range(0f, 1f)] public float Territoriality = 0.08f;
+    [Range(0f, 1f)] public float ActivityCycle = 0.65f;
+
     [Header("Reproduction / Mutation")]
     public float ReproductionEnergyThreshold = 80f;
     [Range(0f, 1f)] public float MutationRate = 0.08f;
@@ -121,6 +132,13 @@ public class EvolutionGenome
         genome.Aggression = 0.12f;
         genome.RiskTolerance = 0.5f;
         genome.DangerFactor = 0.12f;
+        genome.PreferredDepth01 = 0.5f;
+        genome.DepthFlexibility = 0.42f;
+        genome.SchoolTightness = 0.45f;
+        genome.Leadership = 0.35f;
+        genome.FoodSharing = 0.55f;
+        genome.Territoriality = 0.08f;
+        genome.ActivityCycle = 0.65f;
         genome.ReproductionEnergyThreshold = 82f;
         genome.MutationRate = 0.08f;
         genome.MutationStrength = 1f;
@@ -181,6 +199,13 @@ public class EvolutionGenome
         genome.Aggression = UnityEngine.Random.Range(0f, 0.8f);
         genome.RiskTolerance = UnityEngine.Random.Range(0.15f, 1f);
         genome.DangerFactor = UnityEngine.Random.Range(0f, 0.75f);
+        genome.PreferredDepth01 = UnityEngine.Random.Range(0.15f, 0.85f);
+        genome.DepthFlexibility = UnityEngine.Random.Range(0.15f, 0.85f);
+        genome.SchoolTightness = UnityEngine.Random.Range(0.15f, 0.95f);
+        genome.Leadership = UnityEngine.Random.Range(0.05f, 0.95f);
+        genome.FoodSharing = UnityEngine.Random.Range(0.05f, 0.95f);
+        genome.Territoriality = UnityEngine.Random.Range(0f, 0.75f);
+        genome.ActivityCycle = UnityEngine.Random.Range(0.15f, 1f);
         genome.ReproductionEnergyThreshold = UnityEngine.Random.Range(60f, 105f);
         genome.MutationRate = UnityEngine.Random.Range(0.04f, 0.14f);
         genome.MutationStrength = UnityEngine.Random.Range(0.65f, 1.4f);
@@ -271,6 +296,13 @@ public class EvolutionGenome
         child.Aggression = MutateFloat(Aggression, 0.12f, finalMutationRate, finalMutationStrength);
         child.RiskTolerance = MutateFloat(RiskTolerance, 0.12f, finalMutationRate, finalMutationStrength);
         child.DangerFactor = MutateFloat(DangerFactor, 0.16f, finalMutationRate, finalMutationStrength);
+        child.PreferredDepth01 = MutateFloat(PreferredDepth01, 0.08f, finalMutationRate, finalMutationStrength);
+        child.DepthFlexibility = MutateFloat(DepthFlexibility, 0.08f, finalMutationRate, finalMutationStrength);
+        child.SchoolTightness = MutateFloat(SchoolTightness, 0.10f, finalMutationRate, finalMutationStrength);
+        child.Leadership = MutateFloat(Leadership, 0.10f, finalMutationRate, finalMutationStrength);
+        child.FoodSharing = MutateFloat(FoodSharing, 0.10f, finalMutationRate, finalMutationStrength);
+        child.Territoriality = MutateFloat(Territoriality, 0.10f, finalMutationRate, finalMutationStrength);
+        child.ActivityCycle = MutateFloat(ActivityCycle, 0.10f, finalMutationRate, finalMutationStrength);
         child.ReproductionEnergyThreshold = MutateFloat(ReproductionEnergyThreshold, 10f, finalMutationRate, finalMutationStrength);
         child.MutationRate = MutateFloat(MutationRate, 0.02f, finalMutationRate, finalMutationStrength);
         child.MutationStrength = MutateFloat(MutationStrength, 0.15f, finalMutationRate, finalMutationStrength);
@@ -347,6 +379,13 @@ public class EvolutionGenome
         Aggression = Mathf.Clamp01(Aggression);
         RiskTolerance = Mathf.Clamp01(RiskTolerance);
         DangerFactor = Mathf.Clamp(DangerFactor, 0f, 5f);
+        PreferredDepth01 = Mathf.Clamp01(PreferredDepth01);
+        DepthFlexibility = Mathf.Clamp01(DepthFlexibility);
+        SchoolTightness = Mathf.Clamp01(SchoolTightness);
+        Leadership = Mathf.Clamp01(Leadership);
+        FoodSharing = Mathf.Clamp01(FoodSharing);
+        Territoriality = Mathf.Clamp01(Territoriality);
+        ActivityCycle = Mathf.Clamp01(ActivityCycle);
         ReproductionEnergyThreshold = Mathf.Clamp(ReproductionEnergyThreshold, 25f, EnergyCapacity * 0.95f);
         MutationRate = Mathf.Clamp(MutationRate, 0.005f, 0.35f);
         MutationStrength = Mathf.Clamp(MutationStrength, 0.1f, 3f);
@@ -390,6 +429,65 @@ public class EvolutionGenome
         PlantDiet /= total;
         MeatDiet /= total;
         CarrionDiet /= total;
+    }
+
+    public void ReinforceDietUsage(float plantAmount, float meatAmount, float carrionAmount, float learningRate)
+    {
+        float total = Mathf.Max(0.0001f, Mathf.Abs(plantAmount) + Mathf.Abs(meatAmount) + Mathf.Abs(carrionAmount));
+        float rate = Mathf.Clamp01(learningRate);
+
+        PlantDiet = Mathf.Lerp(PlantDiet, Mathf.Clamp01(plantAmount / total), rate);
+        MeatDiet = Mathf.Lerp(MeatDiet, Mathf.Clamp01(meatAmount / total), rate);
+        CarrionDiet = Mathf.Lerp(CarrionDiet, Mathf.Clamp01(carrionAmount / total), rate);
+        NormaliseDietTraits();
+    }
+
+    public void DecayUnusedBehaviourTraits(float rate)
+    {
+        float r = Mathf.Clamp01(rate);
+        Aggression = Mathf.Lerp(Aggression, 0.08f, r * Mathf.Clamp01(1f - MeatDiet));
+        ThreatRange = Mathf.Lerp(ThreatRange, 0.22f, r * Mathf.Clamp01(1f - RiskTolerance));
+        Territoriality = Mathf.Lerp(Territoriality, 0.05f, r * Mathf.Clamp01(1f - Aggression));
+        GroupingChance = Mathf.Lerp(GroupingChance, 0.45f, r * Mathf.Clamp01(PlantDiet + CarrionDiet));
+        ClampValues();
+    }
+
+    public string GetMorphSignature()
+    {
+        return BodyMorphId + "|" + TailMorphId + "|" + FinMorphId + "|" + JawMorphId + "|" + SensorMorphId + "|" + ArmourMorphId + "|" + DorsalFinMorphId + "|" + SpikeMorphId + "|" + GillMorphId;
+    }
+
+    public float GetMorphSimilarity(EvolutionGenome other)
+    {
+        if (other == null)
+        {
+            return 0f;
+        }
+
+        int matches = 0;
+        int total = 9;
+        if (BodyMorphId == other.BodyMorphId) matches++;
+        if (TailMorphId == other.TailMorphId) matches++;
+        if (FinMorphId == other.FinMorphId) matches++;
+        if (JawMorphId == other.JawMorphId) matches++;
+        if (SensorMorphId == other.SensorMorphId) matches++;
+        if (ArmourMorphId == other.ArmourMorphId) matches++;
+        if (DorsalFinMorphId == other.DorsalFinMorphId) matches++;
+        if (SpikeMorphId == other.SpikeMorphId) matches++;
+        if (GillMorphId == other.GillMorphId) matches++;
+
+        float partSimilarity = matches / (float)total;
+        float shapeDifference = 0f;
+        shapeDifference += Mathf.Abs(BodySize - other.BodySize) / 2.8f;
+        shapeDifference += Mathf.Abs(BodyLength - other.BodyLength) / 2.5f;
+        shapeDifference += Mathf.Abs(BodyWidth - other.BodyWidth) / 2.5f;
+        shapeDifference += Mathf.Abs(JawSize - other.JawSize) / 2.5f;
+        shapeDifference += Mathf.Abs(FinSize - other.FinSize) / 2.5f;
+        shapeDifference += Mathf.Abs(TailSize - other.TailSize) / 2.5f;
+        shapeDifference += Mathf.Abs(SensorSize - other.SensorSize) / 2.5f;
+        float shapeSimilarity = 1f - Mathf.Clamp01(shapeDifference / 7f);
+
+        return Mathf.Clamp01(partSimilarity * 0.72f + shapeSimilarity * 0.28f);
     }
 
     public float GetEnergyDrainMultiplier()

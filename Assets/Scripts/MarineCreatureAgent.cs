@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 [RequireComponent(typeof(Rigidbody))]
@@ -14,158 +15,150 @@ public class MarineCreatureAgent : MonoBehaviour
     public string DebugName;
     public CreatureBehaviourType DebugBehaviourType;
 
-    [Header("Energy")]
-    public float BaseEnergyDrainPerSecond = 1.45f;
-    public float ReproductionCooldown = 7f;
+    [Header("Energy / Survival")]
+    public float BaseEnergyDrainPerSecond = 1.0f;
+    public float ReproductionCooldown = 9f;
+    public float LowEnergyRatio = 0.35f;
 
-    [Header("3D Swimming")]
-    public float FoodEatDistance = 1.0f;
-    public float SeparationDistance = 1.8f;
-    public float SwimNoiseStrength = 0.10f;
-    public bool EnableFull3DRoll = true;
-    public float MaxRollAngle = 42f;
-    public float RollResponsiveness = 5f;
-    public float VerticalSwimMultiplier = 1.25f;
-    public float MinimumApproachSpeedScale = 0.28f;
-    public float CloseTargetSlowdownDistance = 2.4f;
-    public float StuckNudgeSpeed = 0.08f;
-    public float StuckNudgeTime = 1.2f;
-
-    [Header("Mouth / Eating Area")]
-    public bool UseMouthBasedEating = true;
-    public float MouthForwardOffset = 0.58f;
-    public float MouthRadius = 0.36f;
-    [Range(5f, 180f)] public float MouthAngle = 92f;
-    public float CloseContactEatForgiveness = 0.2f;
-
-    [Header("Predation")]
-    public float BiteCooldown = 1.85f;
-    public float BaseBiteDamage = 6.5f;
-    public float ArmourDamageReductionPerPoint = 0.13f;
-
-    [Header("Decision Stability")]
-    public float SurvivalFoodPullMultiplier = 2.65f;
-    public float BrainWeightWhenHungry = 0.16f;
-    public float BrainWeightWhenFull = 0.9f;
-    public float SocialWeightWhenHungry = 0.06f;
-    public float SocialWeightWhenFull = 0.65f;
-    public float PreyPullMultiplier = 0.72f;
-    public float WanderTargetRefreshTime = 4.5f;
+    [Header("Evolved Movement Model")]
+    [Tooltip("Minimum swim speed as a ratio of evolved speed. Fish should rarely hard-stop.")]
+    public float MinimumCruiseSpeedScale = 0.28f;
+    public float NormalCruiseSpeedScale = 0.78f;
+    public float HungryCruiseSpeedScale = 1.08f;
+    public float SharpTurnSpeedLoss = 0.55f;
+    public float SteeringAcceleration = 7.5f;
+    public float RotationResponsiveness = 4.5f;
+    public float MaxBankAngle = 34f;
     public float WanderStrength = 0.16f;
+    public float WanderRefreshMin = 2.5f;
+    public float WanderRefreshMax = 6.5f;
+    public float BrainInfluence = 0.08f;
 
-    [Header("Boundary Safety")]
-    public float BoundaryAvoidanceDistance = 7f;
+    [Header("Schooling From Genome")]
+    public float SchoolPerceptionRadius = 10f;
+    public float FriendlySeparationRadius = 1.55f;
+    public int MaxSchoolNeighbours = 34;
+    public float SeparationWeight = 1.35f;
+    public float AlignmentWeight = 1.10f;
+    public float CohesionWeight = 1.05f;
+    public float DifferentMorphSpacingWeight = 0.45f;
+    public float FoodPrioritySchoolReduction = 0.18f;
+    public float MorphSimilarityForSchool = 0.72f;
+    public float HorizontalSeparationBias = 0.12f;
+    public float GroupDangerRadius = 8f;
+    public float GroupDangerWeight = 0.18f;
+
+    [Header("Feeding")]
+    public float FoodEatDistance = 1.0f;
+    public float CloseTargetSlowdownDistance = 2.8f;
+    public float CloseTargetPull = 2.6f;
+    public float FoodQueueRadius = 2.05f;
+    public float FoodQueueStrength = 0.25f;
+    public float MouthForwardOffset = 0.58f;
+    public float MouthRadius = 0.38f;
+    [Range(5f, 180f)] public float MouthAngle = 120f;
+    public float CloseContactEatForgiveness = 0.45f;
+    [Tooltip("When a fish is this close to an edible target, schooling/wander/depth steering are suppressed so the fish commits to feeding instead of stalling near the target.")]
+    public float FeedingCommitDistance = 4.0f;
+    [Tooltip("Extra body-centre forgiveness for eating static food/carrion. This prevents fish from starving while visually touching food but failing a strict mouth angle check.")]
+    public float StaticFoodContactConsumeDistance = 1.45f;
+    [Tooltip("Close feeding uses direct velocity towards the target. Rotation still follows movement, but the fish no longer has to complete a wide turn before making progress.")]
+    public float CloseFeedingDirectMotionDistance = 4.5f;
+    [Range(0f, 1f)] public float FeedingSocialSuppression = 0.08f;
+    public float TargetRetainTime = 2f;
+
+    [Header("Predation / Danger")]
+    public float BiteCooldown = 1.9f;
+    public float BaseBiteDamage = 6f;
+    public float ArmourDamageReductionPerPoint = 0.13f;
+    public float MissedAttackEnergyCost = 1.4f;
+    [Range(0f, 1f)] public float SameMorphAttackAggressionRequired = 0.70f;
+    [Range(0f, 1f)] public float SameMorphAttackMeatRequired = 0.72f;
+    [Range(0f, 1f)] public float StarvingAttackEnergyRatio = 0.26f;
+    [Range(0f, 1f)] public float StarvingAttackAggressionRequired = 0.38f;
+    [Range(0f, 1f)] public float StarvingAttackMeatRequired = 0.64f;
+
+    [Header("Habitat / Depth")]
+    public float DepthPreferenceStrength = 0.95f;
+    public float DepthPadding = 3f;
+    public float BoundaryAvoidanceDistance = 8f;
     public float BoundaryAvoidanceStrength = 5.5f;
-    public float BoundaryHardStopMargin = 0.4f;
-    public float BoundaryVelocityDamping = 0.15f;
-    public bool DebugBoundaryAvoidance;
+    public float BoundaryHardStopMargin = 0.55f;
+    public float BoundaryVelocityDamping = 0.65f;
 
-    [Header("Collision / Anti Stacking")]
-    [Tooltip("The ecosystem uses script checks for eating/biting, so visual colliders can be disabled to stop creatures body-blocking each other.")]
-    public bool DisableBlockingCreatureColliders = true;
-    [Tooltip("Adds one simple trigger sphere to the creature root for selection/debug without letting visual parts block movement.")]
-    public bool UseSimpleRootTriggerCollider = true;
-    public float RootTriggerRadius = 0.85f;
-    [Tooltip("How far creatures try to keep away from each other. This is multiplied by body size.")]
-    public float NeighbourUnstickDistance = 2.05f;
-    public float NeighbourUnstickStrength = 2.2f;
-    public int MaxNeighboursForUnstick = 8;
-    [Range(0f, 1f)] public float VerticalUnstickInfluence = 0.12f;
-    [Tooltip("Pushes creatures gently back toward the middle depth when they have no strong vertical target.")]
-    public float DepthStabilityStrength = 0.12f;
-    [Range(0f, 1f)] public float VerticalDampingWhenCrowded = 0.45f;
-    public bool DebugNeighbourUnstick;
+    [Header("Anti-Stuck / Collision Avoidance")]
+    public bool UseRootLogicCollider = true;
+    public bool RootColliderIsTrigger = true;
+    public float RootColliderRadius = 0.95f;
+    public bool DisableVisualColliders = true;
+    public float PersonalSpaceMultiplier = 1.25f;
+    public float EmergencyUnstickRadiusMultiplier = 0.85f;
+    public float EmergencyUnstickWeight = 2.75f;
+    public float StuckSpeedThreshold = 0.12f;
+    public float StuckCheckTime = 1.2f;
+    public float StuckEscapeDuration = 1.8f;
+    public float StuckEscapeWeight = 2.4f;
+    public float StuckPositionDeltaThreshold = 0.12f;
 
-    [Header("Harmonious Species / Threat Rules")]
-    [Tooltip("Early uniform-baseline creatures are allowed to share space without treating each other as threats.")]
-    public bool BaselineSpeciesAreHarmonious = true;
-    [Range(0f, 1f)] public float HarmlessAggressionLimit = 0.28f;
-    [Range(0f, 1f)] public float HarmlessMeatDietLimit = 0.38f;
-    [Tooltip("When hungry and moving toward food, harmless neighbours are mostly ignored unless actually overlapping.")]
-    [Range(0f, 1f)] public float HungerIgnoreHarmlessNeighbourAt = 0.35f;
-    [Tooltip("Harmless neighbour spacing is mostly horizontal to stop up/down bobbing.")]
-    public float HarmlessNeighbourSlideStrength = 0.85f;
-    [Tooltip("How much harmless crowding is reduced when a creature is hungry and has a food/carrion target.")]
-    [Range(0f, 1f)] public float FoodCrowdSeparationMultiplier = 0.45f;
-    public float TrueThreatFleeMultiplier = 1.25f;
-    [Tooltip("A starving creature can only hunt if it has evolved at least this much aggression.")]
-    [Range(0f, 1f)] public float StarvingHuntAggressionLimit = 0.20f;
-    [Tooltip("A starving creature can only hunt if it has evolved a strong meat diet.")]
-    [Range(0f, 1f)] public float StarvingHuntMeatDietLimit = 0.58f;
-    [Range(0f, 1f)] public float StarvingHuntEnergyRatio = 0.30f;
+    [Header("Evolution Feedback")]
+    public float DietLearningRate = 0.028f;
+    public float BehaviourDecayRate = 0.0015f;
 
-    [Header("v19 Boids Schooling Movement")]
-    [Tooltip("Uses boids-style separation, alignment and cohesion instead of single-neighbour social steering.")]
-    public bool UseBoidMovement = true;
-    public float BoidPerceptionRadius = 7.5f;
-    public float BoidSeparationRadius = 1.75f;
-    public int BoidMaxNeighbours = 18;
-    public float BoidSeparationWeight = 2.6f;
-    public float BoidAlignmentWeight = 1.05f;
-    public float BoidCohesionWeight = 1.25f;
-    public float BoidDifferentGroupSpacingWeight = 0.45f;
-    public float BoidThreatAvoidWeight = 3.2f;
-    [Tooltip("How much same-group separation is allowed to use Y. Low values stop vertical bobbing when fish crowd each other.")]
-    [Range(0f, 1f)] public float BoidSeparationVerticalInfluence = 0.12f;
-    [Tooltip("Hungry fish still school, but food gets priority so they do not starve while trying to stay in formation.")]
-    [Range(0f, 1f)] public float BoidHungryGroupWeightMultiplier = 0.42f;
-    [Tooltip("If true, cohesion/alignment can move the school up/down. Separation still stays mostly horizontal.")]
-    public bool BoidAllowVerticalSchooling = true;
-    [Tooltip("If the current food/carrion/prey target is closer than this, schooling weakens and feeding wins.")]
-    public float BoidCloseFoodPriorityDistance = 3.8f;
-
-    [Header("Debug Visuals")]
+    [Header("Visuals / Debug")]
     public bool ApplyTypeColour = true;
-
-    [Header("Visual Scale Safety")]
+    public bool LocalDebugRays;
+    public bool LocalDebugLabels;
     public bool ScaleCreatureRootByEffectiveBodySize = true;
     public bool DisableLegacyPhenotypeVisuals = true;
 
-    public bool LocalDebugRays;
-    public bool LocalDebugLabels;
-
     private Rigidbody rb;
+    private Renderer[] cachedRenderers;
+    private MaterialPropertyBlock materialBlock;
+
     private FoodSource nearestFood;
     private CarrionSource nearestCarrion;
     private MarineCreatureAgent nearestCreature;
     private MarineCreatureAgent nearestPrey;
-    private Renderer[] cachedRenderers;
-    private MaterialPropertyBlock materialBlock;
+
+    private FoodSource retainedFood;
+    private CarrionSource retainedCarrion;
+    private MarineCreatureAgent retainedPrey;
+    private float retainedTargetTimer;
 
     private float reproductionTimer;
     private float biteTimer;
+    private float aliveTimer;
+    private float senseTimer;
+    private float senseInterval;
+    private float lowProgressTimer;
+    private float stuckEscapeTimer;
+
     private Vector3 lastPosition;
+    private Vector3 wanderDirection;
+    private float wanderTimer;
+    private Vector3 stuckEscapeDirection;
+    private Vector3 currentVelocity;
+
     private Vector3 wantedDirection;
     private Vector3 lastFoodDirection;
     private Vector3 lastCarrionDirection;
     private Vector3 lastCreatureDirection;
     private Vector3 lastPreyDirection;
     private Vector3 lastBoundaryPush;
-    private Vector3 lastNeighbourPush;
-    private Vector3 lastBoidCohesion;
-    private Vector3 lastBoidAlignment;
-    private Vector3 lastBoidSeparation;
-    private Vector3 lastBoidThreatAvoid;
-    private Vector3 lastBoidGroupCentre;
-    private int lastBoidSameGroupCount;
-    private int lastBoidThreatCount;
-    private Vector3 wanderDirection;
-    private float wanderTimer;
-    private float aliveTimer;
-    private float lowSpeedNearTargetTimer;
-    private string debugMoveState = "Wander";
-    private string debugVerticalReason = "Stable";
-    private bool debugNearestCreatureIsThreat;
+    private Vector3 lastSchoolCohesion;
+    private Vector3 lastSchoolAlignment;
+    private Vector3 lastSchoolSeparation;
+    private Vector3 lastThreatAvoidance;
+    private Vector3 lastEmergencyUnstick;
+    private int lastFriendlyCount;
+    private int lastThreatCount;
+    private int lastDifferentCount;
+    private string debugMoveState = "Initialising";
+    private string debugVerticalReason = "Initialising";
 
     public void Initialise(EvolutionCandidate candidate)
     {
-        Candidate = candidate;
-
-        if (Candidate == null)
-        {
-            Candidate = new EvolutionCandidate(EvolutionGenome.CreateBaseline());
-        }
-
+        Candidate = candidate ?? new EvolutionCandidate(EvolutionGenome.CreateBaseline());
         if (Candidate.Genome == null)
         {
             Candidate.Genome = EvolutionGenome.CreateBaseline();
@@ -184,36 +177,37 @@ public class MarineCreatureAgent : MonoBehaviour
         DebugBehaviourType = Candidate.BehaviourType;
         gameObject.name = "Creature_" + DebugName;
 
-        CurrentEnergy = EffectiveStats.EnergyCapacity * 0.9f;
+        rb = GetComponent<Rigidbody>();
+        rb.useGravity = false;
+        rb.linearDamping = 1.85f;
+        rb.angularDamping = 5.0f;
+        rb.interpolation = RigidbodyInterpolation.Interpolate;
+        rb.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
+
         transform.localScale = ScaleCreatureRootByEffectiveBodySize ? Vector3.one * EffectiveStats.BodySize : Vector3.one;
-        lastPosition = transform.position;
+        CurrentEnergy = EffectiveStats.EnergyCapacity * 0.92f;
+
         aliveTimer = 0f;
-        lowSpeedNearTargetTimer = 0f;
+        lowProgressTimer = 0f;
+        retainedTargetTimer = 0f;
         reproductionTimer = Random.Range(1f, ReproductionCooldown);
         biteTimer = Random.Range(0f, BiteCooldown);
+        senseInterval = Random.Range(0.08f, 0.18f);
+        senseTimer = Random.Range(0f, senseInterval);
+        lastPosition = transform.position;
+        currentVelocity = Vector3.zero;
         PickNewWanderDirection();
-
-        if (rb == null)
-        {
-            rb = GetComponent<Rigidbody>();
-        }
-
-        rb.useGravity = false;
-        rb.linearDamping = 2.4f;
-        rb.angularDamping = 5.5f;
-        rb.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
-        rb.interpolation = RigidbodyInterpolation.Interpolate;
 
         ApplyMorphVisuals();
 
-        if (DisableBlockingCreatureColliders)
+        if (DisableVisualColliders)
         {
-            DisableBlockingCollidersOnCreature();
+            DisableBlockingCollidersOnVisuals();
         }
 
-        if (UseSimpleRootTriggerCollider)
+        if (UseRootLogicCollider)
         {
-            EnsureSimpleRootTriggerCollider();
+            EnsureRootLogicCollider();
         }
 
         CacheRenderers(true);
@@ -249,9 +243,16 @@ public class MarineCreatureAgent : MonoBehaviour
         aliveTimer += Time.fixedDeltaTime;
         reproductionTimer -= Time.fixedDeltaTime;
         biteTimer -= Time.fixedDeltaTime;
+        senseTimer -= Time.fixedDeltaTime;
+        retainedTargetTimer -= Time.fixedDeltaTime;
 
-        SenseEnvironment();
-        RunBrainMovement();
+        if (senseTimer <= 0f)
+        {
+            senseTimer = senseInterval;
+            SenseEnvironment();
+        }
+
+        RunEvolvedMovement();
         DrainEnergy();
         TryEatFood();
         TryEatCarrion();
@@ -263,19 +264,6 @@ public class MarineCreatureAgent : MonoBehaviour
         if (CurrentEnergy <= 0f)
         {
             Die(false);
-        }
-    }
-
-    private void CacheRenderers(bool forceRefresh = false)
-    {
-        if (forceRefresh || cachedRenderers == null || cachedRenderers.Length == 0)
-        {
-            cachedRenderers = GetComponentsInChildren<Renderer>();
-        }
-
-        if (materialBlock == null)
-        {
-            materialBlock = new MaterialPropertyBlock();
         }
     }
 
@@ -299,44 +287,77 @@ public class MarineCreatureAgent : MonoBehaviour
 
         builder.MorphLibrary = MorphLibrary;
         builder.UseTypeColour = ApplyTypeColour;
-        Color colour = CreatureDebugTypeUtility.GetTypeColour(Candidate.BehaviourType);
-        builder.Build(Candidate.Genome, EffectiveStats, colour);
+        builder.Build(Candidate.Genome, EffectiveStats, CreatureDebugTypeUtility.GetTypeColour(Candidate.BehaviourType));
     }
 
-
-    private void DisableBlockingCollidersOnCreature()
+    private void CacheRenderers(bool forceRefresh = false)
     {
-        Collider[] colliders = GetComponentsInChildren<Collider>(true);
-
-        for (int i = 0; i < colliders.Length; i++)
+        if (forceRefresh || cachedRenderers == null || cachedRenderers.Length == 0)
         {
-            Collider creatureCollider = colliders[i];
+            cachedRenderers = GetComponentsInChildren<Renderer>(true);
+        }
 
-            if (creatureCollider == null)
+        if (materialBlock == null)
+        {
+            materialBlock = new MaterialPropertyBlock();
+        }
+    }
+
+    private void ApplyDebugColour()
+    {
+        if (!ApplyTypeColour || cachedRenderers == null || Candidate == null)
+        {
+            return;
+        }
+
+        Color colour = CreatureDebugTypeUtility.GetTypeColour(Candidate.BehaviourType);
+        for (int i = 0; i < cachedRenderers.Length; i++)
+        {
+            Renderer rendererToColour = cachedRenderers[i];
+            if (rendererToColour == null)
             {
                 continue;
             }
 
-            // Eating, carrion and predation are all script-driven in this prototype.
-            // Physical colliders on visual morph parts make creatures wedge into each other.
-            creatureCollider.enabled = false;
+            rendererToColour.GetPropertyBlock(materialBlock);
+            materialBlock.SetColor("_BaseColor", colour);
+            materialBlock.SetColor("_Color", colour);
+            rendererToColour.SetPropertyBlock(materialBlock);
         }
     }
 
-    private void EnsureSimpleRootTriggerCollider()
+    private void DisableBlockingCollidersOnVisuals()
     {
-        SphereCollider rootTrigger = GetComponent<SphereCollider>();
-
-        if (rootTrigger == null)
+        Collider[] colliders = GetComponentsInChildren<Collider>(true);
+        for (int i = 0; i < colliders.Length; i++)
         {
-            rootTrigger = gameObject.AddComponent<SphereCollider>();
+            if (colliders[i] == null || colliders[i].gameObject == gameObject)
+            {
+                continue;
+            }
+
+            colliders[i].enabled = false;
+        }
+    }
+
+    private void EnsureRootLogicCollider()
+    {
+        SphereCollider rootCollider = GetComponent<SphereCollider>();
+        if (rootCollider == null)
+        {
+            rootCollider = gameObject.AddComponent<SphereCollider>();
         }
 
         float size = EffectiveStats != null ? Mathf.Max(0.1f, EffectiveStats.BodySize) : 1f;
-        rootTrigger.isTrigger = true;
-        rootTrigger.enabled = true;
-        rootTrigger.center = Vector3.zero;
-        rootTrigger.radius = Mathf.Max(0.05f, RootTriggerRadius * size);
+        rootCollider.enabled = true;
+        rootCollider.isTrigger = RootColliderIsTrigger;
+        rootCollider.center = Vector3.zero;
+        rootCollider.radius = Mathf.Max(0.1f, RootColliderRadius * size);
+
+        if (rb != null)
+        {
+            rb.detectCollisions = true;
+        }
     }
 
     private void RemoveLegacyPhenotypeVisuals()
@@ -378,919 +399,636 @@ public class MarineCreatureAgent : MonoBehaviour
         }
     }
 
-    private void ApplyDebugColour()
-    {
-        if (!ApplyTypeColour || cachedRenderers == null || Candidate == null)
-        {
-            return;
-        }
-
-        Color colour = CreatureDebugTypeUtility.GetTypeColour(Candidate.BehaviourType);
-
-        for (int i = 0; i < cachedRenderers.Length; i++)
-        {
-            Renderer rendererToColour = cachedRenderers[i];
-
-            if (rendererToColour == null)
-            {
-                continue;
-            }
-
-            rendererToColour.GetPropertyBlock(materialBlock);
-            materialBlock.SetColor("_BaseColor", colour);
-            materialBlock.SetColor("_Color", colour);
-            rendererToColour.SetPropertyBlock(materialBlock);
-        }
-    }
-
     private void SenseEnvironment()
     {
-        if (EvolutionEcosystemManager.Instance == null)
+        EvolutionEcosystemManager manager = EvolutionEcosystemManager.Instance;
+        if (manager == null)
         {
             return;
         }
 
         float senseRange = EffectiveStats != null ? EffectiveStats.VisionRange : Candidate.Genome.VisionRange;
-        nearestFood = EvolutionEcosystemManager.Instance.GetNearestFood(GetMouthWorldPosition(), senseRange);
-        nearestCarrion = EvolutionEcosystemManager.Instance.GetNearestCarrion(GetMouthWorldPosition(), senseRange);
-        nearestCreature = EvolutionEcosystemManager.Instance.GetNearestCreature(this, transform.position, senseRange);
-        nearestPrey = EvolutionEcosystemManager.Instance.GetNearestPrey(this, transform.position, senseRange);
+        Vector3 mouth = GetMouthWorldPosition();
+        nearestFood = manager.GetNearestFood(mouth, senseRange);
+        nearestCarrion = manager.GetNearestCarrion(mouth, senseRange);
+        nearestCreature = manager.GetNearestCreature(this, transform.position, senseRange);
+        nearestPrey = manager.GetNearestPrey(this, transform.position, senseRange);
+
+        if (nearestFood != null && !nearestFood.IsConsumed)
+        {
+            retainedFood = nearestFood;
+            retainedTargetTimer = TargetRetainTime;
+        }
+
+        if (nearestCarrion != null && !nearestCarrion.IsConsumed)
+        {
+            retainedCarrion = nearestCarrion;
+            retainedTargetTimer = TargetRetainTime;
+        }
+
+        if (nearestPrey != null && CanAttackPrey(nearestPrey))
+        {
+            retainedPrey = nearestPrey;
+            retainedTargetTimer = TargetRetainTime;
+        }
+
+        if (retainedTargetTimer <= 0f)
+        {
+            retainedFood = null;
+            retainedCarrion = null;
+            retainedPrey = null;
+        }
     }
 
-    private void RunBrainMovement()
+    private void RunEvolvedMovement()
     {
-        Vector3 toFood = GetDirectionAndNormalisedDistance(nearestFood != null ? nearestFood.transform.position : (Vector3?)null, out float foodDistanceNormalised);
-        Vector3 toCarrion = GetDirectionAndNormalisedDistance(nearestCarrion != null ? nearestCarrion.transform.position : (Vector3?)null, out float carrionDistanceNormalised);
-        Vector3 toCreature = GetDirectionAndNormalisedDistance(nearestCreature != null ? nearestCreature.transform.position : (Vector3?)null, out float creatureDistanceNormalised);
-        Vector3 toPrey = GetDirectionAndNormalisedDistance(nearestPrey != null ? nearestPrey.GetBiteTargetPosition() : (Vector3?)null, out float preyDistanceNormalised);
-
-        lastFoodDirection = toFood;
-        lastCarrionDirection = toCarrion;
-        lastCreatureDirection = toCreature;
-        lastPreyDirection = toPrey;
-
         float energyRatio = Mathf.Clamp01(CurrentEnergy / Mathf.Max(0.01f, EffectiveStats.EnergyCapacity));
         float hungerPressure = 1f - energyRatio;
 
-        float[] inputs =
+        Vector3 targetPull = GetFeedingTargetPull(hungerPressure);
+        Vector3 schoolPull = GetEvolvedSchoolingPull(hungerPressure);
+        Vector3 dangerPull = GetDangerAvoidancePull(hungerPressure);
+        Vector3 depthPull = GetDepthPreferencePull(targetPull, dangerPull, hungerPressure);
+        Vector3 boundaryPull = GetBoundaryAvoidanceDirection();
+        Vector3 closeTargetPull = GetCloseTargetPull(hungerPressure);
+        Vector3 queuePull = GetFoodQueuePull(hungerPressure);
+        Vector3 brainPull = GetBrainPull(energyRatio);
+        Vector3 wanderPull = GetWanderPull(energyRatio);
+        Vector3 emergencyPull = GetEmergencyUnstickPull();
+
+        bool feedingCommit = ShouldCommitToStaticFeedingTarget(hungerPressure);
+        if (feedingCommit)
         {
-            energyRatio,
-            toFood.x,
-            toFood.y,
-            toFood.z,
-            1f - foodDistanceNormalised,
-            toCreature.x,
-            toCreature.y,
-            toCreature.z,
-            1f - creatureDistanceNormalised,
-            1f - carrionDistanceNormalised,
-            1f - preyDistanceNormalised,
-            Random.Range(-1f, 1f)
-        };
-
-        float[] outputs = Candidate.Genome.Brain.Evaluate(inputs);
-        float outputX = outputs.Length > 0 ? outputs[0] : 0f;
-        float outputY = outputs.Length > 1 ? outputs[1] : 0f;
-        float outputZ = outputs.Length > 2 ? outputs[2] : 0f;
-        Vector3 brainDirection = new Vector3(outputX, outputY, outputZ);
-        brainDirection.y *= VerticalSwimMultiplier * EffectiveStats.VerticalControl;
-
-        UpdateWanderDirection();
-
-        float brainWeight = Mathf.Lerp(BrainWeightWhenHungry, BrainWeightWhenFull, energyRatio);
-        float survivalPull = Mathf.Lerp(SurvivalFoodPullMultiplier, 0.8f, energyRatio);
-        float plantNeed = Candidate.Genome.PlantDiet * Candidate.Genome.HungerDrive * hungerPressure * survivalPull;
-        float carrionNeed = Candidate.Genome.CarrionDiet * Candidate.Genome.HungerDrive * hungerPressure * survivalPull;
-        float preyNeed = Candidate.Genome.MeatDiet * Candidate.Genome.Aggression * hungerPressure * PreyPullMultiplier;
-
-        Vector3 foodPull = toFood * plantNeed;
-        Vector3 carrionPull = toCarrion * carrionNeed;
-        Vector3 preyPull = toPrey * preyNeed;
-
-        float socialWeight = Mathf.Lerp(SocialWeightWhenHungry, SocialWeightWhenFull, energyRatio);
-        bool useBoids = IsBoidMovementEnabled();
-        Vector3 boidSteering = useBoids ? GetBoidSteering(hungerPressure, socialWeight) : Vector3.zero;
-        Vector3 groupingPull = Vector3.zero;
-        Vector3 separationPush = Vector3.zero;
-        Vector3 neighbourUnstickPush = Vector3.zero;
-
-        if (!useBoids)
-        {
-            bool harmlessNeighbour = IsHarmlessNeighbour(nearestCreature);
-            bool ignoreHarmlessForFood = ShouldIgnoreHarmlessNeighbourForFood(nearestCreature, hungerPressure);
-            float harmlessSocialMultiplier = harmlessNeighbour && ignoreHarmlessForFood ? 0f : 1f;
-            groupingPull = toCreature * Candidate.Genome.GroupingChance * Candidate.Genome.AttractionRange * socialWeight * harmlessSocialMultiplier;
-            separationPush = GetSocialSeparationPush(toCreature, socialWeight, hungerPressure);
-            neighbourUnstickPush = GetNeighbourUnstickPush(hungerPressure);
+            // Once food/carrion is close, the fish must commit to feeding.
+            // This prevents the old loop where schooling/queue/depth forces cancelled the food pull
+            // and the fish starved while sitting beside a resource.
+            float suppression = Mathf.Clamp01(FeedingSocialSuppression);
+            schoolPull *= suppression;
+            depthPull = Vector3.zero;
+            queuePull = Vector3.zero;
+            brainPull *= 0.15f;
+            wanderPull = Vector3.zero;
+            closeTargetPull *= 1.65f;
         }
 
-        lastNeighbourPush = useBoids ? (lastBoidSeparation + lastBoidThreatAvoid) : neighbourUnstickPush;
-        Vector3 wanderPull = wanderDirection * WanderStrength * Mathf.Lerp(0.25f, 1f, energyRatio);
-        brainDirection *= brainWeight;
+        lastBoundaryPush = boundaryPull;
 
-        Vector3 noise = Random.insideUnitSphere * SwimNoiseStrength;
-        noise.y *= 0.45f;
-
-        Vector3 boundaryPush = GetBoundaryAvoidanceDirection();
-        lastBoundaryPush = boundaryPush;
-
-        wantedDirection = brainDirection + foodPull + carrionPull + preyPull + groupingPull + separationPush + neighbourUnstickPush + boidSteering + boundaryPush + wanderPull + noise;
-        wantedDirection += GetCloseTargetCorrection(hungerPressure);
-        wantedDirection += GetDepthStabilityCorrection();
-        StabiliseVerticalMovementWhenCrowded(ref wantedDirection, neighbourUnstickPush);
-        PreventOutwardDirectionAtBounds(ref wantedDirection);
-        UpdateDebugMovementState(hungerPressure, foodPull, carrionPull, preyPull, separationPush, neighbourUnstickPush, boidSteering, boundaryPush);
-
-        if (wantedDirection.sqrMagnitude < 0.05f)
+        Vector3 combined = targetPull + schoolPull + dangerPull + depthPull + boundaryPull + closeTargetPull + queuePull + brainPull + wanderPull + emergencyPull;
+        if (stuckEscapeTimer > 0f)
         {
-            wantedDirection = GetDirectionToSimulationCentre();
+            stuckEscapeTimer -= Time.fixedDeltaTime;
+            combined += stuckEscapeDirection * StuckEscapeWeight;
         }
 
-        wantedDirection.Normalize();
-        MoveTowardsWantedDirection(GetApproachSpeedScale());
+        if (combined.sqrMagnitude < 0.025f)
+        {
+            combined = transform.forward.sqrMagnitude > 0.01f ? transform.forward : Vector3.forward;
+        }
+
+        PreventOutwardDirectionAtBounds(ref combined);
+        if (combined.sqrMagnitude < 0.025f)
+        {
+            combined = GetDirectionToSimulationCentre();
+        }
+
+        wantedDirection = combined.normalized;
+        UpdateDebugMovementState(hungerPressure, targetPull, dangerPull, schoolPull, boundaryPull, emergencyPull);
+        MoveFish(hungerPressure);
+        UpdateStuckDetection(combined);
     }
 
-    private bool IsBoidMovementEnabled()
+    private Vector3 GetFeedingTargetPull(float hungerPressure)
     {
-        EcosystemDebugSettings settings = EcosystemDebugSettings.Instance;
-        return UseBoidMovement && (settings == null || settings.EnableBoidMovement);
+        Vector3 pull = Vector3.zero;
+        Vector3? targetPosition = null;
+        string targetKind = GetPreferredFoodKind();
+
+        if (targetKind == "Meat" && nearestPrey != null && CanAttackPrey(nearestPrey))
+        {
+            targetPosition = nearestPrey.GetBiteTargetPosition();
+        }
+        else if (targetKind == "Carrion" && nearestCarrion != null && !nearestCarrion.IsConsumed)
+        {
+            targetPosition = nearestCarrion.transform.position;
+        }
+        else if (targetKind == "Plant" && nearestFood != null && !nearestFood.IsConsumed)
+        {
+            targetPosition = nearestFood.transform.position;
+        }
+
+        if (!targetPosition.HasValue)
+        {
+            if (nearestFood != null && !nearestFood.IsConsumed && Candidate.Genome.PlantDiet >= 0.12f)
+            {
+                targetPosition = nearestFood.transform.position;
+            }
+            else if (nearestCarrion != null && !nearestCarrion.IsConsumed && Candidate.Genome.CarrionDiet >= 0.12f)
+            {
+                targetPosition = nearestCarrion.transform.position;
+            }
+            else if (nearestPrey != null && CanAttackPrey(nearestPrey))
+            {
+                targetPosition = nearestPrey.GetBiteTargetPosition();
+            }
+        }
+
+        if (targetPosition.HasValue)
+        {
+            Vector3 toTarget = targetPosition.Value - GetMouthWorldPosition();
+            float distance = toTarget.magnitude;
+            if (distance > 0.001f)
+            {
+                float hunger = Mathf.Lerp(0.55f, 3.1f, Mathf.Clamp01(hungerPressure));
+                pull += toTarget.normalized * hunger * Mathf.Lerp(0.75f, 1.3f, Candidate.Genome.HungerDrive);
+            }
+        }
+
+        lastFoodDirection = DirectionTo(nearestFood != null && !nearestFood.IsConsumed ? nearestFood.transform.position : (Vector3?)null);
+        lastCarrionDirection = DirectionTo(nearestCarrion != null && !nearestCarrion.IsConsumed ? nearestCarrion.transform.position : (Vector3?)null);
+        lastPreyDirection = DirectionTo(nearestPrey != null && CanAttackPrey(nearestPrey) ? nearestPrey.GetBiteTargetPosition() : (Vector3?)null);
+        return pull;
     }
 
-    private Vector3 GetBoidSteering(float hungerPressure, float socialWeight)
+    private string GetPreferredFoodKind()
     {
-        lastBoidCohesion = Vector3.zero;
-        lastBoidAlignment = Vector3.zero;
-        lastBoidSeparation = Vector3.zero;
-        lastBoidThreatAvoid = Vector3.zero;
-        lastBoidGroupCentre = transform.position;
-        lastBoidSameGroupCount = 0;
-        lastBoidThreatCount = 0;
+        float plant = Candidate.Genome.PlantDiet;
+        float meat = Candidate.Genome.MeatDiet;
+        float carrion = Candidate.Genome.CarrionDiet;
+
+        if (meat >= plant && meat >= carrion)
+        {
+            return "Meat";
+        }
+
+        if (carrion >= plant && carrion >= meat)
+        {
+            return "Carrion";
+        }
+
+        return "Plant";
+    }
+
+    private Vector3 GetEvolvedSchoolingPull(float hungerPressure)
+    {
+        lastSchoolCohesion = Vector3.zero;
+        lastSchoolAlignment = Vector3.zero;
+        lastSchoolSeparation = Vector3.zero;
+        lastEmergencyUnstick = Vector3.zero;
+        lastFriendlyCount = 0;
+        lastDifferentCount = 0;
 
         EvolutionEcosystemManager manager = EvolutionEcosystemManager.Instance;
-        if (manager == null || EffectiveStats == null)
+        if (manager == null || Candidate == null || Candidate.Genome == null)
         {
             return Vector3.zero;
         }
 
-        System.Collections.Generic.List<MarineCreatureAgent> creatures = manager.GetActiveCreatures();
+        List<MarineCreatureAgent> creatures = manager.GetActiveCreatures();
         if (creatures == null || creatures.Count <= 1)
         {
             return Vector3.zero;
         }
 
         Vector3 ownPosition = rb != null ? rb.position : transform.position;
-        float ownSize = Mathf.Max(0.1f, EffectiveStats.BodySize);
-        float perceptionRadius = Mathf.Max(0.5f, BoidPerceptionRadius * Mathf.Lerp(0.85f, 1.25f, Candidate.Genome.AttractionRange));
-        float separationRadius = Mathf.Max(0.25f, BoidSeparationRadius * ownSize);
-        Vector3 cohesionCentre = Vector3.zero;
-        Vector3 alignment = Vector3.zero;
+        float ownRadius = GetPersonalRadius();
+        float schoolDrive = Mathf.Clamp01(Candidate.Genome.GroupingChance * 0.65f + Candidate.Genome.SchoolTightness * 0.45f + Candidate.Genome.FoodSharing * 0.15f);
+        float schoolReductionNearFood = HasCloseFoodTarget() ? Mathf.Lerp(1f, FoodPrioritySchoolReduction, hungerPressure) : 1f;
+        float cohesionWeight = CohesionWeight * schoolDrive * schoolReductionNearFood;
+        float alignmentWeight = AlignmentWeight * schoolDrive * schoolReductionNearFood;
+        float separationWeight = SeparationWeight * Mathf.Lerp(1.25f, 0.65f, Candidate.Genome.SchoolTightness);
+
+        Vector3 friendlyCentre = Vector3.zero;
+        Vector3 friendlyDirection = Vector3.zero;
         Vector3 separation = Vector3.zero;
-        Vector3 differentGroupSpacing = Vector3.zero;
-        Vector3 threatAvoidance = Vector3.zero;
-        int sameGroupCount = 0;
+        Vector3 differentSpacing = Vector3.zero;
+        int friendlyCount = 0;
         int separationCount = 0;
-        int differentGroupCount = 0;
-        int threatCount = 0;
-        int usedNeighbours = 0;
+        int differentCount = 0;
+        int used = 0;
 
         for (int i = 0; i < creatures.Count; i++)
         {
             MarineCreatureAgent other = creatures[i];
-            if (other == null || other == this || other.EffectiveStats == null || other.Candidate == null || other.Candidate.Genome == null)
+            if (other == null || other == this || other.Candidate == null || other.Candidate.Genome == null || other.EffectiveStats == null)
             {
                 continue;
             }
 
             Vector3 otherPosition = other.transform.position;
-            Vector3 offsetFromOther = ownPosition - otherPosition;
-            float distance = offsetFromOther.magnitude;
-            if (distance <= 0.001f)
+            Vector3 awayVector = ownPosition - otherPosition;
+            float distance = awayVector.magnitude;
+            if (distance <= 0.0001f)
             {
-                Vector2 randomFlat = Random.insideUnitCircle.normalized;
-                if (randomFlat.sqrMagnitude < 0.01f)
-                {
-                    randomFlat = Vector2.right;
-                }
-
-                offsetFromOther = new Vector3(randomFlat.x, 0f, randomFlat.y);
-                distance = 0.001f;
+                awayVector = GetFallbackSideDirection();
+                distance = 0.0001f;
             }
 
-            if (distance > perceptionRadius)
+            if (distance > SchoolPerceptionRadius)
             {
                 continue;
             }
 
-            bool actualThreat = other.CanAttackPrey(this);
-            bool sameGroup = IsSameBoidGroup(other) || IsHarmlessNeighbour(other);
-            Vector3 awayDirection = offsetFromOther / distance;
-
-            if (actualThreat)
+            bool friendly = IsFriendlyByMorph(other);
+            bool realThreat = IsActualThreat(other);
+            if (realThreat)
             {
-                Vector3 threatDir = awayDirection;
-                if (!IsVerticalAvoidanceEnabled())
-                {
-                    threatDir.y = 0f;
-                }
-
-                if (threatDir.sqrMagnitude <= 0.0001f)
-                {
-                    threatDir = GetHorizontalAwayFrom(otherPosition);
-                }
-
-                float threatStrength = 1f - Mathf.Clamp01(distance / Mathf.Max(0.01f, perceptionRadius));
-                threatAvoidance += threatDir.normalized * threatStrength * threatStrength;
-                threatCount++;
-                usedNeighbours++;
-                if (usedNeighbours >= Mathf.Max(1, BoidMaxNeighbours)) break;
                 continue;
             }
 
-            if (sameGroup)
+            float otherRadius = other.GetPersonalRadius();
+            float personalSpace = (ownRadius + otherRadius) * PersonalSpaceMultiplier;
+            Vector3 away = awayVector / distance;
+            Vector3 mostlySidewaysAway = away;
+            mostlySidewaysAway.y *= HorizontalSeparationBias;
+            if (mostlySidewaysAway.sqrMagnitude <= 0.0001f)
             {
-                cohesionCentre += otherPosition;
-
-                Vector3 otherVelocity = other.rb != null ? other.rb.linearVelocity : other.transform.forward;
-                if (otherVelocity.sqrMagnitude <= 0.001f)
-                {
-                    otherVelocity = other.transform.forward;
-                }
-                alignment += otherVelocity.normalized;
-
-                sameGroupCount++;
+                mostlySidewaysAway = GetHorizontalAwayFrom(otherPosition);
             }
-            else if (distance < separationRadius * 1.15f)
+            mostlySidewaysAway.Normalize();
+
+            if (friendly)
             {
-                Vector3 sideAway = awayDirection;
-                sideAway.y *= BoidSeparationVerticalInfluence;
-                if (sideAway.sqrMagnitude <= 0.0001f)
+                float leaderWeight = Mathf.Lerp(0.65f, 1.45f, other.GetLeadershipWeight());
+                friendlyCentre += otherPosition * leaderWeight;
+                Vector3 otherVelocity = other.GetCurrentVelocityOrForward();
+                friendlyDirection += otherVelocity.normalized * leaderWeight;
+                friendlyCount++;
+
+                if (distance < personalSpace)
                 {
-                    sideAway = GetHorizontalAwayFrom(otherPosition);
+                    float t = 1f - Mathf.Clamp01(distance / personalSpace);
+                    float emergency = distance < personalSpace * EmergencyUnstickRadiusMultiplier ? EmergencyUnstickWeight : 1f;
+                    separation += mostlySidewaysAway * t * t * emergency;
+                    separationCount++;
                 }
-                float diffStrength = 1f - Mathf.Clamp01(distance / Mathf.Max(0.01f, separationRadius * 1.15f));
-                differentGroupSpacing += sideAway.normalized * diffStrength;
-                differentGroupCount++;
             }
-
-            if (distance < separationRadius)
+            else
             {
-                Vector3 sepDirection = awayDirection;
-                sepDirection.y *= BoidSeparationVerticalInfluence;
-                if (sepDirection.sqrMagnitude <= 0.0001f)
+                float differentSpace = personalSpace * Mathf.Lerp(1.0f, 1.45f, Candidate.Genome.Territoriality);
+                if (distance < differentSpace)
                 {
-                    sepDirection = GetHorizontalAwayFrom(otherPosition);
+                    float t = 1f - Mathf.Clamp01(distance / differentSpace);
+                    differentSpacing += mostlySidewaysAway * t * t;
+                    differentCount++;
                 }
-
-                float sepStrength = 1f - Mathf.Clamp01(distance / Mathf.Max(0.01f, separationRadius));
-                separation += sepDirection.normalized * sepStrength * sepStrength;
-                separationCount++;
             }
 
-            usedNeighbours++;
-            if (usedNeighbours >= Mathf.Max(1, BoidMaxNeighbours))
+            used++;
+            if (used >= MaxSchoolNeighbours)
             {
                 break;
             }
         }
 
-        bool hasFoodTarget = GetPrimaryFoodTargetPosition().HasValue;
-        float foodPriorityMultiplier = 1f;
-        Vector3? target = GetPrimaryFoodTargetPosition();
-        if (target.HasValue)
+        if (friendlyCount > 0)
         {
-            float targetDistance = Vector3.Distance(GetMouthWorldPosition(), target.Value);
-            if (targetDistance < BoidCloseFoodPriorityDistance)
+            friendlyCentre /= friendlyCount;
+            Vector3 toCentre = friendlyCentre - ownPosition;
+            if (toCentre.sqrMagnitude > 0.001f)
             {
-                foodPriorityMultiplier = Mathf.Lerp(0.25f, 1f, Mathf.Clamp01(targetDistance / Mathf.Max(0.01f, BoidCloseFoodPriorityDistance)));
-            }
-        }
-
-        float groupDrive = Mathf.Clamp01(0.35f + Candidate.Genome.GroupingChance + Candidate.Genome.AttractionRange * 0.35f);
-        float hungryMultiplier = hasFoodTarget ? Mathf.Lerp(1f, BoidHungryGroupWeightMultiplier, hungerPressure) : 1f;
-        float groupWeight = socialWeight * groupDrive * hungryMultiplier * foodPriorityMultiplier;
-
-        if (sameGroupCount > 0)
-        {
-            cohesionCentre /= sameGroupCount;
-            lastBoidGroupCentre = cohesionCentre;
-
-            Vector3 cohesionDirection = cohesionCentre - ownPosition;
-            if (!BoidAllowVerticalSchooling)
-            {
-                cohesionDirection.y = 0f;
+                lastSchoolCohesion = toCentre.normalized * cohesionWeight;
             }
 
-            if (cohesionDirection.sqrMagnitude > 0.0001f)
+            friendlyDirection /= friendlyCount;
+            if (friendlyDirection.sqrMagnitude > 0.001f)
             {
-                lastBoidCohesion = cohesionDirection.normalized * BoidCohesionWeight * groupWeight;
-            }
-
-            alignment /= sameGroupCount;
-            if (!BoidAllowVerticalSchooling)
-            {
-                alignment.y = 0f;
-            }
-
-            if (alignment.sqrMagnitude > 0.0001f)
-            {
-                lastBoidAlignment = alignment.normalized * BoidAlignmentWeight * groupWeight;
+                lastSchoolAlignment = friendlyDirection.normalized * alignmentWeight;
             }
         }
 
         if (separationCount > 0)
         {
-            lastBoidSeparation = separation.normalized * BoidSeparationWeight;
+            lastSchoolSeparation = separation.normalized * separationWeight;
         }
 
-        if (differentGroupCount > 0)
+        if (differentCount > 0)
         {
-            lastBoidSeparation += differentGroupSpacing.normalized * BoidDifferentGroupSpacingWeight;
+            lastSchoolSeparation += differentSpacing.normalized * DifferentMorphSpacingWeight * Mathf.Lerp(0.55f, 1.25f, Candidate.Genome.Territoriality + Candidate.Genome.Aggression * 0.35f);
         }
 
-        if (threatCount > 0)
-        {
-            lastBoidThreatAvoid = threatAvoidance.normalized * BoidThreatAvoidWeight * TrueThreatFleeMultiplier;
-        }
-
-        lastBoidSameGroupCount = sameGroupCount;
-        lastBoidThreatCount = threatCount;
-        return lastBoidCohesion + lastBoidAlignment + lastBoidSeparation + lastBoidThreatAvoid;
+        lastFriendlyCount = friendlyCount;
+        lastDifferentCount = differentCount;
+        return lastSchoolCohesion + lastSchoolAlignment + lastSchoolSeparation;
     }
 
-    private bool IsSameBoidGroup(MarineCreatureAgent other)
+    private Vector3 GetDangerAvoidancePull(float hungerPressure)
     {
-        if (other == null || Candidate == null || Candidate.Genome == null || other.Candidate == null || other.Candidate.Genome == null)
-        {
-            return false;
-        }
+        lastThreatAvoidance = Vector3.zero;
+        lastThreatCount = 0;
 
-        if (BaselineSpeciesAreHarmonious && IsHarmlessNeighbour(other))
-        {
-            return true;
-        }
-
-        return CreatureDebugTypeUtility.GetSpeciesGroupName(Candidate.Genome) == CreatureDebugTypeUtility.GetSpeciesGroupName(other.Candidate.Genome);
-    }
-
-    private Vector3 GetSocialSeparationPush(Vector3 toCreature, float socialWeight, float hungerPressure)
-    {
-        Vector3 separationPush = Vector3.zero;
-        debugNearestCreatureIsThreat = false;
-
-        if (nearestCreature == null)
-        {
-            return separationPush;
-        }
-
-        float creatureDistance = Vector3.Distance(transform.position, nearestCreature.transform.position);
-        float personalSpace = SeparationDistance * EffectiveStats.BodySize;
-        bool actualPredatorThreat = nearestCreature.CanAttackPrey(this);
-        bool harmless = IsHarmlessNeighbour(nearestCreature);
-        debugNearestCreatureIsThreat = actualPredatorThreat;
-
-        if (harmless)
-        {
-            if (!IsHarmlessNeighbourAvoidanceEnabled())
-            {
-                return Vector3.zero;
-            }
-
-            // Harmless same-baseline creatures should not flee from each other.
-            // They only slide sideways if they are genuinely too close.
-            if (creatureDistance < personalSpace)
-            {
-                Vector3 sideways = GetHorizontalAwayFrom(nearestCreature.transform.position);
-                float strength = 1f - Mathf.Clamp01(creatureDistance / Mathf.Max(0.01f, personalSpace));
-
-                if (ShouldIgnoreHarmlessNeighbourForFood(nearestCreature, hungerPressure))
-                {
-                    strength *= FoodCrowdSeparationMultiplier;
-                }
-
-                separationPush += sideways * strength * HarmlessNeighbourSlideStrength;
-            }
-
-            return separationPush;
-        }
-
-        if (!actualPredatorThreat)
-        {
-            // Different but non-threatening creatures still get a small spacing push, not a panic flee.
-            if (creatureDistance < personalSpace)
-            {
-                Vector3 sideways = GetHorizontalAwayFrom(nearestCreature.transform.position);
-                float strength = 1f - Mathf.Clamp01(creatureDistance / Mathf.Max(0.01f, personalSpace));
-                separationPush += sideways * strength * socialWeight * 0.65f;
-            }
-
-            return separationPush;
-        }
-
-        float threatDistance = GetThreatRange();
-        if (threatDistance <= 0.01f)
-        {
-            threatDistance = personalSpace * 2.25f;
-        }
-
-        float threatStrength = 1f - Mathf.Clamp01(creatureDistance / Mathf.Max(0.01f, threatDistance));
-        Vector3 fleeDirection = -toCreature;
-
-        if (!IsVerticalAvoidanceEnabled())
-        {
-            fleeDirection.y = 0f;
-        }
-
-        if (fleeDirection.sqrMagnitude <= 0.0001f)
-        {
-            fleeDirection = GetHorizontalAwayFrom(nearestCreature.transform.position);
-        }
-
-        fleeDirection.Normalize();
-        separationPush += fleeDirection * threatStrength * Candidate.Genome.ThreatRange * (1f - Candidate.Genome.RiskTolerance) * socialWeight * TrueThreatFleeMultiplier;
-        return separationPush;
-    }
-
-    private Vector3 GetNeighbourUnstickPush(float hungerPressure)
-    {
         EvolutionEcosystemManager manager = EvolutionEcosystemManager.Instance;
-
-        if (manager == null || EffectiveStats == null)
+        if (manager == null)
         {
             return Vector3.zero;
         }
 
-        System.Collections.Generic.List<MarineCreatureAgent> creatures = manager.GetActiveCreatures();
-
+        List<MarineCreatureAgent> creatures = manager.GetActiveCreatures();
         if (creatures == null || creatures.Count <= 1)
         {
             return Vector3.zero;
         }
 
-        Vector3 push = Vector3.zero;
         Vector3 ownPosition = rb != null ? rb.position : transform.position;
-        float ownSize = Mathf.Max(0.1f, EffectiveStats.BodySize);
-        int neighboursUsed = 0;
-        int maxNeighbours = Mathf.Max(1, MaxNeighboursForUnstick);
-        bool hasFoodTarget = GetPrimaryFoodTargetPosition().HasValue;
+        float fear = Mathf.Lerp(0.25f, 1.35f, 1f - Candidate.Genome.RiskTolerance);
+        Vector3 avoid = Vector3.zero;
 
         for (int i = 0; i < creatures.Count; i++)
         {
             MarineCreatureAgent other = creatures[i];
-
-            if (other == null || other == this || other.EffectiveStats == null)
+            if (other == null || other == this || !IsActualThreat(other))
             {
                 continue;
             }
 
             Vector3 away = ownPosition - other.transform.position;
             float distance = away.magnitude;
-            float otherSize = Mathf.Max(0.1f, other.EffectiveStats.BodySize);
-            float wantedSpace = NeighbourUnstickDistance * (ownSize + otherSize) * 0.5f;
-
-            if (distance > wantedSpace)
-            {
-                continue;
-            }
-
-            bool actualThreat = other.CanAttackPrey(this);
-            bool harmless = IsHarmlessNeighbour(other);
-
-            if (harmless && !IsHarmlessNeighbourAvoidanceEnabled())
-            {
-                continue;
-            }
-
             if (distance <= 0.001f)
             {
-                Vector2 randomFlat = Random.insideUnitCircle.normalized;
-                if (randomFlat.sqrMagnitude < 0.01f)
-                {
-                    randomFlat = Vector2.right;
-                }
-
-                away = new Vector3(randomFlat.x, 0f, randomFlat.y);
+                away = GetFallbackSideDirection();
                 distance = 0.001f;
             }
 
-            Vector3 awayDirection = away / distance;
-
-            if (harmless || !actualThreat || !IsVerticalAvoidanceEnabled())
+            float dangerRange = Mathf.Max(4f, GetThreatRange() + other.GetThreatRange() * 0.5f);
+            if (distance > dangerRange)
             {
-                // Harmless crowding should make creatures spread around food, not bounce vertically.
-                awayDirection.y = 0f;
-            }
-            else
-            {
-                awayDirection.y *= VerticalUnstickInfluence;
+                continue;
             }
 
-            if (awayDirection.sqrMagnitude <= 0.0001f)
+            float t = 1f - Mathf.Clamp01(distance / dangerRange);
+            Vector3 direction = away.normalized;
+            if (Mathf.Abs(direction.y) < 0.3f)
             {
-                awayDirection = GetHorizontalAwayFrom(other.transform.position);
+                direction.y *= 0.35f;
             }
-
-            awayDirection.Normalize();
-            float strength = 1f - Mathf.Clamp01(distance / Mathf.Max(0.01f, wantedSpace));
-
-            if (harmless)
-            {
-                strength *= HarmlessNeighbourSlideStrength;
-
-                if (hasFoodTarget && hungerPressure >= HungerIgnoreHarmlessNeighbourAt)
-                {
-                    strength *= FoodCrowdSeparationMultiplier;
-                }
-            }
-            else if (actualThreat)
-            {
-                strength *= TrueThreatFleeMultiplier;
-            }
-
-            push += awayDirection * strength * strength;
-            neighboursUsed++;
-
-            if (neighboursUsed >= maxNeighbours)
-            {
-                break;
-            }
+            avoid += direction.normalized * t * t * fear;
+            lastThreatCount++;
         }
 
-        if (push.sqrMagnitude <= 0.0001f)
+        if (lastThreatCount > 0)
+        {
+            lastThreatAvoidance = avoid.normalized * Mathf.Lerp(2.2f, 5.5f, fear);
+        }
+
+        return lastThreatAvoidance;
+    }
+
+    private Vector3 GetDepthPreferencePull(Vector3 targetPull, Vector3 dangerPull, float hungerPressure)
+    {
+        if (EvolutionEcosystemManager.Instance == null || Candidate == null || Candidate.Genome == null)
         {
             return Vector3.zero;
         }
 
-        float hungerReduction = hasFoodTarget ? Mathf.Lerp(1f, 0.45f, Mathf.Clamp01(hungerPressure)) : 1f;
-        Vector3 result = push.normalized * NeighbourUnstickStrength * hungerReduction;
-
-        if (DebugNeighbourUnstick || ShouldDrawBoundaryDebug())
-        {
-            Debug.DrawRay(ownPosition, result, Color.cyan, Time.fixedDeltaTime);
-        }
-
-        return result;
-    }
-
-    private bool IsHarmlessNeighbour(MarineCreatureAgent other)
-    {
-        if (other == null || other == this || Candidate == null || Candidate.Genome == null || other.Candidate == null || other.Candidate.Genome == null)
-        {
-            return true;
-        }
-
-        if (other.CanAttackPrey(this) || CanAttackPrey(other))
-        {
-            return false;
-        }
-
-        bool ownLowAggression = Candidate.Genome.Aggression <= HarmlessAggressionLimit && Candidate.Genome.MeatDiet <= HarmlessMeatDietLimit;
-        bool otherLowAggression = other.Candidate.Genome.Aggression <= HarmlessAggressionLimit && other.Candidate.Genome.MeatDiet <= HarmlessMeatDietLimit;
-
-        if (BaselineSpeciesAreHarmonious && ownLowAggression && otherLowAggression)
-        {
-            return true;
-        }
-
-        bool sameRole = Candidate.BehaviourType == other.Candidate.BehaviourType;
-        bool sameMorph = CreatureDebugTypeUtility.GetMorphologyName(Candidate.Genome) == CreatureDebugTypeUtility.GetMorphologyName(other.Candidate.Genome);
-        return sameRole && sameMorph && ownLowAggression && otherLowAggression;
-    }
-
-    private bool ShouldIgnoreHarmlessNeighbourForFood(MarineCreatureAgent other, float hungerPressure)
-    {
-        if (other == null || !IsHarmlessNeighbour(other))
-        {
-            return false;
-        }
-
-        if (hungerPressure < HungerIgnoreHarmlessNeighbourAt)
-        {
-            return false;
-        }
-
-        return GetPrimaryFoodTargetPosition().HasValue;
-    }
-
-    private bool IsHarmlessNeighbourAvoidanceEnabled()
-    {
-        EcosystemDebugSettings settings = EcosystemDebugSettings.Instance;
-        return settings == null || settings.EnableHarmlessNeighbourAvoidance;
-    }
-
-    private bool IsVerticalAvoidanceEnabled()
-    {
-        EcosystemDebugSettings settings = EcosystemDebugSettings.Instance;
-        return settings == null || settings.EnableVerticalAvoidance;
-    }
-
-    private bool IsPredationDisabledByDebug()
-    {
-        EcosystemDebugSettings settings = EcosystemDebugSettings.Instance;
-        return settings != null && settings.DisablePredationForDebug;
-    }
-
-    private Vector3 GetHorizontalAwayFrom(Vector3 otherPosition)
-    {
-        Vector3 away = transform.position - otherPosition;
-        away.y = 0f;
-
-        if (away.sqrMagnitude <= 0.0001f)
-        {
-            Vector3 right = transform.right;
-            right.y = 0f;
-
-            if (right.sqrMagnitude <= 0.0001f)
-            {
-                right = Vector3.right;
-            }
-
-            away = right;
-        }
-
-        return away.normalized;
-    }
-
-    private void UpdateDebugMovementState(float hungerPressure, Vector3 foodPull, Vector3 carrionPull, Vector3 preyPull, Vector3 separationPush, Vector3 neighbourUnstickPush, Vector3 boidSteering, Vector3 boundaryPush)
-    {
-        if (nearestPrey != null && preyPull.sqrMagnitude > 0.001f)
-        {
-            debugMoveState = "Hunting";
-        }
-        else if (nearestCarrion != null && carrionPull.sqrMagnitude > 0.001f)
-        {
-            debugMoveState = "Carrion";
-        }
-        else if (nearestFood != null && foodPull.sqrMagnitude > 0.001f)
-        {
-            debugMoveState = "Food";
-        }
-        else if (debugNearestCreatureIsThreat && separationPush.sqrMagnitude > 0.001f)
-        {
-            debugMoveState = "Fleeing";
-        }
-        else if (boidSteering.sqrMagnitude > 0.001f && lastBoidThreatCount > 0)
-        {
-            debugMoveState = "Boid avoid";
-        }
-        else if (boidSteering.sqrMagnitude > 0.001f && lastBoidSameGroupCount > 0)
-        {
-            debugMoveState = "Schooling";
-        }
-        else if (neighbourUnstickPush.sqrMagnitude > 0.001f)
-        {
-            debugMoveState = "Sliding";
-        }
-        else if (boundaryPush.sqrMagnitude > 0.001f)
-        {
-            debugMoveState = "Bounds";
-        }
-        else
-        {
-            debugMoveState = hungerPressure > 0.55f ? "Searching" : "Wander";
-        }
-
-        Vector3? target = GetPrimaryFoodTargetPosition();
-        if (Mathf.Abs(wantedDirection.y) < 0.04f)
-        {
-            debugVerticalReason = "Flat";
-        }
-        else if (target.HasValue && Mathf.Abs(target.Value.y - transform.position.y) > 0.75f)
-        {
-            debugVerticalReason = "Target depth";
-        }
-        else if (boundaryPush.sqrMagnitude > 0.001f && Mathf.Abs(boundaryPush.y) > 0.05f)
-        {
-            debugVerticalReason = "Bounds";
-        }
-        else if (debugNearestCreatureIsThreat && separationPush.sqrMagnitude > 0.001f && Mathf.Abs(separationPush.y) > 0.05f)
-        {
-            debugVerticalReason = "Threat";
-        }
-        else if (boidSteering.sqrMagnitude > 0.001f && Mathf.Abs(boidSteering.y) > 0.05f)
-        {
-            debugVerticalReason = "Boids";
-        }
-        else if (neighbourUnstickPush.sqrMagnitude > 0.001f && Mathf.Abs(neighbourUnstickPush.y) > 0.05f)
-        {
-            debugVerticalReason = "Neighbour";
-        }
-        else
-        {
-            debugVerticalReason = "Swim/brain";
-        }
-    }
-
-    private Vector3 GetDepthStabilityCorrection()
-    {
-        if (EvolutionEcosystemManager.Instance == null || DepthStabilityStrength <= 0f)
+        Vector3? activeTarget = GetPrimaryTargetPosition();
+        if (activeTarget.HasValue && Mathf.Abs(activeTarget.Value.y - transform.position.y) > 0.75f)
         {
             return Vector3.zero;
         }
 
-        Vector3? target = GetPrimaryFoodTargetPosition();
+        Vector3 centre = EvolutionEcosystemManager.Instance.transform.position;
+        Vector3 half = EvolutionEcosystemManager.Instance.SimulationAreaSize * 0.5f;
+        float low = centre.y - half.y + DepthPadding;
+        float high = centre.y + half.y - DepthPadding;
+        float preferredY = Mathf.Lerp(low, high, Candidate.Genome.PreferredDepth01);
+        float yError = preferredY - transform.position.y;
+        float normalised = Mathf.Clamp(yError / Mathf.Max(0.1f, half.y), -1f, 1f);
+        float flexibility = Candidate.Genome.DepthFlexibility;
+        float strength = DepthPreferenceStrength * Mathf.Lerp(1.15f, 0.15f, flexibility);
 
-        if (target.HasValue)
+        if (targetPull.sqrMagnitude > 0.01f || dangerPull.sqrMagnitude > 0.01f)
         {
-            float verticalTargetDistance = Mathf.Abs(target.Value.y - transform.position.y);
-
-            if (verticalTargetDistance > 1.2f)
-            {
-                return Vector3.zero;
-            }
+            strength *= Mathf.Lerp(0.25f, 0.65f, flexibility);
         }
 
-        float centreY = EvolutionEcosystemManager.Instance.transform.position.y;
-        float halfHeight = Mathf.Max(0.1f, EvolutionEcosystemManager.Instance.SimulationAreaSize.y * 0.5f);
-        float offset = Mathf.Clamp((centreY - transform.position.y) / halfHeight, -1f, 1f);
-
-        return Vector3.up * offset * DepthStabilityStrength;
+        strength *= Mathf.Lerp(0.85f, 0.45f, hungerPressure);
+        Vector3 depth = Vector3.up * normalised * strength;
+        return depth;
     }
 
-    private void StabiliseVerticalMovementWhenCrowded(ref Vector3 direction, Vector3 neighbourUnstickPush)
+    private Vector3 GetCloseTargetPull(float hungerPressure)
     {
-        if (direction.sqrMagnitude <= 0.0001f || neighbourUnstickPush.sqrMagnitude <= 0.0001f)
-        {
-            return;
-        }
-
-        Vector3? target = GetPrimaryFoodTargetPosition();
-        bool hasImportantVerticalTarget = false;
-
-        if (target.HasValue)
-        {
-            hasImportantVerticalTarget = Mathf.Abs(target.Value.y - transform.position.y) > 1.2f;
-        }
-
-        if (hasImportantVerticalTarget)
-        {
-            return;
-        }
-
-        direction.y *= Mathf.Clamp01(1f - VerticalDampingWhenCrowded);
-    }
-
-    private Vector3 GetCloseTargetCorrection(float hungerPressure)
-    {
-        Vector3? target = GetPrimaryFoodTargetPosition();
+        Vector3? target = GetPrimaryTargetPosition();
         if (!target.HasValue)
         {
-            lowSpeedNearTargetTimer = 0f;
             return Vector3.zero;
         }
 
-        Vector3 mouthPosition = GetMouthWorldPosition();
-        Vector3 toTargetFromMouth = target.Value - mouthPosition;
-        float distanceFromMouth = toTargetFromMouth.magnitude;
-
-        if (distanceFromMouth > CloseTargetSlowdownDistance)
+        Vector3 mouth = GetMouthWorldPosition();
+        Vector3 toTarget = target.Value - mouth;
+        float distance = toTarget.magnitude;
+        if (distance <= 0.001f || distance > CloseTargetSlowdownDistance)
         {
-            lowSpeedNearTargetTimer = 0f;
             return Vector3.zero;
         }
 
-        if (rb.linearVelocity.magnitude <= StuckNudgeSpeed)
-        {
-            lowSpeedNearTargetTimer += Time.fixedDeltaTime;
-        }
-        else
-        {
-            lowSpeedNearTargetTimer = 0f;
-        }
-
-        if (distanceFromMouth <= 0.001f)
-        {
-            return transform.forward * 0.5f;
-        }
-
-        Vector3 correction = toTargetFromMouth.normalized * (1.35f + hungerPressure);
-
-        if (lowSpeedNearTargetTimer >= StuckNudgeTime)
-        {
-            correction += transform.forward * 0.9f;
-            correction += Random.insideUnitSphere * 0.18f;
-        }
-
-        return correction;
+        float closeness = 1f - Mathf.Clamp01(distance / CloseTargetSlowdownDistance);
+        return toTarget.normalized * CloseTargetPull * closeness * Mathf.Lerp(0.65f, 1.35f, hungerPressure);
     }
 
-    private float GetApproachSpeedScale()
+    private Vector3 GetFoodQueuePull(float hungerPressure)
     {
-        Vector3? target = GetPrimaryFoodTargetPosition();
-        if (!target.HasValue)
+        Vector3? target = GetPrimaryTargetPosition();
+        if (!target.HasValue || Candidate == null || Candidate.Genome == null || Candidate.Genome.FoodSharing <= 0.05f)
         {
-            return 1f;
+            return Vector3.zero;
+        }
+
+        if (ShouldCommitToStaticFeedingTarget(hungerPressure))
+        {
+            return Vector3.zero;
         }
 
         float distance = Vector3.Distance(GetMouthWorldPosition(), target.Value);
-        float t = Mathf.Clamp01(distance / Mathf.Max(0.01f, CloseTargetSlowdownDistance));
-        return Mathf.Lerp(MinimumApproachSpeedScale, 1f, t);
+        if (distance > CloseTargetSlowdownDistance * 1.4f)
+        {
+            return Vector3.zero;
+        }
+
+        float angle = (Candidate.Id * 137.508f) * Mathf.Deg2Rad;
+        Vector3 orbit = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle));
+        float radius = FoodQueueRadius * Mathf.Lerp(0.7f, 1.45f, Candidate.Genome.FoodSharing);
+        Vector3 queuePoint = target.Value + orbit * radius;
+        Vector3 toQueue = queuePoint - GetMouthWorldPosition();
+        if (toQueue.sqrMagnitude <= 0.001f)
+        {
+            return Vector3.zero;
+        }
+
+        return toQueue.normalized * FoodQueueStrength * Candidate.Genome.FoodSharing * Mathf.Clamp01(hungerPressure + 0.25f);
     }
 
-    private Vector3? GetPrimaryFoodTargetPosition()
+    private Vector3 GetBrainPull(float energyRatio)
     {
-        if (nearestFood != null && !nearestFood.IsConsumed && Candidate.Genome.PlantDiet >= Candidate.Genome.CarrionDiet && Candidate.Genome.PlantDiet >= Candidate.Genome.MeatDiet * 0.75f)
+        if (Candidate == null || Candidate.Genome == null || Candidate.Genome.Brain == null || BrainInfluence <= 0f)
         {
-            return nearestFood.transform.position;
+            return Vector3.zero;
         }
 
-        if (nearestCarrion != null && !nearestCarrion.IsConsumed && Candidate.Genome.CarrionDiet >= Candidate.Genome.PlantDiet * 0.75f)
+        float[] inputs =
         {
-            return nearestCarrion.transform.position;
+            energyRatio,
+            lastFoodDirection.x,
+            lastFoodDirection.y,
+            lastFoodDirection.z,
+            lastCarrionDirection.x,
+            lastCarrionDirection.y,
+            lastCarrionDirection.z,
+            lastPreyDirection.x,
+            lastPreyDirection.y,
+            lastPreyDirection.z,
+            lastThreatAvoidance.sqrMagnitude > 0.01f ? 1f : 0f,
+            Random.Range(-1f, 1f)
+        };
+
+        float[] outputs = Candidate.Genome.Brain.Evaluate(inputs);
+        Vector3 brain = new Vector3(outputs.Length > 0 ? outputs[0] : 0f, outputs.Length > 1 ? outputs[1] : 0f, outputs.Length > 2 ? outputs[2] : 0f);
+        if (brain.sqrMagnitude <= 0.001f)
+        {
+            return Vector3.zero;
         }
 
-        if (nearestPrey != null && Candidate.Genome.MeatDiet >= Candidate.Genome.PlantDiet * 0.75f)
-        {
-            return nearestPrey.GetBiteTargetPosition();
-        }
-
-        if (nearestFood != null && !nearestFood.IsConsumed)
-        {
-            return nearestFood.transform.position;
-        }
-
-        if (nearestCarrion != null && !nearestCarrion.IsConsumed)
-        {
-            return nearestCarrion.transform.position;
-        }
-
-        return null;
+        brain.y *= Mathf.Clamp(EffectiveStats.VerticalControl, 0.25f, 2.5f);
+        return brain.normalized * BrainInfluence * Mathf.Lerp(0.35f, 1f, energyRatio);
     }
 
-    private void MoveTowardsWantedDirection(float speedScale)
-    {
-        Quaternion targetRotation = Quaternion.LookRotation(wantedDirection, Vector3.up);
-
-        if (EnableFull3DRoll)
-        {
-            Vector3 localWanted = transform.InverseTransformDirection(wantedDirection);
-            float roll = Mathf.Clamp(-localWanted.x * MaxRollAngle, -MaxRollAngle, MaxRollAngle);
-            Quaternion bank = Quaternion.AngleAxis(roll, Vector3.forward);
-            targetRotation *= bank;
-        }
-
-        Quaternion newRotation = Quaternion.RotateTowards(transform.rotation, targetRotation, EffectiveStats.TurnRate * Time.fixedDeltaTime * RollResponsiveness);
-        rb.MoveRotation(newRotation);
-
-        Vector3 wantedVelocity = transform.forward * EffectiveStats.Speed * Mathf.Clamp01(speedScale);
-        Vector3 newVelocity = Vector3.MoveTowards(rb.linearVelocity, wantedVelocity, EffectiveStats.Acceleration * Time.fixedDeltaTime);
-        rb.linearVelocity = PreventOutwardVelocityAtBounds(newVelocity);
-
-        if (EvolutionEcosystemManager.Instance != null)
-        {
-            Vector3 clampedPosition = EvolutionEcosystemManager.Instance.ClampToSimulationArea(rb.position);
-
-            if ((clampedPosition - rb.position).sqrMagnitude > 0.0001f)
-            {
-                rb.position = clampedPosition;
-                rb.linearVelocity = PreventOutwardVelocityAtBounds(rb.linearVelocity) * BoundaryVelocityDamping;
-            }
-        }
-    }
-
-    private void UpdateWanderDirection()
+    private Vector3 GetWanderPull(float energyRatio)
     {
         wanderTimer -= Time.fixedDeltaTime;
-
         if (wanderTimer <= 0f || wanderDirection.sqrMagnitude < 0.01f)
         {
             PickNewWanderDirection();
         }
+
+        return wanderDirection * WanderStrength * Mathf.Lerp(0.25f, 1f, energyRatio) * Mathf.Lerp(0.75f, 1.2f, Candidate.Genome.ActivityCycle);
+    }
+
+    private Vector3 GetEmergencyUnstickPull()
+    {
+        return lastEmergencyUnstick;
+    }
+
+    private void MoveFish(float hungerPressure)
+    {
+        if (rb == null)
+        {
+            return;
+        }
+
+        Quaternion targetRotation = Quaternion.LookRotation(wantedDirection, Vector3.up);
+        Vector3 localWanted = transform.InverseTransformDirection(wantedDirection);
+        float bank = Mathf.Clamp(-localWanted.x * MaxBankAngle, -MaxBankAngle, MaxBankAngle);
+        targetRotation *= Quaternion.AngleAxis(bank, Vector3.forward);
+
+        float turn = Mathf.Max(35f, EffectiveStats.TurnRate) * RotationResponsiveness;
+        rb.MoveRotation(Quaternion.RotateTowards(rb.rotation, targetRotation, turn * Time.fixedDeltaTime));
+
+        float alignment = Mathf.Clamp01((Vector3.Dot(transform.forward, wantedDirection) + 1f) * 0.5f);
+        float sharpTurnScale = Mathf.Lerp(Mathf.Clamp01(1f - SharpTurnSpeedLoss), 1f, alignment);
+        float targetScale = Mathf.Lerp(NormalCruiseSpeedScale, HungryCruiseSpeedScale, Mathf.Clamp01(hungerPressure));
+
+        Vector3? target = GetPrimaryTargetPosition();
+        if (target.HasValue)
+        {
+            float distance = Vector3.Distance(GetMouthWorldPosition(), target.Value);
+            float closeT = Mathf.Clamp01(distance / Mathf.Max(0.01f, CloseTargetSlowdownDistance));
+            targetScale *= Mathf.Lerp(MinimumCruiseSpeedScale, 1f, closeT);
+        }
+
+        bool directFeedingMotion = IsCloseStaticFeedingTarget();
+        targetScale = Mathf.Max(MinimumCruiseSpeedScale, targetScale * sharpTurnScale);
+
+        Vector3 movementDirection = directFeedingMotion
+            ? wantedDirection
+            : Vector3.Slerp(transform.forward, wantedDirection, Mathf.Lerp(0.35f, 0.85f, Mathf.Clamp01(EffectiveStats.VerticalControl * 0.5f)));
+
+        if (movementDirection.sqrMagnitude <= 0.001f)
+        {
+            movementDirection = transform.forward;
+        }
+
+        Vector3 desiredVelocity = movementDirection.normalized * EffectiveStats.Speed * targetScale;
+        desiredVelocity = PreventOutwardVelocityAtBounds(desiredVelocity);
+
+        float accel = Mathf.Max(1f, EffectiveStats.Acceleration) * SteeringAcceleration;
+        currentVelocity = Vector3.MoveTowards(currentVelocity, desiredVelocity, accel * Time.fixedDeltaTime);
+        currentVelocity = PreventOutwardVelocityAtBounds(currentVelocity);
+        rb.linearVelocity = currentVelocity;
+
+        if (EvolutionEcosystemManager.Instance != null)
+        {
+            Vector3 clamped = EvolutionEcosystemManager.Instance.ClampToSimulationArea(rb.position);
+            if ((clamped - rb.position).sqrMagnitude > 0.0001f)
+            {
+                rb.position = clamped;
+                currentVelocity = PreventOutwardVelocityAtBounds(currentVelocity) * BoundaryVelocityDamping;
+                rb.linearVelocity = currentVelocity;
+            }
+        }
+    }
+
+    private void UpdateStuckDetection(Vector3 combinedSteering)
+    {
+        float moved = Vector3.Distance(rb.position, lastPosition);
+        bool shouldBeMoving = combinedSteering.sqrMagnitude > 0.2f;
+        bool barelyMoved = moved < StuckPositionDeltaThreshold * Time.fixedDeltaTime * 4f || rb.linearVelocity.magnitude < StuckSpeedThreshold;
+
+        if (shouldBeMoving && barelyMoved)
+        {
+            lowProgressTimer += Time.fixedDeltaTime;
+        }
+        else
+        {
+            lowProgressTimer = Mathf.Max(0f, lowProgressTimer - Time.fixedDeltaTime * 0.75f);
+        }
+
+        if (lowProgressTimer >= StuckCheckTime)
+        {
+            lowProgressTimer = 0f;
+            stuckEscapeTimer = StuckEscapeDuration;
+            stuckEscapeDirection = BuildStuckEscapeDirection();
+            currentVelocity *= 0.35f;
+        }
+
+        lastPosition = rb.position;
+    }
+
+    private Vector3 BuildStuckEscapeDirection()
+    {
+        Vector3 dir = lastSchoolSeparation + lastBoundaryPush + GetFallbackSideDirection() * 0.6f;
+        Vector3? target = GetPrimaryTargetPosition();
+        if (target.HasValue)
+        {
+            Vector3 toTarget = (target.Value - transform.position);
+            if (toTarget.sqrMagnitude > 0.001f)
+            {
+                dir += Vector3.Cross(toTarget.normalized, Vector3.up).normalized * 0.55f;
+            }
+        }
+
+        if (dir.sqrMagnitude <= 0.001f)
+        {
+            dir = Random.insideUnitSphere;
+        }
+
+        dir.y *= 0.35f;
+        if (dir.sqrMagnitude <= 0.001f)
+        {
+            dir = Vector3.right;
+        }
+
+        return dir.normalized;
     }
 
     private void PickNewWanderDirection()
     {
-        wanderTimer = Random.Range(WanderTargetRefreshTime * 0.65f, WanderTargetRefreshTime * 1.35f);
+        wanderTimer = Random.Range(WanderRefreshMin, WanderRefreshMax);
         wanderDirection = Random.insideUnitSphere;
-
+        wanderDirection.y *= Mathf.Lerp(0.25f, 1.0f, Candidate != null && Candidate.Genome != null ? Candidate.Genome.DepthFlexibility : 0.5f);
         if (wanderDirection.sqrMagnitude < 0.01f)
         {
             wanderDirection = transform.forward;
         }
-
         wanderDirection.Normalize();
-    }
-
-    private Vector3 GetDirectionAndNormalisedDistance(Vector3? targetPosition, out float normalisedDistance)
-    {
-        normalisedDistance = 1f;
-
-        if (!targetPosition.HasValue || Candidate == null || Candidate.Genome == null)
-        {
-            return Vector3.zero;
-        }
-
-        Vector3 origin = GetMouthWorldPosition();
-        Vector3 direction = targetPosition.Value - origin;
-        float distance = direction.magnitude;
-        float vision = EffectiveStats != null ? EffectiveStats.VisionRange : Candidate.Genome.VisionRange;
-        normalisedDistance = Mathf.Clamp01(distance / Mathf.Max(0.01f, vision));
-
-        if (distance <= 0.0001f)
-        {
-            return Vector3.zero;
-        }
-
-        return direction / distance;
     }
 
     private Vector3 GetBoundaryAvoidanceDirection()
@@ -1319,14 +1057,7 @@ public class MarineCreatureAgent : MonoBehaviour
             return Vector3.zero;
         }
 
-        Vector3 result = push.normalized * BoundaryAvoidanceStrength;
-
-        if (DebugBoundaryAvoidance || ShouldDrawBoundaryDebug())
-        {
-            Debug.DrawRay(position, result, Color.yellow, Time.fixedDeltaTime);
-        }
-
-        return result;
+        return push.normalized * BoundaryAvoidanceStrength;
     }
 
     private void AddBoundaryPush(float distanceToEdge, Vector3 inwardDirection, ref Vector3 push)
@@ -1368,6 +1099,22 @@ public class MarineCreatureAgent : MonoBehaviour
         return velocity;
     }
 
+    private Vector3 DirectionTo(Vector3? targetPosition)
+    {
+        if (!targetPosition.HasValue)
+        {
+            return Vector3.zero;
+        }
+
+        Vector3 direction = targetPosition.Value - GetMouthWorldPosition();
+        if (direction.sqrMagnitude <= 0.0001f)
+        {
+            return Vector3.zero;
+        }
+
+        return direction.normalized;
+    }
+
     private Vector3 GetDirectionToSimulationCentre()
     {
         if (EvolutionEcosystemManager.Instance == null)
@@ -1376,27 +1123,247 @@ public class MarineCreatureAgent : MonoBehaviour
         }
 
         Vector3 direction = EvolutionEcosystemManager.Instance.transform.position - transform.position;
+        return direction.sqrMagnitude < 0.05f ? transform.forward : direction.normalized;
+    }
 
-        if (direction.sqrMagnitude < 0.05f)
+    private Vector3 GetHorizontalAwayFrom(Vector3 otherPosition)
+    {
+        Vector3 away = transform.position - otherPosition;
+        away.y = 0f;
+        if (away.sqrMagnitude <= 0.0001f)
         {
-            return transform.forward;
+            away = transform.right;
+            away.y = 0f;
+        }
+        if (away.sqrMagnitude <= 0.0001f)
+        {
+            away = Vector3.right;
+        }
+        return away.normalized;
+    }
+
+    private Vector3 GetFallbackSideDirection()
+    {
+        Vector3 side = transform.right;
+        side.y = 0f;
+        if (side.sqrMagnitude <= 0.0001f)
+        {
+            Vector2 random = Random.insideUnitCircle.normalized;
+            if (random.sqrMagnitude <= 0.0001f)
+            {
+                random = Vector2.right;
+            }
+            side = new Vector3(random.x, 0f, random.y);
+        }
+        return side.normalized;
+    }
+
+    private Vector3 GetCurrentVelocityOrForward()
+    {
+        Vector3 velocity = rb != null ? rb.linearVelocity : currentVelocity;
+        if (velocity.sqrMagnitude <= 0.001f)
+        {
+            velocity = transform.forward;
+        }
+        return velocity;
+    }
+
+    private bool HasCloseFoodTarget()
+    {
+        Vector3? target = GetPrimaryTargetPosition();
+        if (!target.HasValue)
+        {
+            return false;
         }
 
-        return direction.normalized;
+        return Vector3.Distance(GetMouthWorldPosition(), target.Value) <= CloseTargetSlowdownDistance * 1.4f;
+    }
+
+    private bool ShouldCommitToStaticFeedingTarget(float hungerPressure)
+    {
+        if (hungerPressure < 0.08f)
+        {
+            return false;
+        }
+
+        Vector3? target = GetPrimaryStaticFoodTargetPosition();
+        if (!target.HasValue)
+        {
+            return false;
+        }
+
+        float mouthDistance = Vector3.Distance(GetMouthWorldPosition(), target.Value);
+        float bodyDistance = Vector3.Distance(transform.position, target.Value);
+        float commitDistance = Mathf.Max(FeedingCommitDistance, GetPersonalRadius() + GetScaledMouthRadius() + 1.1f);
+
+        return mouthDistance <= commitDistance || bodyDistance <= commitDistance;
+    }
+
+    private bool IsCloseStaticFeedingTarget()
+    {
+        Vector3? target = GetPrimaryStaticFoodTargetPosition();
+        if (!target.HasValue)
+        {
+            return false;
+        }
+
+        float mouthDistance = Vector3.Distance(GetMouthWorldPosition(), target.Value);
+        float bodyDistance = Vector3.Distance(transform.position, target.Value);
+        float directDistance = Mathf.Max(CloseFeedingDirectMotionDistance, GetPersonalRadius() + GetScaledMouthRadius() + 1.2f);
+
+        return mouthDistance <= directDistance || bodyDistance <= directDistance;
+    }
+
+    private Vector3? GetPrimaryStaticFoodTargetPosition()
+    {
+        string preferred = GetPreferredFoodKind();
+
+        if (preferred == "Carrion" && nearestCarrion != null && !nearestCarrion.IsConsumed)
+        {
+            return nearestCarrion.transform.position;
+        }
+
+        if (preferred == "Plant" && nearestFood != null && !nearestFood.IsConsumed)
+        {
+            return nearestFood.transform.position;
+        }
+
+        if (nearestFood != null && !nearestFood.IsConsumed)
+        {
+            return nearestFood.transform.position;
+        }
+
+        if (nearestCarrion != null && !nearestCarrion.IsConsumed)
+        {
+            return nearestCarrion.transform.position;
+        }
+
+        return null;
+    }
+
+    private Vector3? GetPrimaryTargetPosition()
+    {
+        if (nearestPrey != null && CanAttackPrey(nearestPrey))
+        {
+            return nearestPrey.GetBiteTargetPosition();
+        }
+
+        string preferred = GetPreferredFoodKind();
+        if (preferred == "Carrion" && nearestCarrion != null && !nearestCarrion.IsConsumed)
+        {
+            return nearestCarrion.transform.position;
+        }
+
+        if (preferred == "Plant" && nearestFood != null && !nearestFood.IsConsumed)
+        {
+            return nearestFood.transform.position;
+        }
+
+        if (nearestFood != null && !nearestFood.IsConsumed)
+        {
+            return nearestFood.transform.position;
+        }
+
+        if (nearestCarrion != null && !nearestCarrion.IsConsumed)
+        {
+            return nearestCarrion.transform.position;
+        }
+
+        return null;
+    }
+
+    private bool IsFriendlyByMorph(MarineCreatureAgent other)
+    {
+        if (other == null || other.Candidate == null || other.Candidate.Genome == null || Candidate == null || Candidate.Genome == null)
+        {
+            return false;
+        }
+
+        if (CanAttackPrey(other) || other.CanAttackPrey(this))
+        {
+            return false;
+        }
+
+        float similarity = Candidate.Genome.GetMorphSimilarity(other.Candidate.Genome);
+        if (similarity >= MorphSimilarityForSchool)
+        {
+            return true;
+        }
+
+        string ownMorph = CreatureDebugTypeUtility.GetMorphologyName(Candidate.Genome);
+        string otherMorph = CreatureDebugTypeUtility.GetMorphologyName(other.Candidate.Genome);
+        return ownMorph == otherMorph;
+    }
+
+    private bool IsActualThreat(MarineCreatureAgent other)
+    {
+        if (other == null || other == this)
+        {
+            return false;
+        }
+
+        return other.CanAttackPrey(this);
+    }
+
+    private float GetLeadershipWeight()
+    {
+        if (Candidate == null || Candidate.Genome == null)
+        {
+            return 0.25f;
+        }
+
+        float energyRatio = Mathf.Clamp01(CurrentEnergy / Mathf.Max(0.01f, EffectiveStats != null ? EffectiveStats.EnergyCapacity : Candidate.Genome.EnergyCapacity));
+        return Mathf.Clamp01(Candidate.Genome.Leadership * 0.55f + energyRatio * 0.25f + Candidate.Genome.RiskTolerance * 0.2f);
+    }
+
+    private float GetPersonalRadius()
+    {
+        float size = EffectiveStats != null ? EffectiveStats.BodySize : Candidate != null && Candidate.Genome != null ? Candidate.Genome.BodySize : 1f;
+        return Mathf.Max(0.2f, RootColliderRadius * size);
+    }
+
+    private float GetGroupDangerSupport()
+    {
+        EvolutionEcosystemManager manager = EvolutionEcosystemManager.Instance;
+        if (manager == null)
+        {
+            return 0f;
+        }
+
+        float support = 0f;
+        List<MarineCreatureAgent> creatures = manager.GetActiveCreatures();
+        for (int i = 0; i < creatures.Count; i++)
+        {
+            MarineCreatureAgent other = creatures[i];
+            if (other == null || other == this || !IsFriendlyByMorph(other))
+            {
+                continue;
+            }
+
+            float distance = Vector3.Distance(transform.position, other.transform.position);
+            if (distance > GroupDangerRadius)
+            {
+                continue;
+            }
+
+            float t = 1f - Mathf.Clamp01(distance / GroupDangerRadius);
+            support += t;
+        }
+
+        return support * GroupDangerWeight;
     }
 
     private void DrainEnergy()
     {
         float environmentDrain = 1f;
-
         if (EvolutionEcosystemManager.Instance != null && EvolutionEcosystemManager.Instance.Environment != null)
         {
             environmentDrain = EvolutionEcosystemManager.Instance.Environment.EnergyDrainMultiplier;
         }
 
-        float movementCost = rb.linearVelocity.magnitude / Mathf.Max(0.1f, EffectiveStats.Speed);
+        float movementCost = rb != null ? rb.linearVelocity.magnitude / Mathf.Max(0.1f, EffectiveStats.Speed) : 0f;
         float drain = BaseEnergyDrainPerSecond * EffectiveStats.EnergyDrainMultiplier * environmentDrain;
-        drain += movementCost * 0.28f;
+        drain += movementCost * 0.18f;
         CurrentEnergy -= drain * Time.fixedDeltaTime;
     }
 
@@ -1407,17 +1374,19 @@ public class MarineCreatureAgent : MonoBehaviour
             return;
         }
 
-        if (UseMouthBasedEating && !IsPositionInsideMouthArea(nearestFood.transform.position))
+        if (!CanConsumeStaticTarget(nearestFood.transform.position))
         {
             return;
         }
 
-        float dietEfficiency = Mathf.Lerp(0.3f, 1.25f, Candidate.Genome.PlantDiet);
+        float dietEfficiency = Mathf.Lerp(0.35f, 1.25f, Candidate.Genome.PlantDiet);
         float energyGained = nearestFood.Consume() * dietEfficiency;
         CurrentEnergy = Mathf.Min(CurrentEnergy + energyGained, EffectiveStats.EnergyCapacity);
         Candidate.EnergyGained += energyGained;
+        Candidate.PlantEnergyConsumed += energyGained;
         Candidate.FoodEaten++;
-        lowSpeedNearTargetTimer = 0f;
+        Candidate.Genome.ReinforceDietUsage(Candidate.PlantEnergyConsumed, Candidate.MeatEnergyConsumed, Candidate.CarrionEnergyConsumed, DietLearningRate);
+        nearestFood = null;
     }
 
     private void TryEatCarrion()
@@ -1427,7 +1396,7 @@ public class MarineCreatureAgent : MonoBehaviour
             return;
         }
 
-        if (UseMouthBasedEating && !IsPositionInsideMouthArea(nearestCarrion.transform.position))
+        if (!CanConsumeStaticTarget(nearestCarrion.transform.position))
         {
             return;
         }
@@ -1436,24 +1405,26 @@ public class MarineCreatureAgent : MonoBehaviour
         float energyGained = nearestCarrion.Consume() * dietEfficiency;
         CurrentEnergy = Mathf.Min(CurrentEnergy + energyGained, EffectiveStats.EnergyCapacity);
         Candidate.EnergyGained += energyGained;
+        Candidate.CarrionEnergyConsumed += energyGained;
         Candidate.CarrionEaten++;
-        lowSpeedNearTargetTimer = 0f;
+        Candidate.Genome.ReinforceDietUsage(Candidate.PlantEnergyConsumed, Candidate.MeatEnergyConsumed, Candidate.CarrionEnergyConsumed, DietLearningRate);
+        nearestCarrion = null;
     }
 
     private void TryBitePrey()
     {
-        if (biteTimer > 0f || nearestPrey == null)
-        {
-            return;
-        }
-
-        if (!CanAttackPrey(nearestPrey))
+        if (biteTimer > 0f || nearestPrey == null || !CanAttackPrey(nearestPrey))
         {
             return;
         }
 
         if (!IsPositionInsideMouthArea(nearestPrey.GetBiteTargetPosition()))
         {
+            if (Vector3.Distance(GetMouthWorldPosition(), nearestPrey.GetBiteTargetPosition()) <= GetScaledMouthRadius() * 1.45f)
+            {
+                CurrentEnergy -= MissedAttackEnergyCost;
+                biteTimer = BiteCooldown * 0.5f;
+            }
             return;
         }
 
@@ -1461,41 +1432,60 @@ public class MarineCreatureAgent : MonoBehaviour
         bool killed = nearestPrey.ReceiveBite(this, damage, out float energyGained);
         CurrentEnergy = Mathf.Min(CurrentEnergy + energyGained, EffectiveStats.EnergyCapacity);
         Candidate.EnergyGained += energyGained;
+        Candidate.MeatEnergyConsumed += energyGained;
+        Candidate.Genome.ReinforceDietUsage(Candidate.PlantEnergyConsumed, Candidate.MeatEnergyConsumed, Candidate.CarrionEnergyConsumed, DietLearningRate);
         Candidate.PreyBites++;
         Candidate.BiteDamageDealt += damage;
-
         if (killed)
         {
             Candidate.PreyKills++;
         }
-
         biteTimer = BiteCooldown;
+    }
+
+    private bool CanConsumeStaticTarget(Vector3 targetPosition)
+    {
+        if (IsPositionInsideMouthArea(targetPosition))
+        {
+            return true;
+        }
+
+        // Static resources are not enemies and should not require perfect nose alignment.
+        // If the body is visibly touching/covering the food, consume it instead of letting
+        // the fish starve because its mouth socket is a little off.
+        float bodyDistance = Vector3.Distance(transform.position, targetPosition);
+        float bodyContact = Mathf.Max(StaticFoodContactConsumeDistance, GetPersonalRadius() + GetScaledMouthRadius() * 0.55f);
+        if (bodyDistance <= bodyContact)
+        {
+            return true;
+        }
+
+        float mouthDistance = Vector3.Distance(GetMouthWorldPosition(), targetPosition);
+        float mouthContact = Mathf.Max(GetScaledMouthRadius() * 1.65f, StaticFoodContactConsumeDistance * 0.75f);
+        return mouthDistance <= mouthContact;
     }
 
     private bool IsPositionInsideMouthArea(Vector3 targetPosition)
     {
         Vector3 mouthPosition = GetMouthWorldPosition();
         Vector3 toTarget = targetPosition - mouthPosition;
-        float scaledMouthRadius = GetScaledMouthRadius();
-        float distanceSqr = toTarget.sqrMagnitude;
+        float radius = GetScaledMouthRadius();
+        float distance = toTarget.magnitude;
 
-        if (distanceSqr > scaledMouthRadius * scaledMouthRadius)
+        if (distance <= radius)
         {
-            float forgivingDistance = scaledMouthRadius + CloseContactEatForgiveness * EffectiveStats.BodySize;
-            if (Vector3.Distance(transform.position, targetPosition) > forgivingDistance)
+            if (distance <= 0.0001f)
             {
-                return false;
+                return true;
             }
+
+            float dot = Vector3.Dot(transform.forward, toTarget.normalized);
+            float requiredDot = Mathf.Cos((MouthAngle * 0.5f) * Mathf.Deg2Rad);
+            return dot >= requiredDot;
         }
 
-        if (distanceSqr <= 0.0001f)
-        {
-            return true;
-        }
-
-        float dot = Vector3.Dot(transform.forward, toTarget.normalized);
-        float requiredDot = Mathf.Cos((MouthAngle * 0.5f) * Mathf.Deg2Rad);
-        return dot >= requiredDot || Vector3.Distance(transform.position, targetPosition) <= scaledMouthRadius * 0.65f;
+        float forgivingDistance = radius + CloseContactEatForgiveness * Mathf.Max(0.25f, EffectiveStats.BodySize);
+        return Vector3.Distance(transform.position, targetPosition) <= forgivingDistance;
     }
 
     public Vector3 GetMouthWorldPosition()
@@ -1524,7 +1514,6 @@ public class MarineCreatureAgent : MonoBehaviour
         {
             return 0f;
         }
-
         return EffectiveStats.ThreatRange * EffectiveStats.VisionRange;
     }
 
@@ -1543,40 +1532,46 @@ public class MarineCreatureAgent : MonoBehaviour
 
     public bool CanAttackPrey(MarineCreatureAgent prey)
     {
-        if (prey == null || prey == this || Candidate == null || Candidate.Genome == null || prey.Candidate == null || prey.Candidate.Genome == null)
+        if (prey == null || prey == this || Candidate == null || Candidate.Genome == null || prey.Candidate == null || prey.Candidate.Genome == null || EffectiveStats == null)
         {
             return false;
         }
 
         EvolutionEcosystemManager manager = EvolutionEcosystemManager.Instance;
-        if (manager == null || !manager.EnablePredation || IsPredationDisabledByDebug())
+        if (manager == null || !manager.EnablePredation)
         {
             return false;
         }
 
-        float energyRatio = Mathf.Clamp01(CurrentEnergy / Mathf.Max(0.01f, EffectiveStats.EnergyCapacity));
-        bool hasNormalPredatorTraits = Candidate.Genome.MeatDiet >= manager.MinimumMeatDietToHunt && Candidate.Genome.Aggression >= manager.MinimumAggressionToHunt;
-        bool hasStarvingPredatorTraits = energyRatio <= StarvingHuntEnergyRatio &&
-                                       Candidate.Genome.MeatDiet >= Mathf.Max(manager.MinimumMeatDietToHunt, StarvingHuntMeatDietLimit) &&
-                                       Candidate.Genome.Aggression >= StarvingHuntAggressionLimit;
+        float morphSimilarity = Candidate.Genome.GetMorphSimilarity(prey.Candidate.Genome);
+        if (morphSimilarity >= MorphSimilarityForSchool)
+        {
+            if (Candidate.Genome.Aggression < SameMorphAttackAggressionRequired || Candidate.Genome.MeatDiet < SameMorphAttackMeatRequired)
+            {
+                return false;
+            }
+        }
 
-        if (!hasNormalPredatorTraits && !hasStarvingPredatorTraits)
+        float energyRatio = Mathf.Clamp01(CurrentEnergy / Mathf.Max(0.01f, EffectiveStats.EnergyCapacity));
+        bool normalPredator = Candidate.Genome.MeatDiet >= manager.MinimumMeatDietToHunt && Candidate.Genome.Aggression >= manager.MinimumAggressionToHunt;
+        bool starvingPredator = energyRatio <= StarvingAttackEnergyRatio && Candidate.Genome.MeatDiet >= StarvingAttackMeatRequired && Candidate.Genome.Aggression >= StarvingAttackAggressionRequired;
+        if (!normalPredator && !starvingPredator)
         {
             return false;
         }
 
         float preySize = Mathf.Max(0.1f, prey.EffectiveStats != null ? prey.EffectiveStats.BodySize : prey.Candidate.Genome.BodySize);
         float ownSize = Mathf.Max(0.1f, EffectiveStats.BodySize);
-        float allowedSizeRatio = manager.MaxPreySizeRatio + Candidate.Genome.RiskTolerance * 0.45f + Candidate.Genome.Aggression * 0.25f;
-
-        if (preySize / ownSize > allowedSizeRatio)
+        float allowedRatio = manager.MaxPreySizeRatio + Candidate.Genome.RiskTolerance * 0.45f + Candidate.Genome.Aggression * 0.25f;
+        if (preySize / ownSize > allowedRatio)
         {
             return false;
         }
 
         float attackerConfidence = EffectiveStats.DangerFactor + Candidate.Genome.Aggression + Candidate.Genome.RiskTolerance + Candidate.Genome.MeatDiet;
-        float sizeDanger = Mathf.Max(0f, preySize / Mathf.Max(0.1f, ownSize) - 1f) * 0.75f;
-        float preyDanger = (prey.EffectiveStats != null ? prey.EffectiveStats.DangerFactor : prey.Candidate.Genome.DangerFactor) + sizeDanger;
+        float preyDanger = prey.EffectiveStats != null ? prey.EffectiveStats.DangerFactor : prey.Candidate.Genome.DangerFactor;
+        preyDanger += Mathf.Max(0f, preySize / ownSize - 1f) * 0.75f;
+        preyDanger += prey.GetGroupDangerSupport();
         float preyEnergyRatio = Mathf.Clamp01(prey.CurrentEnergy / Mathf.Max(0.01f, prey.EffectiveStats != null ? prey.EffectiveStats.EnergyCapacity : prey.Candidate.Genome.EnergyCapacity));
         float scareStrength = preyDanger * manager.PredatorFearOfDangerFactor * Mathf.Lerp(0.65f, 1.15f, preyEnergyRatio);
 
@@ -1591,29 +1586,21 @@ public class MarineCreatureAgent : MonoBehaviour
     public bool ReceiveBite(MarineCreatureAgent attacker, float incomingDamage, out float energyGainedByAttacker)
     {
         energyGainedByAttacker = 0f;
-
-        if (CurrentEnergy <= 0f || Candidate == null || Candidate.Genome == null)
+        if (CurrentEnergy <= 0f)
         {
-            return false;
+            return true;
         }
 
         float defence = EffectiveStats != null ? EffectiveStats.Defence : Candidate.Genome.Armour;
-        float armourReduction = Mathf.Clamp01(defence * ArmourDamageReductionPerPoint);
-        float finalDamage = Mathf.Max(1f, incomingDamage * (1f - armourReduction));
-        CurrentEnergy -= finalDamage;
-
-        float meatEfficiency = attacker != null && attacker.Candidate != null && attacker.Candidate.Genome != null
-            ? attacker.Candidate.Genome.MeatDiet
-            : 0.5f;
-
-        float gainMultiplier = EvolutionEcosystemManager.Instance != null
-            ? EvolutionEcosystemManager.Instance.BiteEnergyGainMultiplier
-            : 0.35f;
-
-        energyGainedByAttacker = finalDamage * gainMultiplier * Mathf.Lerp(0.35f, 1.15f, meatEfficiency);
+        float reduction = Mathf.Clamp01(defence * ArmourDamageReductionPerPoint);
+        float damage = Mathf.Max(0.25f, incomingDamage * (1f - reduction));
+        CurrentEnergy -= damage;
 
         if (CurrentEnergy <= 0f)
         {
+            float size = EffectiveStats != null ? EffectiveStats.BodySize : Candidate.Genome.BodySize;
+            float gainMultiplier = EvolutionEcosystemManager.Instance != null ? EvolutionEcosystemManager.Instance.BiteEnergyGainMultiplier : 0.32f;
+            energyGainedByAttacker = Mathf.Max(5f, size * 22f) * gainMultiplier;
             Die(false);
             return true;
         }
@@ -1623,56 +1610,95 @@ public class MarineCreatureAgent : MonoBehaviour
 
     private void TryReproduce()
     {
-        if (reproductionTimer > 0f || CurrentEnergy < Candidate.Genome.ReproductionEnergyThreshold || EvolutionEcosystemManager.Instance == null)
+        if (reproductionTimer > 0f || EvolutionEcosystemManager.Instance == null || Candidate == null || Candidate.Genome == null)
         {
             return;
         }
 
-        float mutationMultiplier = EvolutionEcosystemManager.Instance.Environment != null
-            ? EvolutionEcosystemManager.Instance.Environment.MutationMultiplier
-            : 1f;
+        if (CurrentEnergy < Candidate.Genome.ReproductionEnergyThreshold)
+        {
+            return;
+        }
 
-        EvolutionCandidate offspring = Candidate.CreateChild(mutationMultiplier);
-        EvolutionEcosystemManager.Instance.RegisterOffspring(offspring);
-        Candidate.ReproductionCount++;
-        CurrentEnergy *= 0.5f;
+        float mutationMultiplier = EvolutionEcosystemManager.Instance.Environment != null ? EvolutionEcosystemManager.Instance.Environment.MutationMultiplier : 1f;
+        EvolutionGenome childGenome = Candidate.Genome.CreateMutatedCopy(mutationMultiplier);
+        EvolutionCandidate child = new EvolutionCandidate(childGenome);
+        child.ParentId = Candidate.Id;
+        EvolutionEcosystemManager.Instance.RegisterOffspring(child);
+
+        CurrentEnergy *= 0.68f;
         reproductionTimer = ReproductionCooldown;
+        Candidate.ReproductionCount++;
     }
 
     private void UpdateMetrics()
     {
-        float distance = Vector3.Distance(transform.position, lastPosition);
-        Candidate.DistanceTravelled += distance;
+        if (Candidate == null)
+        {
+            return;
+        }
+
         Candidate.SurvivalTime = aliveTimer;
-        Candidate.AverageSpeedUsed = Mathf.Lerp(Candidate.AverageSpeedUsed, rb.linearVelocity.magnitude, 0.05f);
+        Candidate.FinalEnergy = CurrentEnergy;
+        float currentSpeed = rb != null ? rb.linearVelocity.magnitude : 0f;
+        Candidate.DistanceTravelled += currentSpeed * Time.fixedDeltaTime;
+        Candidate.AverageSpeedUsed = Mathf.Lerp(Candidate.AverageSpeedUsed, currentSpeed, 0.02f);
 
-        if (nearestFood != null)
+        if (Candidate.Genome != null)
         {
-            float foodDistance = Vector3.Distance(GetMouthWorldPosition(), nearestFood.transform.position);
-            Candidate.AverageFoodDistance = Mathf.Lerp(Candidate.AverageFoodDistance, foodDistance, 0.05f);
+            Candidate.Genome.DecayUnusedBehaviourTraits(BehaviourDecayRate * Time.fixedDeltaTime);
+        }
+    }
+
+    private void UpdateDebugMovementState(float hungerPressure, Vector3 targetPull, Vector3 dangerPull, Vector3 schoolPull, Vector3 boundaryPull, Vector3 emergencyPull)
+    {
+        if (stuckEscapeTimer > 0f || emergencyPull.sqrMagnitude > 0.01f)
+        {
+            debugMoveState = "Unsticking";
+        }
+        else if (dangerPull.sqrMagnitude > 0.05f)
+        {
+            debugMoveState = "Avoiding predator";
+        }
+        else if (nearestPrey != null && CanAttackPrey(nearestPrey))
+        {
+            debugMoveState = "Hunting";
+        }
+        else if (targetPull.sqrMagnitude > 0.05f && hungerPressure > 0.25f)
+        {
+            debugMoveState = "Feeding";
+        }
+        else if (schoolPull.sqrMagnitude > 0.05f && lastFriendlyCount > 0)
+        {
+            debugMoveState = "Schooling";
+        }
+        else if (boundaryPull.sqrMagnitude > 0.05f)
+        {
+            debugMoveState = "Bounds";
+        }
+        else
+        {
+            debugMoveState = "Cruising";
         }
 
-        if (nearestPrey != null)
+        if (Mathf.Abs(wantedDirection.y) > 0.35f)
         {
-            float preyDistance = Vector3.Distance(GetMouthWorldPosition(), nearestPrey.GetBiteTargetPosition());
-            Candidate.AveragePreyDistance = Mathf.Lerp(Candidate.AveragePreyDistance, preyDistance, 0.05f);
+            if (targetPull.sqrMagnitude > 0.05f && Mathf.Abs(targetPull.y) > 0.15f) debugVerticalReason = "Food depth";
+            else if (dangerPull.sqrMagnitude > 0.05f && Mathf.Abs(dangerPull.y) > 0.15f) debugVerticalReason = "Threat depth";
+            else if (boundaryPull.sqrMagnitude > 0.05f && Mathf.Abs(boundaryPull.y) > 0.15f) debugVerticalReason = "Bounds";
+            else debugVerticalReason = "Preferred depth";
         }
-
-        if (nearestCarrion != null)
+        else
         {
-            float carrionDistance = Vector3.Distance(GetMouthWorldPosition(), nearestCarrion.transform.position);
-            Candidate.AverageCarrionDistance = Mathf.Lerp(Candidate.AverageCarrionDistance, carrionDistance, 0.05f);
+            debugVerticalReason = "Cruise";
         }
-
-        lastPosition = transform.position;
     }
 
     private void DrawRuntimeDebugRays()
     {
         EcosystemDebugSettings settings = EcosystemDebugSettings.Instance;
         bool drawRays = LocalDebugRays || (settings != null && settings.DrawCreatureMovementRays);
-
-        if (!drawRays)
+        if (!drawRays || rb == null)
         {
             return;
         }
@@ -1682,69 +1708,21 @@ public class MarineCreatureAgent : MonoBehaviour
         float velocityScale = settings != null ? settings.VelocityRayScale : 0.4f;
         Vector3 mouth = GetMouthWorldPosition();
 
-        if (settings == null || settings.DrawWantedDirectionRays)
-        {
-            Debug.DrawRay(transform.position, wantedDirection * wantedLength, Color.blue, duration);
-        }
-
-        if (settings == null || settings.DrawVelocityRays)
-        {
-            Debug.DrawRay(transform.position, rb.linearVelocity * velocityScale, Color.white, duration);
-        }
-
-        if (nearestFood != null && (settings == null || settings.DrawFoodTargetRays))
-        {
-            Debug.DrawLine(mouth, nearestFood.transform.position, Color.green, duration);
-            Debug.DrawRay(mouth, lastFoodDirection * 3f, Color.green, duration);
-        }
-
-        if (nearestCarrion != null && (settings == null || settings.DrawCarrionTargetRays))
-        {
-            Debug.DrawLine(mouth, nearestCarrion.transform.position, new Color(0.55f, 0.3f, 0.1f), duration);
-            Debug.DrawRay(mouth, lastCarrionDirection * 3f, new Color(0.55f, 0.3f, 0.1f), duration);
-        }
-
-        if (nearestPrey != null && (settings == null || settings.DrawPreyTargetRays))
-        {
-            Debug.DrawLine(mouth, nearestPrey.GetBiteTargetPosition(), Color.red, duration);
-            Debug.DrawRay(mouth, lastPreyDirection * 3f, Color.red, duration);
-        }
-
-        if (nearestCreature != null && (settings == null || settings.DrawSocialTargetRays))
-        {
-            Color socialColour = Candidate.Genome.ThreatRange > Candidate.Genome.GroupingChance ? Color.red : Color.magenta;
-            Debug.DrawLine(transform.position, nearestCreature.transform.position, socialColour, duration);
-            Debug.DrawRay(transform.position, lastCreatureDirection * 3f, socialColour, duration);
-        }
-
+        if (settings == null || settings.DrawWantedDirectionRays) Debug.DrawRay(transform.position, wantedDirection * wantedLength, Color.blue, duration);
+        if (settings == null || settings.DrawVelocityRays) Debug.DrawRay(transform.position, rb.linearVelocity * velocityScale, Color.white, duration);
+        if (nearestFood != null && (settings == null || settings.DrawFoodTargetRays)) Debug.DrawLine(mouth, nearestFood.transform.position, Color.green, duration);
+        if (nearestCarrion != null && (settings == null || settings.DrawCarrionTargetRays)) Debug.DrawLine(mouth, nearestCarrion.transform.position, new Color(0.55f, 0.3f, 0.1f), duration);
+        if (nearestPrey != null && (settings == null || settings.DrawPreyTargetRays)) Debug.DrawLine(mouth, nearestPrey.GetBiteTargetPosition(), Color.red, duration);
+        if (nearestCreature != null && (settings == null || settings.DrawSocialTargetRays)) Debug.DrawLine(transform.position, nearestCreature.transform.position, IsActualThreat(nearestCreature) ? Color.red : new Color(0.4f, 0.7f, 1f), duration);
         if (settings == null || settings.DrawBoidRays)
         {
-            if (lastBoidCohesion.sqrMagnitude > 0.001f) Debug.DrawRay(transform.position, lastBoidCohesion, new Color(0.1f, 0.9f, 1f), duration);
-            if (lastBoidAlignment.sqrMagnitude > 0.001f) Debug.DrawRay(transform.position, lastBoidAlignment, new Color(0.55f, 0.75f, 1f), duration);
-            if (lastBoidSeparation.sqrMagnitude > 0.001f) Debug.DrawRay(transform.position, lastBoidSeparation, Color.cyan, duration);
-            if (lastBoidThreatAvoid.sqrMagnitude > 0.001f) Debug.DrawRay(transform.position, lastBoidThreatAvoid, new Color(1f, 0.35f, 0.1f), duration);
-
-            if (settings != null && settings.DrawBoidGroupCentreRays && lastBoidSameGroupCount > 0)
-            {
-                Debug.DrawLine(transform.position, lastBoidGroupCentre, new Color(0.25f, 1f, 1f), duration);
-            }
+            if (lastSchoolCohesion.sqrMagnitude > 0.001f) Debug.DrawRay(transform.position, lastSchoolCohesion, new Color(0.1f, 0.9f, 1f), duration);
+            if (lastSchoolAlignment.sqrMagnitude > 0.001f) Debug.DrawRay(transform.position, lastSchoolAlignment, new Color(0.55f, 0.75f, 1f), duration);
+            if (lastSchoolSeparation.sqrMagnitude > 0.001f) Debug.DrawRay(transform.position, lastSchoolSeparation, Color.cyan, duration);
+            if (lastThreatAvoidance.sqrMagnitude > 0.001f) Debug.DrawRay(transform.position, lastThreatAvoidance, new Color(1f, 0.35f, 0.1f), duration);
+            if (lastEmergencyUnstick.sqrMagnitude > 0.001f) Debug.DrawRay(transform.position, lastEmergencyUnstick, Color.magenta, duration);
         }
-
-        if ((settings == null || settings.DrawBoundaryPush) && lastBoundaryPush.sqrMagnitude > 0.001f)
-        {
-            Debug.DrawRay(transform.position, lastBoundaryPush, Color.yellow, duration);
-        }
-
-        if (lastNeighbourPush.sqrMagnitude > 0.001f)
-        {
-            Debug.DrawRay(transform.position, lastNeighbourPush, Color.cyan, duration);
-        }
-    }
-
-    private bool ShouldDrawBoundaryDebug()
-    {
-        EcosystemDebugSettings settings = EcosystemDebugSettings.Instance;
-        return settings != null && settings.DrawBoundaryPush;
+        if ((settings == null || settings.DrawBoundaryPush) && lastBoundaryPush.sqrMagnitude > 0.001f) Debug.DrawRay(transform.position, lastBoundaryPush, Color.yellow, duration);
     }
 
     public string GetDebugSummary()
@@ -1763,7 +1741,7 @@ public class MarineCreatureAgent : MonoBehaviour
                " | Def " + EffectiveStats.Defence.ToString("F1") +
                " | Danger " + EffectiveStats.DangerFactor.ToString("F1") +
                " | State " + debugMoveState +
-               " | Boids G/T " + lastBoidSameGroupCount + "/" + lastBoidThreatCount +
+               " | School F/D/T " + lastFriendlyCount + "/" + lastDifferentCount + "/" + lastThreatCount +
                " | Vertical " + debugVerticalReason +
                " | " + EffectiveStats.MorphSummary +
                " | Diet P/M/C " + Candidate.Genome.PlantDiet.ToString("F2") + "/" + Candidate.Genome.MeatDiet.ToString("F2") + "/" + Candidate.Genome.CarrionDiet.ToString("F2");
@@ -1778,6 +1756,31 @@ public class MarineCreatureAgent : MonoBehaviour
         }
 
         Destroy(gameObject);
+    }
+
+    public string GetDebugMoveState()
+    {
+        return debugMoveState;
+    }
+
+    public string GetDebugVerticalReason()
+    {
+        return debugVerticalReason;
+    }
+
+    public int GetFriendlySchoolmateCount()
+    {
+        return lastFriendlyCount;
+    }
+
+    public int GetThreatCount()
+    {
+        return lastThreatCount;
+    }
+
+    public float GetPreferredDepth01()
+    {
+        return Candidate != null && Candidate.Genome != null ? Candidate.Genome.PreferredDepth01 : 0.5f;
     }
 
     private void OnDrawGizmos()
@@ -1806,13 +1809,6 @@ public class MarineCreatureAgent : MonoBehaviour
         {
             Gizmos.color = new Color(0f, 0.8f, 1f, selectedStyle ? 0.8f : 0.25f);
             Gizmos.DrawWireSphere(transform.position, EffectiveStats != null ? EffectiveStats.VisionRange : Candidate.Genome.VisionRange);
-
-            float threatRange = GetThreatRange();
-            if (threatRange > 0.1f)
-            {
-                Gizmos.color = new Color(1f, 0.1f, 0.1f, selectedStyle ? 0.7f : 0.2f);
-                Gizmos.DrawWireSphere(transform.position, threatRange);
-            }
         }
 
         if (drawMouth)
@@ -1832,7 +1828,6 @@ public class MarineCreatureAgent : MonoBehaviour
     private void OnGUI()
     {
         EcosystemDebugSettings settings = EcosystemDebugSettings.Instance;
-
         if (!(LocalDebugLabels || (settings != null && settings.ShowCreatureLabels)))
         {
             return;
@@ -1857,7 +1852,6 @@ public class MarineCreatureAgent : MonoBehaviour
 
         float maxDistance = settings != null ? settings.LabelMaxDistance : 80f;
         float distance = Vector3.Distance(Camera.main.transform.position, transform.position);
-
         if (distance > maxDistance)
         {
             return;
@@ -1866,7 +1860,6 @@ public class MarineCreatureAgent : MonoBehaviour
         float bodySize = EffectiveStats != null ? EffectiveStats.BodySize : Candidate.Genome.BodySize;
         Vector3 worldPoint = transform.position + Vector3.up * bodySize * 1.4f;
         Vector3 screenPoint = Camera.main.WorldToScreenPoint(worldPoint);
-
         if (screenPoint.z <= 0f)
         {
             return;
@@ -1885,11 +1878,7 @@ public class MarineCreatureAgent : MonoBehaviour
 
         if (settings == null || settings.ShowMovementStateInLabels)
         {
-            label += "\n" + debugMoveState;
-            if (settings == null || settings.ShowBoidStateInLabels)
-            {
-                label += " G" + lastBoidSameGroupCount;
-            }
+            label += "\n" + debugMoveState + " F" + lastFriendlyCount + " T" + lastThreatCount;
         }
 
         if (settings != null && settings.ShowVerticalReasonInLabels)
