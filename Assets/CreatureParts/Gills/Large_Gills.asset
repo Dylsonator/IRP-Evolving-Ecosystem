@@ -1,0 +1,56 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0469ef77eabcdb54299fc87d28b8e1c5, type: 3}
+  m_Name: Large_Gills
+  m_EditorClassIdentifier: 
+  PartId: large
+  DisplayName: large gills
+  Slot: 8
+  Family: 3
+  PartPrefab: {fileID: 6216843525559374655, guid: c079f800a7d51fe4a8a63d89d7b0766b, type: 3}
+  LocalPosition: {x: 0, y: 0, z: 0}
+  LocalRotationEuler: {x: 0, y: 0, z: 0}
+  LocalScale: {x: 1, y: 1, z: 1}
+  MirrorOnX: 0
+  DebugColour: {r: 1, g: 1, b: 1, a: 1}
+  OverrideTypeColour: 0
+  SocketNodes: []
+  UseBodySocket: 1
+  PreferredSocketName: 
+  AddLocalOffsetToSocket: 1
+  AddLocalRotationToSocket: 1
+  MultiplyLocalScaleBySocketScale: 0
+  ApplyGenomeShapeScale: 0
+  SpeedModifier: 0.05
+  AccelerationModifier: 0.06
+  TurnRateModifier: -0.02
+  VerticalControlModifier: 0.04
+  BodySizeModifier: 0.04
+  VisionRangeModifier: 0
+  EnergyCapacityModifier: 12
+  BiteDamageModifier: 0
+  MouthRadiusModifier: 0
+  DefenceModifier: 0.02
+  DangerFactorModifier: 0.02
+  EnergyDrainMultiplier: 1.1
+  SpeedMultiplier: 1.04
+  TurnRateMultiplier: 0.99
+  BiteDamageMultiplier: 1
+  VisionRangeMultiplier: 1
+  PlantDietBias: 0
+  MeatDietBias: 0.04
+  CarrionDietBias: 0.02
+  AggressionModifier: 0.03
+  RiskToleranceModifier: 0.05
+  GroupingModifier: -0.01
+  ThreatModifier: 0.02
+  MutationWeight: 0.7

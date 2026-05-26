@@ -24,7 +24,7 @@ MonoBehaviour:
   DebugColour: {r: 1, g: 1, b: 1, a: 1}
   OverrideTypeColour: 0
   SocketNodes: []
-  UseBodySocket: 1
+  UseBodySocket: 0
   PreferredSocketName: 
   AddLocalOffsetToSocket: 1
   AddLocalRotationToSocket: 1

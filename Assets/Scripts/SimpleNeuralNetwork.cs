@@ -35,40 +35,49 @@ public class SimpleNeuralNetwork
 
     public float[] Evaluate(float[] inputs)
     {
-        if (inputs == null || inputs.Length != InputCount)
-        {
-            Debug.LogWarning("SimpleNeuralNetwork received the wrong number of inputs.");
-            return new float[OutputCount];
-        }
-
-        float[] hidden = new float[HiddenCount];
         float[] outputs = new float[OutputCount];
+        float[] hidden = new float[HiddenCount];
+        EvaluateNonAlloc(inputs, outputs, hidden);
+        return outputs;
+    }
+
+    public bool EvaluateNonAlloc(float[] inputs, float[] outputs, float[] hiddenScratch)
+    {
+        if (inputs == null || inputs.Length != InputCount || outputs == null || outputs.Length < OutputCount || hiddenScratch == null || hiddenScratch.Length < HiddenCount)
+        {
+            Debug.LogWarning("SimpleNeuralNetwork received invalid input/output buffers.");
+            return false;
+        }
 
         for (int h = 0; h < HiddenCount; h++)
         {
             float sum = HiddenBiases[h];
+            int weightOffset = h;
 
             for (int i = 0; i < InputCount; i++)
             {
-                sum += inputs[i] * InputHiddenWeights[i * HiddenCount + h];
+                sum += inputs[i] * InputHiddenWeights[weightOffset];
+                weightOffset += HiddenCount;
             }
 
-            hidden[h] = (float)Math.Tanh(sum);
+            hiddenScratch[h] = (float)Math.Tanh(sum);
         }
 
         for (int o = 0; o < OutputCount; o++)
         {
             float sum = OutputBiases[o];
+            int weightOffset = o;
 
             for (int h = 0; h < HiddenCount; h++)
             {
-                sum += hidden[h] * HiddenOutputWeights[h * OutputCount + o];
+                sum += hiddenScratch[h] * HiddenOutputWeights[weightOffset];
+                weightOffset += OutputCount;
             }
 
             outputs[o] = Mathf.Clamp((float)Math.Tanh(sum), -1f, 1f);
         }
 
-        return outputs;
+        return true;
     }
 
     public SimpleNeuralNetwork CreateMutatedCopy(float mutationRate, float mutationStrength)

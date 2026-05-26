@@ -110,8 +110,13 @@ public class EvolutionEcosystemManager : MonoBehaviour
     private readonly List<EcosystemWaterCurrentZone> activeCurrentZones = new List<EcosystemWaterCurrentZone>();
     private readonly List<EvolutionCandidate> offspringPool = new List<EvolutionCandidate>();
 
+    [Header("Performance")]
+    [Tooltip("How often manager lists are cleaned for destroyed/null entries. Registration still removes objects immediately on disable.")]
+    public float ListCleanInterval = 0.5f;
+
     private float foodSpawnTimer;
     private float extinctionTimer;
+    private float listCleanTimer;
     private int nextCreatureId = 1;
     private EvolutionGenome baselineGenome;
     private Coroutine bootstrapRoutine;
@@ -198,7 +203,13 @@ public class EvolutionEcosystemManager : MonoBehaviour
         foodSpawnTimer += Time.deltaTime;
         extinctionTimer += Time.deltaTime;
 
-        CleanLists();
+        listCleanTimer -= Time.deltaTime;
+        if (listCleanTimer <= 0f)
+        {
+            listCleanTimer = Mathf.Max(0.05f, ListCleanInterval);
+            CleanLists();
+        }
+
         HandleFoodSpawning();
         HandleExtinctionEvents();
 
@@ -1242,12 +1253,60 @@ public class EvolutionEcosystemManager : MonoBehaviour
 
     private void CleanLists()
     {
-        activeCreatures.RemoveAll(creature => creature == null);
-        activeFood.RemoveAll(food => food == null);
-        activeCarrion.RemoveAll(carrion => carrion == null);
-        activePlants.RemoveAll(plant => plant == null);
-        activeEggClusters.RemoveAll(egg => egg == null);
-        activeCurrentZones.RemoveAll(zone => zone == null);
+        RemoveNullCreatures();
+        RemoveNullFood();
+        RemoveNullCarrion();
+        RemoveNullPlants();
+        RemoveNullEggClusters();
+        RemoveNullCurrentZones();
+    }
+
+    private void RemoveNullCreatures()
+    {
+        for (int i = activeCreatures.Count - 1; i >= 0; i--)
+        {
+            if (activeCreatures[i] == null) activeCreatures.RemoveAt(i);
+        }
+    }
+
+    private void RemoveNullFood()
+    {
+        for (int i = activeFood.Count - 1; i >= 0; i--)
+        {
+            if (activeFood[i] == null) activeFood.RemoveAt(i);
+        }
+    }
+
+    private void RemoveNullCarrion()
+    {
+        for (int i = activeCarrion.Count - 1; i >= 0; i--)
+        {
+            if (activeCarrion[i] == null) activeCarrion.RemoveAt(i);
+        }
+    }
+
+    private void RemoveNullPlants()
+    {
+        for (int i = activePlants.Count - 1; i >= 0; i--)
+        {
+            if (activePlants[i] == null) activePlants.RemoveAt(i);
+        }
+    }
+
+    private void RemoveNullEggClusters()
+    {
+        for (int i = activeEggClusters.Count - 1; i >= 0; i--)
+        {
+            if (activeEggClusters[i] == null) activeEggClusters.RemoveAt(i);
+        }
+    }
+
+    private void RemoveNullCurrentZones()
+    {
+        for (int i = activeCurrentZones.Count - 1; i >= 0; i--)
+        {
+            if (activeCurrentZones[i] == null) activeCurrentZones.RemoveAt(i);
+        }
     }
 
     public List<MarineCreatureAgent> GetActiveCreatures()

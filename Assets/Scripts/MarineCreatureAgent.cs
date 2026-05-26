@@ -61,6 +61,7 @@ public class MarineCreatureAgent : MonoBehaviour
     public float WanderRefreshMin = 2.5f;
     public float WanderRefreshMax = 6.5f;
     public float BrainInfluence = 0.08f;
+    public bool ShouldLeaveCurrentResource;
 
     [Header("Autonomous Behaviour Brain")]
     [Tooltip("How often the fish re-evaluates its high-level behaviour. Higher values make behaviour calmer and less twitchy.")]
@@ -288,6 +289,24 @@ public class MarineCreatureAgent : MonoBehaviour
     private Renderer[] cachedRenderers;
     private MaterialPropertyBlock materialBlock;
 
+    [Header("Performance")]
+    [Tooltip("Caches expensive all-creature social/danger scans. Lower values are more accurate but slower.")]
+    public float SocialScanInterval = 0.18f;
+    [Tooltip("Caches terrain ray checks. Lower values are more accurate but slower.")]
+    public float TerrainScanInterval = 0.12f;
+
+    private float socialScanTimer;
+    private float dangerScanTimer;
+    private float crowdScanTimer;
+    private float terrainScanTimer;
+    private Vector3 cachedSchoolPull;
+    private Vector3 cachedDangerPull;
+    private Vector3 cachedCrowdPull;
+    private Vector3 cachedTerrainPull;
+    private float[] brainInputs;
+    private float[] brainOutputs;
+    private float[] brainHiddenScratch;
+
     private FoodSource nearestFood;
     private CarrionSource nearestCarrion;
     private MarineCreatureAgent nearestCreature;
@@ -437,8 +456,12 @@ public class MarineCreatureAgent : MonoBehaviour
         reproductionTimer = Random.Range(1f, ReproductionCooldown);
         eggLayTimer = Random.Range(3f, EggLayCooldown);
         biteTimer = Random.Range(0f, BiteCooldown);
-        senseInterval = Random.Range(0.08f, 0.18f);
+        senseInterval = Random.Range(0.14f, 0.28f);
         senseTimer = Random.Range(0f, senseInterval);
+        socialScanTimer = Random.Range(0f, Mathf.Max(0.02f, SocialScanInterval));
+        dangerScanTimer = Random.Range(0f, Mathf.Max(0.02f, SocialScanInterval));
+        crowdScanTimer = Random.Range(0f, Mathf.Max(0.02f, SocialScanInterval));
+        terrainScanTimer = Random.Range(0f, Mathf.Max(0.02f, TerrainScanInterval));
         lastPosition = transform.position;
         currentVelocity = Vector3.zero;
         currentBrainMode = FishAutonomousBehaviourMode.Resting;
@@ -505,6 +528,10 @@ public class MarineCreatureAgent : MonoBehaviour
         retainedTargetTimer -= Time.fixedDeltaTime;
         ignoredResourceTimer -= Time.fixedDeltaTime;
         feedingHoldTimer -= Time.fixedDeltaTime;
+        socialScanTimer -= Time.fixedDeltaTime;
+        dangerScanTimer -= Time.fixedDeltaTime;
+        crowdScanTimer -= Time.fixedDeltaTime;
+        terrainScanTimer -= Time.fixedDeltaTime;
         if (feedingHoldTimer < 0f)
         {
             feedingHoldTimer = 0f;
@@ -773,7 +800,7 @@ public class MarineCreatureAgent : MonoBehaviour
             + lowHealthNeed * HealthNeedWeight * 0.38f
             + (hasFoodMemory && !rememberedFoodWasBad ? Candidate.Genome.FoodMemoryStrength * 0.14f : 0f));
 
-        if (ShouldLeaveCurrentResource())
+        if (ShouldLeaveCurrentResource)
         {
             brainFoodDesire *= 0.25f;
         }
@@ -1084,18 +1111,18 @@ public class MarineCreatureAgent : MonoBehaviour
 
         Vector3 targetPull = hungryEnough ? GetFeedingTargetPull(hungerPressure) : Vector3.zero;
         Vector3 rawStaticFeedingPull = hungryEnough ? GetRawStaticFeedingPull(hungerPressure) : Vector3.zero;
-        Vector3 schoolPull = GetEvolvedSchoolingPull(hungerPressure);
-        Vector3 dangerPull = GetDangerAvoidancePull(hungerPressure);
+        Vector3 schoolPull = GetCachedSchoolingPull(hungerPressure);
+        Vector3 dangerPull = GetCachedDangerAvoidancePull(hungerPressure);
         Vector3 depthPull = GetDepthPreferencePull(targetPull, dangerPull, hungerPressure);
         Vector3 boundaryPull = GetBoundaryAvoidanceDirection();
         Vector3 closeTargetPull = GetCloseTargetPull(hungerPressure);
         Vector3 queuePull = GetFoodQueuePull(hungerPressure);
-        Vector3 crowdPull = GetCrowdStabilisationPull(hungerPressure);
+        Vector3 crowdPull = GetCachedCrowdStabilisationPull(hungerPressure);
         Vector3 brainPull = GetBrainPull(energyRatio);
         Vector3 wanderPull = GetWanderPull(energyRatio);
         Vector3 homePull = GetHomeAreaPull(hungerPressure);
         Vector3 matePull = GetMateSeekingPull(hungerPressure);
-        Vector3 terrainPull = GetTerrainAvoidancePull();
+        Vector3 terrainPull = GetCachedTerrainAvoidancePull();
         Vector3 emergencyPull = GetEmergencyUnstickPull();
 
         ApplyBrainModeToPulls(hungerPressure,
@@ -1307,6 +1334,17 @@ public class MarineCreatureAgent : MonoBehaviour
         return "Plant";
     }
 
+    private Vector3 GetCachedSchoolingPull(float hungerPressure)
+    {
+        if (socialScanTimer <= 0f)
+        {
+            socialScanTimer = Mathf.Max(0.02f, SocialScanInterval) * Random.Range(0.85f, 1.15f);
+            cachedSchoolPull = GetEvolvedSchoolingPull(hungerPressure);
+        }
+
+        return cachedSchoolPull;
+    }
+
     private Vector3 GetEvolvedSchoolingPull(float hungerPressure)
     {
         lastSchoolCohesion = Vector3.zero;
@@ -1455,6 +1493,17 @@ public class MarineCreatureAgent : MonoBehaviour
         Vector3 social = lastSchoolCohesion + lastSchoolAlignment + lastSchoolSeparation + lastLeaderPull;
         ClampSocialVertical(ref social);
         return social;
+    }
+
+    private Vector3 GetCachedCrowdStabilisationPull(float hungerPressure)
+    {
+        if (crowdScanTimer <= 0f)
+        {
+            crowdScanTimer = Mathf.Max(0.02f, SocialScanInterval) * Random.Range(0.85f, 1.15f);
+            cachedCrowdPull = GetCrowdStabilisationPull(hungerPressure);
+        }
+
+        return cachedCrowdPull;
     }
 
     private Vector3 GetCrowdStabilisationPull(float hungerPressure)
@@ -1645,6 +1694,17 @@ public class MarineCreatureAgent : MonoBehaviour
         }
     }
 
+    private Vector3 GetCachedDangerAvoidancePull(float hungerPressure)
+    {
+        if (dangerScanTimer <= 0f)
+        {
+            dangerScanTimer = Mathf.Max(0.02f, SocialScanInterval) * Random.Range(0.85f, 1.15f);
+            cachedDangerPull = GetDangerAvoidancePull(hungerPressure);
+        }
+
+        return cachedDangerPull;
+    }
+
     private Vector3 GetDangerAvoidancePull(float hungerPressure)
     {
         lastThreatAvoidance = Vector3.zero;
@@ -1772,24 +1832,36 @@ public class MarineCreatureAgent : MonoBehaviour
             return Vector3.zero;
         }
 
-        float[] inputs =
+        SimpleNeuralNetwork network = Candidate.Genome.Brain;
+        if (brainInputs == null || brainInputs.Length != network.InputCount)
         {
-            energyRatio,
-            lastFoodDirection.x,
-            lastFoodDirection.y,
-            lastFoodDirection.z,
-            lastCarrionDirection.x,
-            lastCarrionDirection.y,
-            lastCarrionDirection.z,
-            lastPreyDirection.x,
-            lastPreyDirection.y,
-            lastPreyDirection.z,
-            lastThreatAvoidance.sqrMagnitude > 0.01f ? 1f : 0f,
-            Random.Range(-1f, 1f)
-        };
+            brainInputs = new float[network.InputCount];
+            brainOutputs = new float[network.OutputCount];
+            brainHiddenScratch = new float[network.HiddenCount];
+        }
 
-        float[] outputs = Candidate.Genome.Brain.Evaluate(inputs);
-        Vector3 brain = new Vector3(outputs.Length > 0 ? outputs[0] : 0f, outputs.Length > 1 ? outputs[1] : 0f, outputs.Length > 2 ? outputs[2] : 0f);
+        if (brainInputs.Length >= 12)
+        {
+            brainInputs[0] = energyRatio;
+            brainInputs[1] = lastFoodDirection.x;
+            brainInputs[2] = lastFoodDirection.y;
+            brainInputs[3] = lastFoodDirection.z;
+            brainInputs[4] = lastCarrionDirection.x;
+            brainInputs[5] = lastCarrionDirection.y;
+            brainInputs[6] = lastCarrionDirection.z;
+            brainInputs[7] = lastPreyDirection.x;
+            brainInputs[8] = lastPreyDirection.y;
+            brainInputs[9] = lastPreyDirection.z;
+            brainInputs[10] = lastThreatAvoidance.sqrMagnitude > 0.01f ? 1f : 0f;
+            brainInputs[11] = Random.Range(-1f, 1f);
+        }
+
+        if (!network.EvaluateNonAlloc(brainInputs, brainOutputs, brainHiddenScratch))
+        {
+            return Vector3.zero;
+        }
+
+        Vector3 brain = new Vector3(brainOutputs.Length > 0 ? brainOutputs[0] : 0f, brainOutputs.Length > 1 ? brainOutputs[1] : 0f, brainOutputs.Length > 2 ? brainOutputs[2] : 0f);
         if (brain.sqrMagnitude <= 0.001f)
         {
             return Vector3.zero;
@@ -3331,6 +3403,17 @@ public class MarineCreatureAgent : MonoBehaviour
         drive *= Mathf.Lerp(1f, 0.25f, Mathf.Clamp01(hungerPressure));
 
         return toMate.normalized * MateSeekingWeight * drive;
+    }
+
+    private Vector3 GetCachedTerrainAvoidancePull()
+    {
+        if (terrainScanTimer <= 0f)
+        {
+            terrainScanTimer = Mathf.Max(0.02f, TerrainScanInterval) * Random.Range(0.85f, 1.15f);
+            cachedTerrainPull = GetTerrainAvoidancePull();
+        }
+
+        return cachedTerrainPull;
     }
 
     private Vector3 GetTerrainAvoidancePull()

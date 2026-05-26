@@ -1,0 +1,56 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0469ef77eabcdb54299fc87d28b8e1c5, type: 3}
+  m_Name: Small_Spikes
+  m_EditorClassIdentifier: 
+  PartId: small
+  DisplayName: small spikes
+  Slot: 7
+  Family: 9
+  PartPrefab: {fileID: 5667414294843417785, guid: 93752061de8a19c409d131ec68b013ad, type: 3}
+  LocalPosition: {x: 0, y: 0, z: 0}
+  LocalRotationEuler: {x: 0, y: 0, z: 0}
+  LocalScale: {x: 1, y: 1, z: 1}
+  MirrorOnX: 0
+  DebugColour: {r: 1, g: 1, b: 1, a: 1}
+  OverrideTypeColour: 0
+  SocketNodes: []
+  UseBodySocket: 1
+  PreferredSocketName: 
+  AddLocalOffsetToSocket: 1
+  AddLocalRotationToSocket: 1
+  MultiplyLocalScaleBySocketScale: 0
+  ApplyGenomeShapeScale: 0
+  SpeedModifier: -0.04
+  AccelerationModifier: -0.02
+  TurnRateModifier: -0.03
+  VerticalControlModifier: -0.02
+  BodySizeModifier: 0
+  VisionRangeModifier: 0
+  EnergyCapacityModifier: 0
+  BiteDamageModifier: 0.02
+  MouthRadiusModifier: 0
+  DefenceModifier: 0.12
+  DangerFactorModifier: 0.14
+  EnergyDrainMultiplier: 1.06
+  SpeedMultiplier: 0.98
+  TurnRateMultiplier: 0.98
+  BiteDamageMultiplier: 1.03
+  VisionRangeMultiplier: 1
+  PlantDietBias: 0.03
+  MeatDietBias: -0.01
+  CarrionDietBias: 0
+  AggressionModifier: -0.01
+  RiskToleranceModifier: 0.06
+  GroupingModifier: 0.05
+  ThreatModifier: 0.08
+  MutationWeight: 0.75

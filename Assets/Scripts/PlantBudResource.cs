@@ -15,8 +15,12 @@ public class PlantBudResource : MonoBehaviour
     public float DetachImpulseMin = 0.25f;
     public float DetachImpulseMax = 0.85f;
 
+    [Header("Performance")]
+    public float DetachedUpdateInterval = 0.12f;
+
     private FoodSource food;
     private float detachedTimer;
+    private float detachedUpdateTimer;
     private Vector3 driftVelocity;
     private bool hasBeenBitten;
 
@@ -59,7 +63,21 @@ public class PlantBudResource : MonoBehaviour
             return;
         }
 
-        detachedTimer += Time.deltaTime;
+        float dt = Time.deltaTime;
+        detachedTimer += dt;
+        detachedUpdateTimer -= dt;
+
+        if (detachedUpdateTimer > 0f)
+        {
+            if (CanSpoilWhenDetached && detachedTimer >= DetachedLifeTime)
+            {
+                NotifyParentConsumed();
+                Destroy(gameObject);
+            }
+            return;
+        }
+
+        detachedUpdateTimer = Mathf.Max(0.02f, DetachedUpdateInterval);
 
         EvolutionEcosystemManager manager = EvolutionEcosystemManager.Instance;
         if (manager != null)
@@ -83,8 +101,9 @@ public class PlantBudResource : MonoBehaviour
                 }
             }
 
-            driftVelocity = Vector3.Lerp(driftVelocity, wanted, Time.deltaTime * 2.5f);
-            transform.position += driftVelocity * Time.deltaTime;
+            float step = Mathf.Max(0.02f, DetachedUpdateInterval);
+            driftVelocity = Vector3.Lerp(driftVelocity, wanted, step * 2.5f);
+            transform.position += driftVelocity * step;
             transform.position = manager.ClampToSimulationArea(transform.position);
         }
 

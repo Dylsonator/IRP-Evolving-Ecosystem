@@ -1,0 +1,56 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0469ef77eabcdb54299fc87d28b8e1c5, type: 3}
+  m_Name: Antennae_Sensors
+  m_EditorClassIdentifier: 
+  PartId: amtennae
+  DisplayName: antennae sensors
+  Slot: 4
+  Family: 8
+  PartPrefab: {fileID: 8548700750130084010, guid: 0652b89b5d344704d81a1be789f2a3cf, type: 3}
+  LocalPosition: {x: 0, y: 0, z: 0}
+  LocalRotationEuler: {x: 0, y: 0, z: 0}
+  LocalScale: {x: 1, y: 1, z: 1}
+  MirrorOnX: 0
+  DebugColour: {r: 1, g: 1, b: 1, a: 1}
+  OverrideTypeColour: 0
+  SocketNodes: []
+  UseBodySocket: 1
+  PreferredSocketName: 
+  AddLocalOffsetToSocket: 1
+  AddLocalRotationToSocket: 1
+  MultiplyLocalScaleBySocketScale: 0
+  ApplyGenomeShapeScale: 0
+  SpeedModifier: -0.03
+  AccelerationModifier: 0
+  TurnRateModifier: 0.02
+  VerticalControlModifier: 0
+  BodySizeModifier: 0
+  VisionRangeModifier: 2.5
+  EnergyCapacityModifier: 0
+  BiteDamageModifier: 0
+  MouthRadiusModifier: 0
+  DefenceModifier: 0
+  DangerFactorModifier: 0.02
+  EnergyDrainMultiplier: 1.09
+  SpeedMultiplier: 0.99
+  TurnRateMultiplier: 1.02
+  BiteDamageMultiplier: 1
+  VisionRangeMultiplier: 1.12
+  PlantDietBias: 0.02
+  MeatDietBias: 0
+  CarrionDietBias: 0.08
+  AggressionModifier: -0.01
+  RiskToleranceModifier: 0.03
+  GroupingModifier: 0.04
+  ThreatModifier: 0.05
+  MutationWeight: 0.7

@@ -25,9 +25,13 @@ public class CarrionSource : MonoBehaviour
     [Header("Feeding Pressure")]
     public float RecentFeederMemoryTime = 4.0f;
 
+    [Header("Performance")]
+    public float UpdateInterval = 0.16f;
+
     private readonly List<int> recentFeederIds = new List<int>();
     private readonly List<float> recentFeederTimes = new List<float>();
     private Vector3 initialScale;
+    private float updateTimer;
 
     private void OnEnable()
     {
@@ -68,7 +72,16 @@ public class CarrionSource : MonoBehaviour
 
     private void Update()
     {
-        Age += Time.deltaTime;
+        float dt = Time.deltaTime;
+        Age += dt;
+        updateTimer -= dt;
+
+        if (updateTimer > 0f)
+        {
+            return;
+        }
+
+        updateTimer = Mathf.Max(0.02f, UpdateInterval);
         ApplySettlingAndCurrentDrift();
 
         if (Age >= DecayTime)

@@ -122,7 +122,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6db7a214a59934b43a69540b6d472714, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  EnergyValue: 25
+  EnergyValue: 50
   MaxMass: 44
   RemainingMass: -1
   MinimumVisibleScale: 0.18

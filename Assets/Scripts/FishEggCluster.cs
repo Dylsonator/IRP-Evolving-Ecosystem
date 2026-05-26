@@ -18,8 +18,12 @@ public class FishEggCluster : MonoBehaviour
     public float MinimumScale = 0.25f;
     public float MaximumScale = 1.4f;
 
+    [Header("Performance")]
+    public float ScaleRefreshInterval = 0.2f;
+
     private Vector3 initialScale;
     private float predatorScanTimer;
+    private float scaleRefreshTimer;
 
     private void Awake()
     {
@@ -53,7 +57,12 @@ public class FishEggCluster : MonoBehaviour
             HandlePredationPressure();
         }
 
-        UpdateScale();
+        scaleRefreshTimer -= Time.deltaTime;
+        if (scaleRefreshTimer <= 0f)
+        {
+            scaleRefreshTimer = Mathf.Max(0.02f, ScaleRefreshInterval);
+            UpdateScale();
+        }
 
         if (Health <= 0f || EggMass <= 0.01f)
         {

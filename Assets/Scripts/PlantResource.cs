@@ -53,9 +53,13 @@ public class PlantResource : MonoBehaviour
 
     private readonly List<PlantBudResource> activeBuds = new List<PlantBudResource>();
     private readonly List<Transform> sockets = new List<Transform>();
+    [Header("Performance")]
+    public float PlantTickInterval = 0.35f;
+
     private Transform proceduralRoot;
     private float regrowTimer;
     private float detachTimer;
+    private float plantTickTimer;
 
     private void OnEnable()
     {
@@ -92,6 +96,13 @@ public class PlantResource : MonoBehaviour
 
     private void Update()
     {
+        plantTickTimer -= Time.deltaTime;
+        if (plantTickTimer > 0f)
+        {
+            return;
+        }
+
+        plantTickTimer = Mathf.Max(0.02f, PlantTickInterval);
         CleanBuds();
         HandleRegrowth();
         HandleBudDetachment();

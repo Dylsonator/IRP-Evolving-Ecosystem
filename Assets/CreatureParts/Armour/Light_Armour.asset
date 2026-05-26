@@ -30,27 +30,27 @@ MonoBehaviour:
   AddLocalRotationToSocket: 1
   MultiplyLocalScaleBySocketScale: 0
   ApplyGenomeShapeScale: 0
-  SpeedModifier: 0
-  AccelerationModifier: 0
-  TurnRateModifier: 0
-  VerticalControlModifier: 0
+  SpeedModifier: -0.08
+  AccelerationModifier: -0.05
+  TurnRateModifier: -0.04
+  VerticalControlModifier: -0.02
   BodySizeModifier: 0
   VisionRangeModifier: 0
-  EnergyCapacityModifier: 0
+  EnergyCapacityModifier: 5
   BiteDamageModifier: 0
   MouthRadiusModifier: 0
-  DefenceModifier: 0
-  DangerFactorModifier: 0
-  EnergyDrainMultiplier: 1
-  SpeedMultiplier: 1
-  TurnRateMultiplier: 1
+  DefenceModifier: 0.14
+  DangerFactorModifier: 0.06
+  EnergyDrainMultiplier: 1.06
+  SpeedMultiplier: 0.97
+  TurnRateMultiplier: 0.98
   BiteDamageMultiplier: 1
   VisionRangeMultiplier: 1
-  PlantDietBias: 0
+  PlantDietBias: 0.02
   MeatDietBias: 0
-  CarrionDietBias: 0
-  AggressionModifier: 0
-  RiskToleranceModifier: 0
-  GroupingModifier: 0
-  ThreatModifier: 0
-  MutationWeight: 1
+  CarrionDietBias: 0.01
+  AggressionModifier: -0.01
+  RiskToleranceModifier: -0.04
+  GroupingModifier: 0.03
+  ThreatModifier: 0.04
+  MutationWeight: 0.85

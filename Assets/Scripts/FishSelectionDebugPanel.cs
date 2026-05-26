@@ -21,6 +21,12 @@ public class FishSelectionDebugPanel : MonoBehaviour
     [Header("Saving")]
     public string SnapshotFolder = "IRP_SelectedFishSnapshots";
 
+    [Header("Performance")]
+    public bool AllowSelectionWhenPanelHidden = false;
+    public float CameraRefreshInterval = 1f;
+
+    private float cameraRefreshTimer;
+
     private void Awake()
     {
         if (SelectionCamera == null)
@@ -31,6 +37,11 @@ public class FishSelectionDebugPanel : MonoBehaviour
 
     private void Update()
     {
+        if (!ShowPanel && !AllowSelectionWhenPanelHidden)
+        {
+            return;
+        }
+
         TrySelectFishFromMouse();
     }
 
@@ -43,7 +54,12 @@ public class FishSelectionDebugPanel : MonoBehaviour
 
         if (SelectionCamera == null)
         {
-            SelectionCamera = Camera.main;
+            cameraRefreshTimer -= Time.deltaTime;
+            if (cameraRefreshTimer <= 0f)
+            {
+                cameraRefreshTimer = Mathf.Max(0.05f, CameraRefreshInterval);
+                SelectionCamera = Camera.main;
+            }
         }
 
         if (SelectionCamera == null)

@@ -1,0 +1,56 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0469ef77eabcdb54299fc87d28b8e1c5, type: 3}
+  m_Name: Predator_Jaw
+  m_EditorClassIdentifier: 
+  PartId: predatory
+  DisplayName: predator jaw
+  Slot: 3
+  Family: 5
+  PartPrefab: {fileID: 2457415453459306169, guid: bb05abc0291e46a41a20f1b0f06e91ea, type: 3}
+  LocalPosition: {x: 0, y: 0, z: 0}
+  LocalRotationEuler: {x: 0, y: 0, z: 0}
+  LocalScale: {x: 1, y: 1, z: 1}
+  MirrorOnX: 0
+  DebugColour: {r: 1, g: 1, b: 1, a: 1}
+  OverrideTypeColour: 0
+  SocketNodes: []
+  UseBodySocket: 1
+  PreferredSocketName: 
+  AddLocalOffsetToSocket: 1
+  AddLocalRotationToSocket: 1
+  MultiplyLocalScaleBySocketScale: 0
+  ApplyGenomeShapeScale: 0
+  SpeedModifier: 0.02
+  AccelerationModifier: 0.04
+  TurnRateModifier: -0.03
+  VerticalControlModifier: 0
+  BodySizeModifier: 0.03
+  VisionRangeModifier: 0
+  EnergyCapacityModifier: 3
+  BiteDamageModifier: 0.22
+  MouthRadiusModifier: 0.06
+  DefenceModifier: 0.02
+  DangerFactorModifier: 0.18
+  EnergyDrainMultiplier: 1.1
+  SpeedMultiplier: 1.02
+  TurnRateMultiplier: 0.98
+  BiteDamageMultiplier: 1.22
+  VisionRangeMultiplier: 1
+  PlantDietBias: -0.08
+  MeatDietBias: 0.14
+  CarrionDietBias: 0.02
+  AggressionModifier: 0.14
+  RiskToleranceModifier: 0.1
+  GroupingModifier: -0.06
+  ThreatModifier: 0.08
+  MutationWeight: 0.65

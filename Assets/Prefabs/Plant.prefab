@@ -1,0 +1,87 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &3732924044473965821
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 973010840813698098}
+  - component: {fileID: 126840116942310572}
+  m_Layer: 0
+  m_Name: Plant
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &973010840813698098
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3732924044473965821}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 17.80551, y: 27.287449, z: 2.2233617}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &126840116942310572
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3732924044473965821}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3f1f1d8533f5fae4eb08c90f0c668a77, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  GenerateProceduralPlant: 1
+  RegenerateOnStart: 1
+  ClearPreviousProceduralParts: 1
+  RandomSeed: 0
+  UseRandomSeed: 1
+  MinimumStalks: 3
+  MaximumStalks: 7
+  StalkLengthMin: 1.2
+  StalkLengthMax: 3.4
+  StalkThicknessMin: 0.08
+  StalkThicknessMax: 0.18
+  BaseSpreadRadius: 0.45
+  TipSpreadRadius: 0.85
+  LeanAmount: 0.55
+  UpwardBias: 0.85
+  GenerateLeaves: 1
+  LeavesPerStalk: 2
+  LeafLength: 0.65
+  LeafWidth: 0.18
+  StalkMaterial: {fileID: 2100000, guid: a69ea6b91203ea04ea2602ab7f7a9ebc, type: 2}
+  LeafMaterial: {fileID: 2100000, guid: 6105fe37c2055cb458e37bd3e3e4ba1d, type: 2}
+  BudPrefab: {fileID: 5059079653024269994, guid: 9112ca78a5748054e971412ab322c1b0, type: 3}
+  UseBudSockets: 1
+  BudSocketNameContains: Bud
+  RandomBudCount: 5
+  RandomBudRadius: 1.25
+  BudMass: 18
+  BudNutritionQuality: 1
+  DetachChancePerMinute: 0.08
+  DetachedBudLifeTime: 55
+  BudsDetachWhenBitten: 1
+  DetachImpulseMin: 0.25
+  DetachImpulseMax: 0.85
+  Regrows: 1
+  RegrowDelay: 18
+  RegrowInterval: 9
+  MaxActiveBuds: 3
+  SnapToTerrainOnStart: 1
+  TerrainOffset: 0.05
+  AlignToTerrainNormal: 0
+  PlantTickInterval: 0.35
