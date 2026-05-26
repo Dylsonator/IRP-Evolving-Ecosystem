@@ -17,6 +17,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
     public MarineCreatureAgent CreaturePrefab;
     public FoodSource FoodPrefab;
     public CarrionSource CarrionPrefab;
+    public FishEggCluster EggClusterPrefab;
 
     [Header("Libraries")]
     public CreatureMorphLibrary MorphLibrary;
@@ -26,34 +27,29 @@ public class EvolutionEcosystemManager : MonoBehaviour
     public EvolutionStatsTracker StatsTracker;
     public EcosystemDebugSettings DebugSettings;
 
+    [Header("Real Ecosystem Objects")]
+    public bool UsePlacedPlantsForFood = true;
+    public bool EnableRandomFoodFallback = false;
+    public int MaxActiveCreatures = 180;
+
+    [Header("Terrain / Water Height")]
+    public Terrain TerrainSource;
+    public LayerMask TerrainRaycastMask = ~0;
+    public bool KeepSpawnsAboveTerrain = true;
+    public bool KeepSimulationAboveTerrain = true;
+    public float TerrainClearance = 0.35f;
+    public float FishTerrainClearance = 1.0f;
+    public float FoodTerrainClearance = 0.12f;
+    public float CarrionTerrainClearance = 0.12f;
+    public float PlantTerrainOffset = 0.04f;
+    public float TerrainProbeHeight = 160f;
+    public float TerrainProbeDistance = 320f;
+    public bool UseWaterSurfaceLimit = true;
+    public float WaterSurfacePadding = 1.0f;
+
     [Header("Simulation Area")]
     public Vector3 SimulationAreaSize = new Vector3(100f, 35f, 100f);
     public float SpawnPaddingFromBounds = 4f;
-
-    [Header("Terrain / Seabed")]
-    [Tooltip("Raises creature, food and carrion spawn points if they would appear inside or under the seabed.")]
-    public bool KeepSpawnsAboveTerrain = true;
-    [Tooltip("Also prevents swimming positions from being clamped below the seabed during movement.")]
-    public bool KeepSimulationAboveTerrain = true;
-    [Tooltip("Optional Unity Terrain. If left empty, the active terrain is used when available.")]
-    public Terrain TerrainSource;
-    [Tooltip("Optional collider for a mesh/probuilder seabed. Assign this if your map is not a Unity Terrain object.")]
-    public Collider TerrainCollider;
-    [Tooltip("Used for mesh/probuilder seabeds when no explicit terrain collider is assigned. Put the seabed on its own layer and use that layer here.")]
-    public LayerMask TerrainRaycastMask = ~0;
-    [Tooltip("How far above the seabed spawned objects are lifted.")]
-    public float MinimumHeightAboveTerrain = 1.25f;
-    [Tooltip("How high above the simulation area the terrain ray starts.")]
-    public float TerrainProbeHeight = 120f;
-    [Tooltip("How far down the terrain ray checks.")]
-    public float TerrainProbeDistance = 260f;
-
-    [Header("Environmental Pressure Zones")]
-    public bool AutoFindPressureZones = true;
-    public List<EcosystemPressureZone> PressureZones = new List<EcosystemPressureZone>();
-    [Range(0f, 1f)] public float FoodZoneSpawnChance = 0.78f;
-    [Range(0f, 1f)] public float CreatureZoneSpawnChance = 0.62f;
-    public float ZoneRefreshInterval = 3f;
 
     [Header("Generation Settings")]
     public int StartingPopulation = 60;
@@ -109,11 +105,13 @@ public class EvolutionEcosystemManager : MonoBehaviour
     private readonly List<MarineCreatureAgent> activeCreatures = new List<MarineCreatureAgent>();
     private readonly List<FoodSource> activeFood = new List<FoodSource>();
     private readonly List<CarrionSource> activeCarrion = new List<CarrionSource>();
+    private readonly List<PlantResource> activePlants = new List<PlantResource>();
+    private readonly List<FishEggCluster> activeEggClusters = new List<FishEggCluster>();
+    private readonly List<EcosystemWaterCurrentZone> activeCurrentZones = new List<EcosystemWaterCurrentZone>();
     private readonly List<EvolutionCandidate> offspringPool = new List<EvolutionCandidate>();
 
     private float foodSpawnTimer;
     private float extinctionTimer;
-    private float zoneRefreshTimer;
     private int nextCreatureId = 1;
     private EvolutionGenome baselineGenome;
     private Coroutine bootstrapRoutine;
@@ -133,7 +131,6 @@ public class EvolutionEcosystemManager : MonoBehaviour
         }
 
         CreatureMorphLibrary.SetActiveLibrary(MorphLibrary);
-        RefreshPressureZones();
     }
 
     private void Start()
@@ -165,8 +162,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
                 ? baselineGenome.CreateInitialVariant(InitialGenomeVariation)
                 : EvolutionGenome.CreateRandom();
 
-            EvolutionCandidate candidate = new EvolutionCandidate(genome);
-            SpawnCreature(candidate, GetSpawnPointForCandidate(candidate));
+            SpawnCreature(new EvolutionCandidate(genome), GetSpawnPointForCreature());
 
             if (StaggerInitialSpawn && i % creatureBudget == creatureBudget - 1)
             {
@@ -174,14 +170,17 @@ public class EvolutionEcosystemManager : MonoBehaviour
             }
         }
 
-        int foodBudget = Mathf.Max(1, FoodSpawnsPerFrame);
-        for (int i = 0; i < StartingFood; i++)
+        if (!UsePlacedPlantsForFood || EnableRandomFoodFallback)
         {
-            SpawnFood();
-
-            if (StaggerInitialSpawn && i % foodBudget == foodBudget - 1)
+            int foodBudget = Mathf.Max(1, FoodSpawnsPerFrame);
+            for (int i = 0; i < StartingFood; i++)
             {
-                yield return null;
+                SpawnFood();
+
+                if (StaggerInitialSpawn && i % foodBudget == foodBudget - 1)
+                {
+                    yield return null;
+                }
             }
         }
 
@@ -198,13 +197,6 @@ public class EvolutionEcosystemManager : MonoBehaviour
         GenerationTimer += Time.deltaTime;
         foodSpawnTimer += Time.deltaTime;
         extinctionTimer += Time.deltaTime;
-        zoneRefreshTimer += Time.deltaTime;
-
-        if (AutoFindPressureZones && zoneRefreshTimer >= ZoneRefreshInterval)
-        {
-            zoneRefreshTimer = 0f;
-            RefreshPressureZones();
-        }
 
         CleanLists();
         HandleFoodSpawning();
@@ -239,7 +231,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
                 : EvolutionGenome.CreateRandom();
 
             EvolutionCandidate candidate = new EvolutionCandidate(genome);
-            SpawnCreature(candidate, GetSpawnPointForCandidate(candidate));
+            SpawnCreature(candidate, GetSpawnPointForCreature());
         }
     }
 
@@ -253,6 +245,11 @@ public class EvolutionEcosystemManager : MonoBehaviour
 
     private void HandleFoodSpawning()
     {
+        if (UsePlacedPlantsForFood && !EnableRandomFoodFallback)
+        {
+            return;
+        }
+
         if (foodSpawnTimer < FoodSpawnInterval)
         {
             return;
@@ -314,7 +311,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         int budget = Mathf.Max(1, CreatureSpawnsPerFrame);
         for (int i = 0; i < nextGeneration.Count; i++)
         {
-            SpawnCreature(nextGeneration[i], GetSpawnPointForCandidate(nextGeneration[i]));
+            SpawnCreature(nextGeneration[i], GetSpawnPointForCreature());
             if (StaggerInitialSpawn && i % budget == budget - 1)
             {
                 yield return null;
@@ -499,7 +496,6 @@ public class EvolutionEcosystemManager : MonoBehaviour
         candidate.AssignRuntimeIdentity(nextCreatureId, CurrentGeneration, parentId);
         nextCreatureId++;
 
-        position = GetSafeSpawnPoint(position);
         MarineCreatureAgent creature = Instantiate(CreaturePrefab, position, Quaternion.identity);
         creature.MorphLibrary = MorphLibrary;
         creature.Initialise(candidate);
@@ -516,7 +512,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
             return;
         }
 
-        FoodSource food = Instantiate(FoodPrefab, GetSafeSpawnPoint(GetFoodSpawnPoint()), Quaternion.identity);
+        FoodSource food = Instantiate(FoodPrefab, GetSpawnPointForFood(), Quaternion.identity);
         if (food.MaxMass <= 0f)
         {
             food.MaxMass = Mathf.Max(1f, food.EnergyValue);
@@ -525,7 +521,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         {
             food.RemainingMass = food.MaxMass;
         }
-        activeFood.Add(food);
+        RegisterFood(food);
     }
 
     public void SpawnCarrionFromDeath(MarineCreatureAgent creature, bool causedByExtinctionEvent)
@@ -560,13 +556,13 @@ public class EvolutionEcosystemManager : MonoBehaviour
 
         if (CarrionPrefab != null)
         {
-            carrion = Instantiate(CarrionPrefab, GetSafeSpawnPoint(creature.transform.position), Quaternion.identity);
+            carrion = Instantiate(CarrionPrefab, ProjectPointAboveTerrain(creature.transform.position, CarrionTerrainClearance), Quaternion.identity);
         }
         else
         {
             GameObject carrionObject = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             carrionObject.name = "Carrion_Source";
-            carrionObject.transform.position = GetSafeSpawnPoint(creature.transform.position);
+            carrionObject.transform.position = ProjectPointAboveTerrain(creature.transform.position, CarrionTerrainClearance);
             carrionObject.transform.localScale = Vector3.one * Mathf.Clamp(size * 0.45f, 0.25f, 1.4f);
             carrion = carrionObject.AddComponent<CarrionSource>();
         }
@@ -574,7 +570,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         carrion.EnergyValue = energyValue;
         carrion.MaxMass = Mathf.Max(1f, energyValue);
         carrion.RemainingMass = carrion.MaxMass;
-        activeCarrion.Add(carrion);
+        RegisterCarrion(carrion);
     }
 
     private void RemoveOldestCarrion()
@@ -625,9 +621,64 @@ public class EvolutionEcosystemManager : MonoBehaviour
         activeFood.Remove(food);
     }
 
+    public void RegisterCarrion(CarrionSource carrion)
+    {
+        if (carrion != null && !activeCarrion.Contains(carrion))
+        {
+            activeCarrion.Add(carrion);
+        }
+    }
+
     public void UnregisterCarrion(CarrionSource carrion)
     {
         activeCarrion.Remove(carrion);
+    }
+
+    public void RegisterFood(FoodSource food)
+    {
+        if (food != null && !activeFood.Contains(food))
+        {
+            activeFood.Add(food);
+        }
+    }
+
+    public void RegisterPlant(PlantResource plant)
+    {
+        if (plant != null && !activePlants.Contains(plant))
+        {
+            activePlants.Add(plant);
+        }
+    }
+
+    public void UnregisterPlant(PlantResource plant)
+    {
+        activePlants.Remove(plant);
+    }
+
+    public void RegisterEggCluster(FishEggCluster eggCluster)
+    {
+        if (eggCluster != null && !activeEggClusters.Contains(eggCluster))
+        {
+            activeEggClusters.Add(eggCluster);
+        }
+    }
+
+    public void UnregisterEggCluster(FishEggCluster eggCluster)
+    {
+        activeEggClusters.Remove(eggCluster);
+    }
+
+    public void RegisterCurrentZone(EcosystemWaterCurrentZone zone)
+    {
+        if (zone != null && !activeCurrentZones.Contains(zone))
+        {
+            activeCurrentZones.Add(zone);
+        }
+    }
+
+    public void UnregisterCurrentZone(EcosystemWaterCurrentZone zone)
+    {
+        activeCurrentZones.Remove(zone);
     }
 
 
@@ -849,6 +900,120 @@ public class EvolutionEcosystemManager : MonoBehaviour
         return nearest;
     }
 
+    public bool CanSpawnMoreActiveCreatures()
+    {
+        CleanLists();
+        return activeCreatures.Count < Mathf.Max(1, MaxActiveCreatures);
+    }
+
+    public MarineCreatureAgent GetBestMateFor(MarineCreatureAgent seeker, float searchRadius, float requiredMorphSimilarity)
+    {
+        if (seeker == null || seeker.Candidate == null || seeker.Candidate.Genome == null)
+        {
+            return null;
+        }
+
+        bool seekerFemale = seeker.Candidate.Genome.SexGene >= 0.5f;
+        MarineCreatureAgent best = null;
+        float bestScore = float.MinValue;
+        float radiusSqr = searchRadius * searchRadius;
+
+        for (int i = 0; i < activeCreatures.Count; i++)
+        {
+            MarineCreatureAgent other = activeCreatures[i];
+            if (other == null || other == seeker || other.Candidate == null || other.Candidate.Genome == null)
+            {
+                continue;
+            }
+
+            bool otherFemale = other.Candidate.Genome.SexGene >= 0.5f;
+            if (otherFemale == seekerFemale)
+            {
+                continue;
+            }
+
+            if (!other.IsMatureForMating() || !other.HasMatingEnergy())
+            {
+                continue;
+            }
+
+            float similarity = seeker.Candidate.Genome.GetMorphSimilarity(other.Candidate.Genome);
+            if (similarity < requiredMorphSimilarity)
+            {
+                continue;
+            }
+
+            float distSqr = (other.transform.position - seeker.transform.position).sqrMagnitude;
+            if (distSqr > radiusSqr)
+            {
+                continue;
+            }
+
+            float distance = Mathf.Sqrt(distSqr);
+            float score = similarity * 2f + other.GetHealthRatio() + other.GetEffectiveEnergyRatio() - distance * 0.03f;
+            if (score > bestScore)
+            {
+                bestScore = score;
+                best = other;
+            }
+        }
+
+        return best;
+    }
+
+    public Vector3 FindSafeEggPositionNear(Vector3 origin, EvolutionGenome genome, float radius, int samples)
+    {
+        Vector3 best = ClampToSimulationArea(origin);
+        float bestScore = float.MinValue;
+        int count = Mathf.Max(4, samples);
+
+        for (int i = 0; i < count; i++)
+        {
+            Vector3 candidate = origin + Random.insideUnitSphere * Mathf.Max(1f, radius);
+            candidate = ClampToSimulationArea(candidate);
+            if (KeepSpawnsAboveTerrain)
+            {
+                candidate = ProjectPointAboveTerrain(candidate, TerrainClearance);
+            }
+
+            float creatureCrowd = CountCreaturesNearPoint(candidate, 7f, null);
+            float currentStress = GetCurrentStressAt(candidate);
+            float foodScore = GetNearestFood(candidate, 16f) != null ? 0.35f : 0f;
+            float score = foodScore - creatureCrowd * 0.15f - currentStress * Mathf.Lerp(0.25f, 1.2f, genome != null ? 1f - genome.Bravery : 0.5f);
+
+            if (score > bestScore)
+            {
+                bestScore = score;
+                best = candidate;
+            }
+        }
+
+        return best;
+    }
+
+    public FishEggCluster SpawnEggCluster(MarineCreatureAgent mother, MarineCreatureAgent father, Vector3 position, List<EvolutionCandidate> children, float hatchTime, float health, float mass)
+    {
+        FishEggCluster cluster;
+        if (EggClusterPrefab != null)
+        {
+            cluster = Instantiate(EggClusterPrefab, position, Quaternion.identity);
+        }
+        else
+        {
+            GameObject obj = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            obj.name = "Fish_Egg_Cluster";
+            obj.transform.position = position;
+            obj.transform.localScale = Vector3.one * 0.55f;
+            Collider c = obj.GetComponent<Collider>();
+            if (c != null) c.isTrigger = true;
+            cluster = obj.AddComponent<FishEggCluster>();
+        }
+
+        cluster.Initialise(children, hatchTime, health, mass);
+        RegisterEggCluster(cluster);
+        return cluster;
+    }
+
     public void TriggerExtinctionEvent()
     {
         CleanLists();
@@ -882,223 +1047,96 @@ public class EvolutionEcosystemManager : MonoBehaviour
         Debug.Log("Extinction event killed " + killCount + " creatures.");
     }
 
-
-    public void RefreshPressureZones()
+    public Vector3 GetSpawnPointForCreature()
     {
-        if (!AutoFindPressureZones)
-        {
-            return;
-        }
+        Vector3 point = GetRandomPointInSimulationArea();
+        return KeepSpawnsAboveTerrain ? ProjectPointAboveTerrain(point, FishTerrainClearance) : point;
+    }
 
-        PressureZones.Clear();
-        EcosystemPressureZone[] zones = FindObjectsByType<EcosystemPressureZone>(FindObjectsSortMode.None);
-        for (int i = 0; i < zones.Length; i++)
+    public Vector3 GetSpawnPointForFood()
+    {
+        Vector3 point = GetRandomPointInSimulationArea();
+        return KeepSpawnsAboveTerrain ? ProjectPointAboveTerrain(point, FoodTerrainClearance) : point;
+    }
+
+    public Vector3 ProjectPointToTerrain(Vector3 point, float offset)
+    {
+        if (TryGetTerrainHeight(point, out float y))
         {
-            if (zones[i] != null && zones[i].isActiveAndEnabled)
+            point.y = y + Mathf.Max(0f, offset);
+        }
+        return point;
+    }
+
+    public Vector3 ProjectPointAboveTerrain(Vector3 point, float clearance)
+    {
+        if (TryGetTerrainHeight(point, out float y))
+        {
+            point.y = Mathf.Max(point.y, y + Mathf.Max(0f, clearance));
+        }
+        return point;
+    }
+
+    public bool TryGetTerrainHeight(Vector3 point, out float terrainY)
+    {
+        if (TerrainSource != null)
+        {
+            Vector3 terrainPos = TerrainSource.transform.position;
+            TerrainData data = TerrainSource.terrainData;
+            if (data != null)
             {
-                PressureZones.Add(zones[i]);
-            }
-        }
-    }
-
-    private Vector3 GetFoodSpawnPoint()
-    {
-        if (PressureZones == null || PressureZones.Count == 0 || Random.value > FoodZoneSpawnChance)
-        {
-            return GetRandomPointInSimulationArea();
-        }
-
-        EcosystemPressureZone zone = GetWeightedFoodZone();
-        return zone != null ? zone.GetRandomPointInside(this) : GetRandomPointInSimulationArea();
-    }
-
-    private Vector3 GetSpawnPointForCandidate(EvolutionCandidate candidate)
-    {
-        if (candidate == null || candidate.Genome == null || PressureZones == null || PressureZones.Count == 0 || Random.value > CreatureZoneSpawnChance)
-        {
-            return GetRandomPointInSimulationArea();
-        }
-
-        EcosystemPressureZone zone = GetWeightedHabitatZone(candidate.Genome);
-        return zone != null ? zone.GetRandomPointInside(this) : GetRandomPointInSimulationArea();
-    }
-
-    private EcosystemPressureZone GetWeightedFoodZone()
-    {
-        float totalWeight = 0f;
-        for (int i = 0; i < PressureZones.Count; i++)
-        {
-            if (PressureZones[i] != null)
-            {
-                totalWeight += PressureZones[i].GetFoodSpawnWeight();
+                Vector3 local = point - terrainPos;
+                if (local.x >= 0f && local.z >= 0f && local.x <= data.size.x && local.z <= data.size.z)
+                {
+                    terrainY = terrainPos.y + TerrainSource.SampleHeight(point);
+                    return true;
+                }
             }
         }
 
-        if (totalWeight <= 0.001f)
+        Vector3 origin = point + Vector3.up * Mathf.Max(1f, TerrainProbeHeight);
+        if (Physics.Raycast(origin, Vector3.down, out RaycastHit hit, Mathf.Max(1f, TerrainProbeDistance), TerrainRaycastMask, QueryTriggerInteraction.Ignore))
         {
-            return null;
+            terrainY = hit.point.y;
+            return true;
         }
 
-        float pick = Random.value * totalWeight;
-        float running = 0f;
-        for (int i = 0; i < PressureZones.Count; i++)
+        terrainY = 0f;
+        return false;
+    }
+
+    public Vector3 GetCurrentVelocityAt(Vector3 position)
+    {
+        Vector3 total = Vector3.zero;
+        for (int i = activeCurrentZones.Count - 1; i >= 0; i--)
         {
-            EcosystemPressureZone zone = PressureZones[i];
+            EcosystemWaterCurrentZone zone = activeCurrentZones[i];
             if (zone == null)
             {
+                activeCurrentZones.RemoveAt(i);
                 continue;
             }
 
-            running += zone.GetFoodSpawnWeight();
-            if (pick <= running)
-            {
-                return zone;
-            }
+            total += zone.GetCurrentVelocity(position);
         }
-
-        return null;
+        return total;
     }
 
-    private EcosystemPressureZone GetWeightedHabitatZone(EvolutionGenome genome)
+    public float GetCurrentStressAt(Vector3 position)
     {
-        float totalWeight = 0f;
-        for (int i = 0; i < PressureZones.Count; i++)
+        float stress = 0f;
+        for (int i = activeCurrentZones.Count - 1; i >= 0; i--)
         {
-            if (PressureZones[i] != null)
-            {
-                totalWeight += PressureZones[i].GetHabitatSuitability(genome);
-            }
-        }
-
-        if (totalWeight <= 0.001f)
-        {
-            return null;
-        }
-
-        float pick = Random.value * totalWeight;
-        float running = 0f;
-        for (int i = 0; i < PressureZones.Count; i++)
-        {
-            EcosystemPressureZone zone = PressureZones[i];
+            EcosystemWaterCurrentZone zone = activeCurrentZones[i];
             if (zone == null)
             {
+                activeCurrentZones.RemoveAt(i);
                 continue;
             }
 
-            running += zone.GetHabitatSuitability(genome);
-            if (pick <= running)
-            {
-                return zone;
-            }
+            stress += zone.GetInfluence01(position) * (zone.EnergyDrainPressure + zone.HealthPressure + Mathf.Max(0f, zone.FlowStrength) * 0.04f);
         }
-
-        return null;
-    }
-
-    public EcosystemPressureZone GetPressureZoneAt(Vector3 position)
-    {
-        if (PressureZones == null || PressureZones.Count == 0)
-        {
-            return null;
-        }
-
-        EcosystemPressureZone best = null;
-        float bestInfluence = 0f;
-        for (int i = 0; i < PressureZones.Count; i++)
-        {
-            EcosystemPressureZone zone = PressureZones[i];
-            if (zone == null)
-            {
-                continue;
-            }
-
-            float influence = zone.GetInfluence01(position);
-            if (influence > bestInfluence)
-            {
-                bestInfluence = influence;
-                best = zone;
-            }
-        }
-
-        return best;
-    }
-
-    public EcosystemPressureZone GetBestHabitatZoneForGenome(EvolutionGenome genome, Vector3 position)
-    {
-        if (PressureZones == null || PressureZones.Count == 0 || genome == null)
-        {
-            return null;
-        }
-
-        EcosystemPressureZone best = null;
-        float bestScore = float.MinValue;
-        for (int i = 0; i < PressureZones.Count; i++)
-        {
-            EcosystemPressureZone zone = PressureZones[i];
-            if (zone == null)
-            {
-                continue;
-            }
-
-            float distance = Vector3.Distance(position, zone.transform.position);
-            float distanceScore = 1f - Mathf.Clamp01(distance / Mathf.Max(1f, SimulationAreaSize.magnitude * 0.35f));
-            float score = zone.GetHabitatSuitability(genome) * 1.15f + distanceScore * Mathf.Lerp(0.1f, 0.7f, genome.HabitatLoyalty);
-            score -= zone.DangerPressure * Mathf.Lerp(0.75f, 0.15f, genome.Bravery);
-
-            if (score > bestScore)
-            {
-                bestScore = score;
-                best = zone;
-            }
-        }
-
-        return best;
-    }
-
-    public float GetZoneStressAt(Vector3 position)
-    {
-        EcosystemPressureZone zone = GetPressureZoneAt(position);
-        return zone != null ? zone.GetStressAt(position) : 0f;
-    }
-
-    public float GetZoneEnergyDrainMultiplierAt(Vector3 position)
-    {
-        EcosystemPressureZone zone = GetPressureZoneAt(position);
-        if (zone == null)
-        {
-            return 1f;
-        }
-
-        float influence = zone.GetInfluence01(position);
-        return Mathf.Lerp(1f, Mathf.Max(0.1f, zone.EnergyDrainMultiplier), influence);
-    }
-
-    public float GetZoneMutationMultiplierAt(Vector3 position)
-    {
-        EcosystemPressureZone zone = GetPressureZoneAt(position);
-        if (zone == null)
-        {
-            return 1f;
-        }
-
-        return Mathf.Lerp(1f, Mathf.Max(0.1f, zone.MutationPressure), zone.GetInfluence01(position));
-    }
-
-    public float GetZonePreferredDepth01At(Vector3 position, float fallback)
-    {
-        EcosystemPressureZone zone = GetPressureZoneAt(position);
-        if (zone == null)
-        {
-            return fallback;
-        }
-
-        return Mathf.Lerp(fallback, zone.PreferredDepth01, zone.DepthInfluence * zone.GetInfluence01(position));
-    }
-
-    public string GetZoneNameAt(Vector3 position)
-    {
-        EcosystemPressureZone zone = GetPressureZoneAt(position);
-        return zone != null ? zone.ZoneName : "Open water";
+        return stress;
     }
 
     public Vector3 GetRandomPointInSimulationArea()
@@ -1110,13 +1148,11 @@ public class EvolutionEcosystemManager : MonoBehaviour
         float yPadding = Mathf.Min(padding, Mathf.Max(0f, half.y - 0.1f));
         float zPadding = Mathf.Min(padding, Mathf.Max(0f, half.z - 0.1f));
 
-        Vector3 point = new Vector3(
+        return new Vector3(
             Random.Range(centre.x - half.x + xPadding, centre.x + half.x - xPadding),
             Random.Range(centre.y - half.y + yPadding, centre.y + half.y - yPadding),
             Random.Range(centre.z - half.z + zPadding, centre.z + half.z - zPadding)
         );
-
-        return GetSafeSpawnPoint(point);
     }
 
     public Vector3 ClampToSimulationArea(Vector3 position)
@@ -1128,89 +1164,17 @@ public class EvolutionEcosystemManager : MonoBehaviour
         position.y = Mathf.Clamp(position.y, centre.y - half.y, centre.y + half.y);
         position.z = Mathf.Clamp(position.z, centre.z - half.z, centre.z + half.z);
 
-        if (KeepSimulationAboveTerrain)
+        if (KeepSimulationAboveTerrain && TryGetTerrainHeight(position, out float terrainY))
         {
-            position = LiftPointAboveTerrain(position);
-            position.y = Mathf.Clamp(position.y, centre.y - half.y, centre.y + half.y);
+            position.y = Mathf.Max(position.y, terrainY + Mathf.Max(0f, FishTerrainClearance));
+        }
+
+        if (UseWaterSurfaceLimit)
+        {
+            position.y = Mathf.Min(position.y, centre.y + half.y - Mathf.Max(0f, WaterSurfacePadding));
         }
 
         return position;
-    }
-
-    public Vector3 GetSafeSpawnPoint(Vector3 position)
-    {
-        position = ClampToSimulationArea(position);
-
-        if (KeepSpawnsAboveTerrain)
-        {
-            position = LiftPointAboveTerrain(position);
-            position = ClampToSimulationArea(position);
-        }
-
-        return position;
-    }
-
-    public Vector3 LiftPointAboveTerrain(Vector3 position)
-    {
-        float terrainY;
-        if (!TryGetTerrainHeight(position, out terrainY))
-        {
-            return position;
-        }
-
-        float minimumY = terrainY + Mathf.Max(0f, MinimumHeightAboveTerrain);
-        if (position.y < minimumY)
-        {
-            position.y = minimumY;
-        }
-
-        return position;
-    }
-
-    public bool TryGetTerrainHeight(Vector3 position, out float terrainY)
-    {
-        Terrain terrain = TerrainSource;
-        if (terrain == null)
-        {
-            terrain = Terrain.activeTerrain;
-        }
-
-        if (terrain != null && terrain.terrainData != null)
-        {
-            Vector3 terrainPosition = terrain.transform.position;
-            Vector3 terrainSize = terrain.terrainData.size;
-            bool insideTerrain = position.x >= terrainPosition.x && position.x <= terrainPosition.x + terrainSize.x &&
-                                 position.z >= terrainPosition.z && position.z <= terrainPosition.z + terrainSize.z;
-
-            if (insideTerrain)
-            {
-                terrainY = terrain.SampleHeight(position) + terrainPosition.y;
-                return true;
-            }
-        }
-
-        if (TerrainCollider != null)
-        {
-            Ray ray = new Ray(new Vector3(position.x, position.y + Mathf.Max(1f, TerrainProbeHeight), position.z), Vector3.down);
-            RaycastHit colliderHit;
-            if (TerrainCollider.Raycast(ray, out colliderHit, Mathf.Max(1f, TerrainProbeDistance + TerrainProbeHeight)))
-            {
-                terrainY = colliderHit.point.y;
-                return true;
-            }
-        }
-
-        RaycastHit hit;
-        Vector3 origin = new Vector3(position.x, transform.position.y + SimulationAreaSize.y * 0.5f + Mathf.Max(1f, TerrainProbeHeight), position.z);
-        float distance = Mathf.Max(1f, TerrainProbeDistance + SimulationAreaSize.y + TerrainProbeHeight);
-        if (Physics.Raycast(origin, Vector3.down, out hit, distance, TerrainRaycastMask, QueryTriggerInteraction.Ignore))
-        {
-            terrainY = hit.point.y;
-            return true;
-        }
-
-        terrainY = 0f;
-        return false;
     }
 
     private void ClearSimulation()
@@ -1233,8 +1197,17 @@ public class EvolutionEcosystemManager : MonoBehaviour
             }
         }
 
+        for (int i = activeEggClusters.Count - 1; i >= 0; i--)
+        {
+            if (activeEggClusters[i] != null)
+            {
+                Destroy(activeEggClusters[i].gameObject);
+            }
+        }
+
         activeFood.Clear();
         activeCarrion.Clear();
+        activeEggClusters.Clear();
         offspringPool.Clear();
     }
 
@@ -1258,9 +1231,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         GenerationTimer = 0f;
         extinctionTimer = 0f;
         foodSpawnTimer = 0f;
-        zoneRefreshTimer = 0f;
         nextCreatureId = 1;
-        RefreshPressureZones();
         StartBootstrap();
     }
 
@@ -1274,6 +1245,9 @@ public class EvolutionEcosystemManager : MonoBehaviour
         activeCreatures.RemoveAll(creature => creature == null);
         activeFood.RemoveAll(food => food == null);
         activeCarrion.RemoveAll(carrion => carrion == null);
+        activePlants.RemoveAll(plant => plant == null);
+        activeEggClusters.RemoveAll(egg => egg == null);
+        activeCurrentZones.RemoveAll(zone => zone == null);
     }
 
     public List<MarineCreatureAgent> GetActiveCreatures()
@@ -1294,6 +1268,21 @@ public class EvolutionEcosystemManager : MonoBehaviour
     public List<CarrionSource> GetActiveCarrion()
     {
         return activeCarrion;
+    }
+
+    public List<PlantResource> GetActivePlants()
+    {
+        return activePlants;
+    }
+
+    public List<FishEggCluster> GetActiveEggClusters()
+    {
+        return activeEggClusters;
+    }
+
+    public List<EcosystemWaterCurrentZone> GetActiveCurrentZones()
+    {
+        return activeCurrentZones;
     }
 
     private void OnDrawGizmosSelected()

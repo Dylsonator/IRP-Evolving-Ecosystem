@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 6750591313750925527}
   - component: {fileID: 7228186923828327965}
   - component: {fileID: 5059079653024269994}
+  - component: {fileID: 7083844641830214655}
   m_Layer: 0
   m_Name: PlantFoodPrefab
   m_TagString: Untagged
@@ -121,8 +122,36 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6db7a214a59934b43a69540b6d472714, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  FoodType: 0
   EnergyValue: 25
-  CanRot: 1
-  FreshMeatRotTime: 25
-  RottenMeatDespawnTime: 55
+  MaxMass: 44
+  RemainingMass: -1
+  MinimumVisibleScale: 0.18
+  DisablePhysicalColliders: 1
+  RecentFeederMemoryTime: 4
+--- !u!54 &7083844641830214655
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7850248482371866354}
+  serializedVersion: 4
+  m_Mass: 1
+  m_Drag: 0
+  m_AngularDrag: 0.05
+  m_CenterOfMass: {x: 0, y: 0, z: 0}
+  m_InertiaTensor: {x: 1, y: 1, z: 1}
+  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ImplicitCom: 1
+  m_ImplicitTensor: 1
+  m_UseGravity: 0
+  m_IsKinematic: 0
+  m_Interpolate: 0
+  m_Constraints: 0
+  m_CollisionDetection: 0

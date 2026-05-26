@@ -13,13 +13,8 @@ MonoBehaviour:
   m_Name: CreatureMorphLibrary
   m_EditorClassIdentifier: 
   Parts:
-  - {fileID: 11400000, guid: cb82287155f04704d8271cee614beccb, type: 2}
-  - {fileID: 11400000, guid: 718c67a61ce02c340bbe6616d6fa6591, type: 2}
-  - {fileID: 11400000, guid: d465c0e1157f7514aa1082594a90c92b, type: 2}
-  - {fileID: 11400000, guid: 0d334720d2e0126438606aeca81d5bb5, type: 2}
-  - {fileID: 11400000, guid: ce760c9f252d20d43a6be62217bd5a27, type: 2}
-  - {fileID: 11400000, guid: 4b979244d2bb16f45b2d14a45148e35e, type: 2}
-  - {fileID: 11400000, guid: cac5d63dcbbe5874384fb78fb81bf2eb, type: 2}
-  - {fileID: 11400000, guid: 45c1670c52fee214992420a562fe3d57, type: 2}
-  - {fileID: 11400000, guid: 0dee40d66b34dc64c81b6d121377ec54, type: 2}
+  - {fileID: 11400000, guid: 7c3828f5cbfba964890c4c79a90f1723, type: 2}
+  - {fileID: 11400000, guid: 780d016e4ef610e40ba7e8872376e3ae, type: 2}
+  - {fileID: 11400000, guid: 40107c897c8d38546bb3b13e1ad88e09, type: 2}
+  - {fileID: 11400000, guid: 24780428b3a654742b2c45c4d025a6d8, type: 2}
   Modifiers: []

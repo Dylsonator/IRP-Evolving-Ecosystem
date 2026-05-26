@@ -108,13 +108,17 @@ public class CreatureEffectiveStats
     {
         CreatureMorphPartData part = library != null ? library.FindPart(slot, partId) : null;
 
-        if (part != null)
+        if (part == null)
         {
-            ApplyPartData(part, scale, length, width);
             return;
         }
 
-        ApplyFallbackPart(slot, partId, scale, length, width);
+        if (!CreatureMorphLibrary.IsNonePartId(part.PartId) && part.PartPrefab == null)
+        {
+            return;
+        }
+
+        ApplyPartData(part, scale, length, width);
     }
 
     private void ApplyPartData(CreatureMorphPartData part, float scale, float length, float width)
@@ -240,7 +244,7 @@ public class CreatureEffectiveStats
             return part.DisplayName;
         }
 
-        return CreatureMorphLibrary.GetFallbackDisplayName(id);
+        return string.IsNullOrEmpty(id) ? "None" : CreatureMorphLibrary.NormalisePartIdForSlot(slot, id).Replace('_', ' ');
     }
 
     public void Clamp()

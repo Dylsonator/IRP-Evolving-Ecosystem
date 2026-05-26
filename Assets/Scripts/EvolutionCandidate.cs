@@ -21,6 +21,7 @@ public class EvolutionCandidate
     public float EnergyGained;
     public int FoodEaten;
     public int CarrionEaten;
+    public float FoodMassConsumed;
     public int PreyBites;
     public float PlantEnergyConsumed;
     public float MeatEnergyConsumed;
@@ -28,21 +29,27 @@ public class EvolutionCandidate
     public float StarvationDamageTaken;
     public int FoodMemoryUses;
     public int LeaderFollowEvents;
+    public float RestingTime;
+    public float ExploringTime;
+    public float SchoolingTime;
+    public float ForagingTime;
+    public float FeedingTime;
+    public float MateSeekingTime;
+    public float HuntingTime;
+    public float FleeingTime;
+    public float RecoveryTime;
+    public int BrainModeSwitches;
     public int PreyKills;
     public float BiteDamageDealt;
     public int ReproductionCount;
+    public int EggsLaid;
+    public int EggsHatched;
+    public int EggsEaten;
     public float DistanceTravelled;
     public float AverageSpeedUsed;
     public float AverageFoodDistance;
     public float AveragePreyDistance;
     public float AverageCarrionDistance;
-    public int FoodBitesTaken;
-    public float FoodMassConsumed;
-    public float HabitatSettledTime;
-    public float ZoneExposureTime;
-    public float EnvironmentalPressureExposure;
-    public float HomeConfidence;
-    public int DangerMemoryEvents;
 
     public EvolutionCandidate(EvolutionGenome genome)
     {
@@ -83,16 +90,18 @@ public class EvolutionCandidate
         fitness += FinalStomachFullness * 8f;
         fitness += FoodEaten * 12f;
         fitness += CarrionEaten * 10f;
+        fitness += FoodMassConsumed * 0.18f;
         fitness += PreyBites * 6f;
         fitness += PreyKills * 28f;
         fitness += BiteDamageDealt * 0.18f;
         fitness += ReproductionCount * 45f;
+        fitness += EggsLaid * 4f;
+        fitness += EggsHatched * 18f;
+        fitness += FoodMemoryUses * 1.2f;
+        fitness += LeaderFollowEvents * 0.6f;
+        fitness += Mathf.Min(ForagingTime, SurvivalTime) * 0.08f;
+        fitness += Mathf.Min(MateSeekingTime, SurvivalTime) * 0.05f;
         fitness += DistanceTravelled * 0.02f;
-        fitness += FoodMassConsumed * 0.16f;
-        fitness += HabitatSettledTime * 0.18f;
-        fitness += HomeConfidence * 8f;
-        fitness -= StarvationDamageTaken * 0.18f;
-        fitness -= EnvironmentalPressureExposure * 0.08f;
 
         return Mathf.Max(0f, fitness);
     }
@@ -100,7 +109,7 @@ public class EvolutionCandidate
     public Vector2 GetBehaviourDescriptor()
     {
         float movementDescriptor = Mathf.Clamp01(DistanceTravelled / 500f);
-        float feedingScore = FoodEaten + CarrionEaten + PreyBites + PreyKills * 2f;
+        float feedingScore = FoodEaten + CarrionEaten + FoodMassConsumed * 0.05f + PreyBites + PreyKills * 2f;
         float feedingDescriptor = Mathf.Clamp01(feedingScore / 14f);
 
         return new Vector2(movementDescriptor, feedingDescriptor);
@@ -148,27 +157,34 @@ public class EvolutionCandidate
         EnergyGained += other.EnergyGained;
         FoodEaten += other.FoodEaten;
         CarrionEaten += other.CarrionEaten;
+        FoodMassConsumed += other.FoodMassConsumed;
         PlantEnergyConsumed += other.PlantEnergyConsumed;
         MeatEnergyConsumed += other.MeatEnergyConsumed;
         CarrionEnergyConsumed += other.CarrionEnergyConsumed;
         StarvationDamageTaken += other.StarvationDamageTaken;
         FoodMemoryUses += other.FoodMemoryUses;
         LeaderFollowEvents += other.LeaderFollowEvents;
+        RestingTime += other.RestingTime;
+        ExploringTime += other.ExploringTime;
+        SchoolingTime += other.SchoolingTime;
+        ForagingTime += other.ForagingTime;
+        FeedingTime += other.FeedingTime;
+        MateSeekingTime += other.MateSeekingTime;
+        HuntingTime += other.HuntingTime;
+        FleeingTime += other.FleeingTime;
+        RecoveryTime += other.RecoveryTime;
+        BrainModeSwitches += other.BrainModeSwitches;
         PreyBites += other.PreyBites;
         PreyKills += other.PreyKills;
         BiteDamageDealt += other.BiteDamageDealt;
         ReproductionCount += other.ReproductionCount;
+        EggsLaid += other.EggsLaid;
+        EggsHatched += other.EggsHatched;
+        EggsEaten += other.EggsEaten;
         DistanceTravelled += other.DistanceTravelled;
         AverageSpeedUsed += other.AverageSpeedUsed;
         AverageFoodDistance += other.AverageFoodDistance;
         AveragePreyDistance += other.AveragePreyDistance;
         AverageCarrionDistance += other.AverageCarrionDistance;
-        FoodBitesTaken += other.FoodBitesTaken;
-        FoodMassConsumed += other.FoodMassConsumed;
-        HabitatSettledTime += other.HabitatSettledTime;
-        ZoneExposureTime += other.ZoneExposureTime;
-        EnvironmentalPressureExposure += other.EnvironmentalPressureExposure;
-        HomeConfidence = Mathf.Max(HomeConfidence, other.HomeConfidence);
-        DangerMemoryEvents += other.DangerMemoryEvents;
     }
 }

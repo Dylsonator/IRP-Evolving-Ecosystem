@@ -38,15 +38,15 @@ public class EvolutionGenome
     public float GillSize = 1f;
 
     [Header("Morph Part Genes")]
-    public string BodyMorphId = "body_basic";
-    public string TailMorphId = "tail_basic";
-    public string FinMorphId = "fins_basic";
-    public string JawMorphId = "jaw_filter";
-    public string SensorMorphId = "sensors_basic";
-    public string ArmourMorphId = "armour_none";
-    public string DorsalFinMorphId = "dorsal_none";
-    public string SpikeMorphId = "spikes_none";
-    public string GillMorphId = "gills_basic";
+    public string BodyMorphId = "basic";
+    public string TailMorphId = "basic";
+    public string FinMorphId = "basic";
+    public string JawMorphId = "basic";
+    public string SensorMorphId = "basic";
+    public string ArmourMorphId = "none";
+    public string DorsalFinMorphId = "none";
+    public string SpikeMorphId = "none";
+    public string GillMorphId = "basic";
 
     [Header("Diet Traits")]
     [Range(0f, 1f)] public float PlantDiet = 0.85f;
@@ -81,17 +81,18 @@ public class EvolutionGenome
     [Range(0f, 1f)] public float Selfishness = 0.18f;
     [Range(0f, 1f)] public float ExplorationDrive = 0.45f;
     [Range(0f, 1f)] public float FoodMemoryStrength = 0.55f;
+
+    [Header("Life Cycle / Sensing Traits")]
+    [Range(0f, 1f)] public float SexGene = 0.5f;
+    [Range(0f, 1f)] public float NestingDrive = 0.45f;
+    [Range(0f, 1f)] public float EggProtection = 0.35f;
+    [Range(0f, 1f)] public float MateDrive = 0.45f;
+    [Range(0f, 1f)] public float Stealth = 0.25f;
+    [Range(0f, 1f)] public float HearingSensitivity = 0.45f;
+
     public bool PlantDietLocked;
     public bool MeatDietLocked;
     public bool CarrionDietLocked;
-
-    [Header("Habitat / Reproduction Prep")]
-    [Range(0f, 1f)] public float HabitatLoyalty = 0.45f;
-    [Range(0f, 1f)] public float NestingDrive = 0.25f;
-    [Range(0f, 1f)] public float EggProtection = 0.25f;
-    [Range(0f, 1f)] public float Stealth = 0.25f;
-    [Range(0f, 1f)] public float HearingSensitivity = 0.45f;
-    [Range(0f, 1f)] public float SexGene = 0.5f;
 
     [Header("Reproduction / Mutation")]
     public float ReproductionEnergyThreshold = 80f;
@@ -132,15 +133,15 @@ public class EvolutionGenome
         genome.SpikeLength = 0.2f;
         genome.GillSize = 1f;
 
-        genome.BodyMorphId = "body_basic";
-        genome.TailMorphId = "tail_basic";
-        genome.FinMorphId = "fins_basic";
-        genome.JawMorphId = "jaw_filter";
-        genome.SensorMorphId = "sensors_basic";
-        genome.ArmourMorphId = "armour_none";
-        genome.DorsalFinMorphId = "dorsal_none";
-        genome.SpikeMorphId = "spikes_none";
-        genome.GillMorphId = "gills_basic";
+        genome.BodyMorphId = "basic";
+        genome.TailMorphId = "basic";
+        genome.FinMorphId = "basic";
+        genome.JawMorphId = "basic";
+        genome.SensorMorphId = "basic";
+        genome.ArmourMorphId = "none";
+        genome.DorsalFinMorphId = "none";
+        genome.SpikeMorphId = "none";
+        genome.GillMorphId = "basic";
 
         genome.PlantDiet = 0.85f;
         genome.MeatDiet = 0.05f;
@@ -166,15 +167,15 @@ public class EvolutionGenome
         genome.Selfishness = 0.18f;
         genome.ExplorationDrive = 0.45f;
         genome.FoodMemoryStrength = 0.55f;
+        genome.SexGene = UnityEngine.Random.value;
+        genome.NestingDrive = 0.45f;
+        genome.EggProtection = 0.35f;
+        genome.MateDrive = 0.45f;
+        genome.Stealth = 0.25f;
+        genome.HearingSensitivity = 0.45f;
         genome.PlantDietLocked = false;
         genome.MeatDietLocked = false;
         genome.CarrionDietLocked = false;
-        genome.HabitatLoyalty = 0.45f;
-        genome.NestingDrive = 0.25f;
-        genome.EggProtection = 0.25f;
-        genome.Stealth = 0.25f;
-        genome.HearingSensitivity = 0.45f;
-        genome.SexGene = UnityEngine.Random.value;
         genome.ReproductionEnergyThreshold = 82f;
         genome.MutationRate = 0.08f;
         genome.MutationStrength = 1f;
@@ -215,15 +216,15 @@ public class EvolutionGenome
         genome.SpikeLength = UnityEngine.Random.Range(0f, 1.4f);
         genome.GillSize = UnityEngine.Random.Range(0.65f, 1.7f);
 
-        genome.BodyMorphId = CreatureMorphLibrary.GetFallbackRandomPartId(CreatureMorphSlot.Body, genome.BodyMorphId);
-        genome.TailMorphId = CreatureMorphLibrary.GetFallbackRandomPartId(CreatureMorphSlot.Tail, genome.TailMorphId);
-        genome.FinMorphId = CreatureMorphLibrary.GetFallbackRandomPartId(CreatureMorphSlot.Fins, genome.FinMorphId);
-        genome.JawMorphId = CreatureMorphLibrary.GetFallbackRandomPartId(CreatureMorphSlot.Jaw, genome.JawMorphId);
-        genome.SensorMorphId = CreatureMorphLibrary.GetFallbackRandomPartId(CreatureMorphSlot.Sensors, genome.SensorMorphId);
-        genome.ArmourMorphId = CreatureMorphLibrary.GetFallbackRandomPartId(CreatureMorphSlot.Armour, genome.ArmourMorphId);
-        genome.DorsalFinMorphId = CreatureMorphLibrary.GetFallbackRandomPartId(CreatureMorphSlot.DorsalFin, genome.DorsalFinMorphId);
-        genome.SpikeMorphId = CreatureMorphLibrary.GetFallbackRandomPartId(CreatureMorphSlot.Spikes, genome.SpikeMorphId);
-        genome.GillMorphId = CreatureMorphLibrary.GetFallbackRandomPartId(CreatureMorphSlot.Gills, genome.GillMorphId);
+        genome.BodyMorphId = CreatureMorphLibrary.GetRandomPartIdFromActive(CreatureMorphSlot.Body, genome.BodyMorphId);
+        genome.TailMorphId = CreatureMorphLibrary.GetRandomPartIdFromActive(CreatureMorphSlot.Tail, genome.TailMorphId);
+        genome.FinMorphId = CreatureMorphLibrary.GetRandomPartIdFromActive(CreatureMorphSlot.Fins, genome.FinMorphId);
+        genome.JawMorphId = CreatureMorphLibrary.GetRandomPartIdFromActive(CreatureMorphSlot.Jaw, genome.JawMorphId);
+        genome.SensorMorphId = CreatureMorphLibrary.GetRandomPartIdFromActive(CreatureMorphSlot.Sensors, genome.SensorMorphId);
+        genome.ArmourMorphId = CreatureMorphLibrary.GetRandomPartIdFromActive(CreatureMorphSlot.Armour, genome.ArmourMorphId);
+        genome.DorsalFinMorphId = CreatureMorphLibrary.GetRandomPartIdFromActive(CreatureMorphSlot.DorsalFin, genome.DorsalFinMorphId);
+        genome.SpikeMorphId = CreatureMorphLibrary.GetRandomPartIdFromActive(CreatureMorphSlot.Spikes, genome.SpikeMorphId);
+        genome.GillMorphId = CreatureMorphLibrary.GetRandomPartIdFromActive(CreatureMorphSlot.Gills, genome.GillMorphId);
 
         genome.PlantDiet = UnityEngine.Random.Range(0.45f, 1f);
         genome.MeatDiet = UnityEngine.Random.Range(0f, 0.65f);
@@ -249,12 +250,12 @@ public class EvolutionGenome
         genome.Selfishness = UnityEngine.Random.Range(0f, 0.45f);
         genome.ExplorationDrive = UnityEngine.Random.Range(0.15f, 0.85f);
         genome.FoodMemoryStrength = UnityEngine.Random.Range(0.15f, 0.85f);
-        genome.HabitatLoyalty = UnityEngine.Random.Range(0.05f, 0.95f);
-        genome.NestingDrive = UnityEngine.Random.Range(0.05f, 0.95f);
-        genome.EggProtection = UnityEngine.Random.Range(0.05f, 0.95f);
-        genome.Stealth = UnityEngine.Random.Range(0.05f, 0.95f);
-        genome.HearingSensitivity = UnityEngine.Random.Range(0.05f, 0.95f);
         genome.SexGene = UnityEngine.Random.value;
+        genome.NestingDrive = UnityEngine.Random.Range(0.15f, 0.85f);
+        genome.EggProtection = UnityEngine.Random.Range(0.05f, 0.85f);
+        genome.MateDrive = UnityEngine.Random.Range(0.15f, 0.85f);
+        genome.Stealth = UnityEngine.Random.Range(0.05f, 0.85f);
+        genome.HearingSensitivity = UnityEngine.Random.Range(0.15f, 0.9f);
         genome.ReproductionEnergyThreshold = UnityEngine.Random.Range(60f, 105f);
         genome.MutationRate = UnityEngine.Random.Range(0.04f, 0.14f);
         genome.MutationStrength = UnityEngine.Random.Range(0.65f, 1.4f);
@@ -359,12 +360,16 @@ public class EvolutionGenome
         child.Selfishness = MutateFloat(Selfishness, 0.10f, finalMutationRate, finalMutationStrength);
         child.ExplorationDrive = MutateFloat(ExplorationDrive, 0.10f, finalMutationRate, finalMutationStrength);
         child.FoodMemoryStrength = MutateFloat(FoodMemoryStrength, 0.10f, finalMutationRate, finalMutationStrength);
-        child.HabitatLoyalty = MutateFloat(HabitatLoyalty, 0.10f, finalMutationRate, finalMutationStrength);
+        child.SexGene = SexGene;
+        if (UnityEngine.Random.value < finalMutationRate * 0.25f)
+        {
+            child.SexGene = UnityEngine.Random.value;
+        }
         child.NestingDrive = MutateFloat(NestingDrive, 0.10f, finalMutationRate, finalMutationStrength);
-        child.EggProtection = MutateFloat(EggProtection, 0.10f, finalMutationRate, finalMutationStrength);
+        child.EggProtection = MutateFloat(EggProtection, 0.12f, finalMutationRate, finalMutationStrength);
+        child.MateDrive = MutateFloat(MateDrive, 0.10f, finalMutationRate, finalMutationStrength);
         child.Stealth = MutateFloat(Stealth, 0.10f, finalMutationRate, finalMutationStrength);
         child.HearingSensitivity = MutateFloat(HearingSensitivity, 0.10f, finalMutationRate, finalMutationStrength);
-        child.SexGene = MutateFloat(SexGene, 0.18f, finalMutationRate, finalMutationStrength);
         child.PlantDietLocked = PlantDietLocked;
         child.MeatDietLocked = MeatDietLocked;
         child.CarrionDietLocked = CarrionDietLocked;
@@ -458,12 +463,12 @@ public class EvolutionGenome
         Selfishness = Mathf.Clamp01(Selfishness);
         ExplorationDrive = Mathf.Clamp01(ExplorationDrive);
         FoodMemoryStrength = Mathf.Clamp01(FoodMemoryStrength);
-        HabitatLoyalty = Mathf.Clamp01(HabitatLoyalty);
+        SexGene = Mathf.Clamp01(SexGene);
         NestingDrive = Mathf.Clamp01(NestingDrive);
         EggProtection = Mathf.Clamp01(EggProtection);
+        MateDrive = Mathf.Clamp01(MateDrive);
         Stealth = Mathf.Clamp01(Stealth);
         HearingSensitivity = Mathf.Clamp01(HearingSensitivity);
-        SexGene = Mathf.Clamp01(SexGene);
         ApplyDietLocks();
         ReproductionEnergyThreshold = Mathf.Clamp(ReproductionEnergyThreshold, 25f, EnergyCapacity * 0.95f);
         MutationRate = Mathf.Clamp(MutationRate, 0.005f, 0.35f);
@@ -478,15 +483,25 @@ public class EvolutionGenome
 
     private void EnsureMorphIds()
     {
-        if (string.IsNullOrEmpty(BodyMorphId)) BodyMorphId = "body_basic";
-        if (string.IsNullOrEmpty(TailMorphId)) TailMorphId = "tail_basic";
-        if (string.IsNullOrEmpty(FinMorphId)) FinMorphId = "fins_basic";
-        if (string.IsNullOrEmpty(JawMorphId)) JawMorphId = "jaw_filter";
-        if (string.IsNullOrEmpty(SensorMorphId)) SensorMorphId = "sensors_basic";
-        if (string.IsNullOrEmpty(ArmourMorphId)) ArmourMorphId = "armour_none";
-        if (string.IsNullOrEmpty(DorsalFinMorphId)) DorsalFinMorphId = "dorsal_none";
-        if (string.IsNullOrEmpty(SpikeMorphId)) SpikeMorphId = "spikes_none";
-        if (string.IsNullOrEmpty(GillMorphId)) GillMorphId = "gills_basic";
+        BodyMorphId = NormaliseMorphIdForSlot(BodyMorphId, CreatureMorphSlot.Body, "basic");
+        TailMorphId = NormaliseMorphIdForSlot(TailMorphId, CreatureMorphSlot.Tail, "basic");
+        FinMorphId = NormaliseMorphIdForSlot(FinMorphId, CreatureMorphSlot.Fins, "basic");
+        JawMorphId = NormaliseMorphIdForSlot(JawMorphId, CreatureMorphSlot.Jaw, "basic");
+        SensorMorphId = NormaliseMorphIdForSlot(SensorMorphId, CreatureMorphSlot.Sensors, "basic");
+        ArmourMorphId = NormaliseMorphIdForSlot(ArmourMorphId, CreatureMorphSlot.Armour, "none");
+        DorsalFinMorphId = NormaliseMorphIdForSlot(DorsalFinMorphId, CreatureMorphSlot.DorsalFin, "none");
+        SpikeMorphId = NormaliseMorphIdForSlot(SpikeMorphId, CreatureMorphSlot.Spikes, "none");
+        GillMorphId = NormaliseMorphIdForSlot(GillMorphId, CreatureMorphSlot.Gills, "basic");
+    }
+
+    private string NormaliseMorphIdForSlot(string id, CreatureMorphSlot slot, string fallback)
+    {
+        if (string.IsNullOrEmpty(id))
+        {
+            return fallback;
+        }
+
+        return CreatureMorphLibrary.NormalisePartIdForSlot(slot, id);
     }
 
     public void NormaliseDietTraits()
@@ -560,8 +575,6 @@ public class EvolutionGenome
             PlantDiet = Mathf.Max(0.88f, PlantDiet);
             MeatDiet = Mathf.Min(MeatDiet, 0.07f);
             CarrionDiet = Mathf.Min(CarrionDiet, 0.08f);
-            HabitatLoyalty = Mathf.Max(HabitatLoyalty, 0.42f);
-            FoodSharing = Mathf.Max(FoodSharing, 0.42f);
         }
         else if (MeatDietLocked)
         {
@@ -570,8 +583,6 @@ public class EvolutionGenome
             CarrionDiet = Mathf.Min(CarrionDiet, 0.10f);
             Aggression = Mathf.Max(Aggression, 0.35f);
             Selfishness = Mathf.Max(Selfishness, 0.35f);
-            Bravery = Mathf.Max(Bravery, 0.45f);
-            Stealth = Mathf.Max(Stealth, 0.35f);
         }
         else if (CarrionDietLocked)
         {
@@ -579,7 +590,6 @@ public class EvolutionGenome
             PlantDiet = Mathf.Min(PlantDiet, 0.08f);
             MeatDiet = Mathf.Min(MeatDiet, 0.12f);
             FoodMemoryStrength = Mathf.Max(FoodMemoryStrength, 0.55f);
-            ExplorationDrive = Mathf.Max(ExplorationDrive, 0.45f);
         }
     }
 

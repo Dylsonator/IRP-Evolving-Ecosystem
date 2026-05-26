@@ -23,6 +23,22 @@ public class FoodSource : MonoBehaviour
     private readonly List<float> recentFeederTimes = new List<float>();
     private Vector3 initialScale;
 
+    private void OnEnable()
+    {
+        if (EvolutionEcosystemManager.Instance != null)
+        {
+            EvolutionEcosystemManager.Instance.RegisterFood(this);
+        }
+    }
+
+    private void OnDisable()
+    {
+        if (EvolutionEcosystemManager.Instance != null)
+        {
+            EvolutionEcosystemManager.Instance.UnregisterFood(this);
+        }
+    }
+
     private void Awake()
     {
         initialScale = transform.localScale;
@@ -77,6 +93,12 @@ public class FoodSource : MonoBehaviour
         float eaten = Mathf.Min(requestedMass, RemainingMass);
         RemainingMass -= eaten;
         EnergyValue = RemainingMass;
+
+        PlantBudResource plantBud = GetComponent<PlantBudResource>();
+        if (plantBud != null)
+        {
+            plantBud.NotifyBitten(eaten, feederId);
+        }
 
         if (RemainingMass <= 0.01f)
         {

@@ -11,6 +11,12 @@ public class CarrionSource : MonoBehaviour
     public float Age;
     public float MinimumVisibleScale = 0.18f;
 
+    [Header("Settling / Currents")]
+    public bool SettleToTerrain = true;
+    public float TerrainClearance = 0.18f;
+    public float SinkSpeedByMass = 0.45f;
+    public float CurrentDriftMultiplier = 0.55f;
+
     [Header("Physics Safety")]
     public bool DisablePhysicalColliders = true;
 
@@ -22,6 +28,22 @@ public class CarrionSource : MonoBehaviour
     private readonly List<int> recentFeederIds = new List<int>();
     private readonly List<float> recentFeederTimes = new List<float>();
     private Vector3 initialScale;
+
+    private void OnEnable()
+    {
+        if (EvolutionEcosystemManager.Instance != null)
+        {
+            EvolutionEcosystemManager.Instance.RegisterCarrion(this);
+        }
+    }
+
+    private void OnDisable()
+    {
+        if (EvolutionEcosystemManager.Instance != null)
+        {
+            EvolutionEcosystemManager.Instance.UnregisterCarrion(this);
+        }
+    }
 
     private void Awake()
     {
@@ -47,11 +69,43 @@ public class CarrionSource : MonoBehaviour
     private void Update()
     {
         Age += Time.deltaTime;
+        ApplySettlingAndCurrentDrift();
 
         if (Age >= DecayTime)
         {
             RemoveWithoutEnergy();
         }
+    }
+
+
+    private void ApplySettlingAndCurrentDrift()
+    {
+        EvolutionEcosystemManager manager = EvolutionEcosystemManager.Instance;
+        if (manager == null)
+        {
+            return;
+        }
+
+        Vector3 movement = manager.GetCurrentVelocityAt(transform.position) * CurrentDriftMultiplier;
+        if (SettleToTerrain && manager.TryGetTerrainHeight(transform.position, out float groundY))
+        {
+            float targetY = groundY + TerrainClearance;
+            if (transform.position.y > targetY + 0.05f)
+            {
+                float massFactor = Mathf.Lerp(0.35f, 1.4f, Mathf.Clamp01(MaxMass / 120f));
+                movement += Vector3.down * SinkSpeedByMass * massFactor;
+            }
+            else
+            {
+                Vector3 p = transform.position;
+                p.y = Mathf.Max(p.y, targetY);
+                transform.position = p;
+                movement.y = Mathf.Max(0f, movement.y);
+            }
+        }
+
+        transform.position += movement * Time.deltaTime;
+        transform.position = manager.ClampToSimulationArea(transform.position);
     }
 
     private void DisableBlockingPhysics()

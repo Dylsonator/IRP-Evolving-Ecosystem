@@ -16,7 +16,7 @@ public class CreatureMorphBuilder : MonoBehaviour
     [Tooltip("When true, non-body parts first look for CreatureMorphSocketMarker components placed inside the active body prefab.")]
     public bool UsePrefabBodySocketMarkers = true;
 
-    [Tooltip("If a body prefab has no socket markers, the builder can still use socket data stored on the body morph asset as a fallback.")]
+    [Tooltip("If a body prefab has no socket markers, the builder can still use socket data stored on the body morph asset.")]
     public bool UseAssetSocketNodesFallback = true;
 
     [Tooltip("Draws small gizmos for the active prefab/asset sockets when the creature is selected.")]
@@ -34,7 +34,6 @@ public class CreatureMorphBuilder : MonoBehaviour
     [Header("Morph Lookup Debug")]
     public bool LogMissingMorphParts = true;
     public bool LogMissingPrefabs = true;
-    public bool NameFallbackPartsClearly = true;
 
     private Transform modelRoot;
     private readonly List<GameObject> spawnedParts = new List<GameObject>();
@@ -91,6 +90,31 @@ public class CreatureMorphBuilder : MonoBehaviour
         }
 
         CreatureMorphPartData part = MorphLibrary != null ? MorphLibrary.FindPart(slot, partId) : null;
+
+        if (part == null)
+        {
+            if (LogMissingMorphParts)
+            {
+                Debug.LogWarning("[IRP Morph] Missing MorphPartData for slot '" + slot + "' with PartId '" + partId + "'. Nothing will be spawned for this slot.", this);
+            }
+
+            return null;
+        }
+
+        if (part.PartPrefab == null)
+        {
+            if (CreatureMorphLibrary.IsNonePartId(part.PartId))
+            {
+                return null;
+            }
+
+            if (LogMissingPrefabs)
+            {
+                Debug.LogWarning("[IRP Morph] MorphPartData '" + part.PartId + "' was found for slot '" + slot + "', but it has no prefab. Nothing will be spawned for this slot.", part);
+            }
+
+            return null;
+        }
 
         if (slot != CreatureMorphSlot.Body)
         {
@@ -400,17 +424,12 @@ public class CreatureMorphBuilder : MonoBehaviour
     {
         if (part == null)
         {
-            if (LogMissingMorphParts)
-            {
-                Debug.LogWarning("[IRP Morph] Missing MorphPartData for slot '" + slot + "' with PartId '" + partId + "'. Using generated fallback primitive.", this);
-            }
-
-            return SpawnFallbackPart(slot, partId, resolved, typeColour, fallbackPrimitive);
+            return null;
         }
 
-        if (part.PartPrefab == null && LogMissingPrefabs)
+        if (part.PartPrefab == null)
         {
-            Debug.LogWarning("[IRP Morph] MorphPartData '" + part.PartId + "' was found, but PartPrefab is empty. Using generated fallback primitive. Assign your custom prefab to this PartData asset if you want it used.", part);
+            return null;
         }
 
         GameObject first = SpawnPartFromData(part, resolved, typeColour);
@@ -425,9 +444,7 @@ public class CreatureMorphBuilder : MonoBehaviour
         }
 
         Color colour = part.OverrideTypeColour ? part.DebugColour : typeColour;
-        string displayName = part.PartPrefab == null && NameFallbackPartsClearly
-            ? "FALLBACK_MISSING_PREFAB_" + part.PartId
-            : part.DisplayName;
+        string displayName = string.IsNullOrEmpty(part.DisplayName) ? part.Slot + "_" + part.PartId : part.DisplayName;
 
         GameObject first = SpawnSinglePart(part.PartPrefab, displayName, resolved.LocalPosition, resolved.LocalRotationEuler, resolved.LocalScale, colour);
 
@@ -445,20 +462,7 @@ public class CreatureMorphBuilder : MonoBehaviour
 
     private GameObject SpawnFallbackPart(CreatureMorphSlot slot, string partId, ResolvedMorphTransform resolved, Color typeColour, PrimitiveType primitive)
     {
-        Color colour = GetFallbackPartColour(slot, partId, typeColour);
-        string label = NameFallbackPartsClearly ? ("FALLBACK_" + slot + "_" + partId) : CreatureMorphLibrary.GetFallbackDisplayName(partId);
-        GameObject first = SpawnSinglePart(null, label, resolved.LocalPosition, resolved.LocalRotationEuler, resolved.LocalScale, colour, primitive);
-
-        if (resolved.MirrorOnX && first != null)
-        {
-            Vector3 mirroredPosition = resolved.LocalPosition;
-            mirroredPosition.x *= -1f;
-            Vector3 mirroredRotation = resolved.LocalRotationEuler;
-            mirroredRotation.z *= -1f;
-            SpawnSinglePart(null, label + " Mirror", mirroredPosition, mirroredRotation, resolved.LocalScale, colour, primitive);
-        }
-
-        return first;
+        return null;
     }
 
     private GameObject SpawnSinglePart(GameObject prefab, string name, Vector3 localPosition, Vector3 localRotationEuler, Vector3 localScale, Color colour, PrimitiveType fallbackPrimitive = PrimitiveType.Cube)
@@ -480,8 +484,7 @@ public class CreatureMorphBuilder : MonoBehaviour
         }
         else
         {
-            instance = GameObject.CreatePrimitive(fallbackPrimitive);
-            instance.transform.SetParent(modelRoot, false);
+            return null;
         }
 
         instance.name = string.IsNullOrEmpty(name) ? "MorphPart" : name;

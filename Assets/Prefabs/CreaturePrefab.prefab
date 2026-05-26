@@ -11,7 +11,6 @@ GameObject:
   - component: {fileID: 6787818732762232436}
   - component: {fileID: 2075440987222123123}
   - component: {fileID: 4206938082564389894}
-  - component: {fileID: 1879219479675903565}
   - component: {fileID: 6774844043051048400}
   m_Layer: 0
   m_Name: CreaturePrefab
@@ -58,8 +57,8 @@ Rigidbody:
   m_ImplicitCom: 1
   m_ImplicitTensor: 1
   m_UseGravity: 0
-  m_IsKinematic: 0
-  m_Interpolate: 0
+  m_IsKinematic: 1
+  m_Interpolate: 1
   m_Constraints: 0
   m_CollisionDetection: 0
 --- !u!114 &4206938082564389894
@@ -127,6 +126,21 @@ MonoBehaviour:
       FoodSharing: 0.45
       Territoriality: 0.08
       ActivityCycle: 0.65
+      HungerThreshold: 0.48
+      StomachSize: 1
+      Metabolism: 1
+      Bravery: 0.45
+      Selfishness: 0.18
+      ExplorationDrive: 0.45
+      FoodMemoryStrength: 0.55
+      SexGene: 0.5
+      NestingDrive: 0.25
+      EggProtection: 0.25
+      Stealth: 0.25
+      HearingSensitivity: 0.45
+      PlantDietLocked: 0
+      MeatDietLocked: 0
+      CarrionDietLocked: 0
       ReproductionEnergyThreshold: 80
       MutationRate: 0.08
       MutationStrength: 1
@@ -146,16 +160,25 @@ MonoBehaviour:
     BehaviourType: 0
     SurvivalTime: 0
     FinalEnergy: 0
+    FinalHealth: 0
+    FinalStomachFullness: 0
     EnergyGained: 0
     FoodEaten: 0
     CarrionEaten: 0
+    FoodMassConsumed: 0
     PreyBites: 0
     PlantEnergyConsumed: 0
     MeatEnergyConsumed: 0
     CarrionEnergyConsumed: 0
+    StarvationDamageTaken: 0
+    FoodMemoryUses: 0
+    LeaderFollowEvents: 0
     PreyKills: 0
     BiteDamageDealt: 0
     ReproductionCount: 0
+    EggsLaid: 0
+    EggsHatched: 0
+    EggsEaten: 0
     DistanceTravelled: 0
     AverageSpeedUsed: 0
     AverageFoodDistance: 0
@@ -185,11 +208,24 @@ MonoBehaviour:
     MorphSummary: 
   MorphLibrary: {fileID: 11400000, guid: 5620c6424db82e1419e7de0466d7ae80, type: 2}
   CurrentEnergy: 0
+  CurrentHealth: 0
+  StomachPlant: 0
+  StomachMeat: 0
+  StomachCarrion: 0
+  AgeSeconds: 0
+  IsJuvenile: 0
   DebugName: 
   DebugBehaviourType: 0
   BaseEnergyDrainPerSecond: 1.8
   ReproductionCooldown: 5
   LowEnergyRatio: 0.35
+  BaseHealth: 100
+  StarvationHealthDamagePerSecond: 4
+  HealthRecoveryPerSecond: 1.6
+  BaseStomachCapacity: 46
+  BaseDigestionPerSecond: 3.2
+  BaseBiteMass: 7.5
+  FullStomachSlowdown: 0.18
   MinimumCruiseSpeedScale: 0.28
   NormalCruiseSpeedScale: 0.78
   HungryCruiseSpeedScale: 1.08
@@ -233,13 +269,57 @@ MonoBehaviour:
   StaticFoodContactConsumeDistance: 1.45
   CloseFeedingDirectMotionDistance: 4.5
   FeedingSocialSuppression: 0.04
+  DirectStaticFeedingPullWeight: 7.5
+  StaticBodyContactConsumeDistance: 2.15
+  StaticMouthContactConsumeDistance: 1.65
   TargetRetainTime: 2
+  FeedingHoldAfterBite: 0.42
+  FeedingHoldDamping: 9.5
+  FeedingTurnResponsiveness: 1.35
+  LeaveResourceEnergyRatio: 0.78
+  LeaveResourceStomachRatio: 0.62
+  LeaveResourceIgnoreTime: 4.5
+  FeedingPersonalSpaceBoost: 1.35
   ResourceCrowdRadius: 5.25
   MinComfortableFeeders: 1
   MaxComfortableFeeders: 5
   ResourceCrowdPenaltyLowSharing: 32
   ResourceCrowdPenaltyHighSharing: 7
+  ResourceApproachSlotRadius: 1.85
+  ResourceAbandonDuration: 5
+  StuckResourceProgressTime: 1.65
+  StuckResourceDistanceEpsilon: 0.08
+  HardUnstickSideStepWeight: 5.5
   CrowdedFeedingSchoolSuppression: 0.02
+  HungryLeaderSearchRadius: 14
+  HungryLeaderPullWeight: 1.35
+  FoodMemoryDuration: 55
+  FoodMemoryAreaRadius: 8
+  BadFoodMemoryDuration: 18
+  NotHungryFoodPullSuppression: 0.06
+  DesperateHealthRatio: 0.35
+  HomeMemoryStrength: 0.75
+  HomeAttractionDistance: 12
+  HomeAttractionWeight: 0.9
+  SafeHomeLearningRate: 0.035
+  UnsafeHomeDecayRate: 0.08
+  DangerMemoryDuration: 65
+  DangerMemoryAvoidanceWeight: 1.15
+  MaturityAgeSeconds: 90
+  JuvenileGrowTime: 70
+  JuvenileStartScale: 0.35
+  MateSearchRadius: 18
+  RequiredMateMorphSimilarity: 0.78
+  MateEnergyRatioRequired: 0.68
+  EggLayCooldown: 55
+  EggLayEnergyCost: 24
+  MinimumEggsPerClutch: 2
+  MaximumEggsPerClutch: 8
+  EggHatchTime: 55
+  EggHealthPerBodySize: 12
+  EggMassPerEgg: 7
+  NestSearchRadius: 18
+  NestSearchSamples: 12
   BiteCooldown: 1.65
   BaseBiteDamage: 8
   ArmourDamageReductionPerPoint: 0.16
@@ -273,6 +353,11 @@ MonoBehaviour:
   StuckEscapeDuration: 1.8
   StuckEscapeWeight: 2.4
   StuckPositionDeltaThreshold: 0.12
+  KinematicOverlapIterations: 2
+  KinematicOverlapResolveStrength: 0.65
+  KinematicOverlapVerticalInfluence: 0.03
+  FeedingOverlapResolveStrength: 1.05
+  OverlapSearchRadius: 3.5
   DietLearningRate: 0.028
   BehaviourDecayRate: 0.0015
   ApplyTypeColour: 1
@@ -280,20 +365,6 @@ MonoBehaviour:
   LocalDebugLabels: 0
   ScaleCreatureRootByEffectiveBodySize: 1
   DisableLegacyPhenotypeVisuals: 1
---- !u!114 &1879219479675903565
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1169779037587707263}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c5931c976de5bcf449a9b716a612b387, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  AutoBuildPrimitiveBody: 0
-  HideOriginalRenderer: 1
 --- !u!135 &6774844043051048400
 SphereCollider:
   m_ObjectHideFlags: 0
