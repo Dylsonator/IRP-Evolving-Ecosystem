@@ -36,6 +36,13 @@ public class EvolutionCandidate
     public float AverageFoodDistance;
     public float AveragePreyDistance;
     public float AverageCarrionDistance;
+    public int FoodBitesTaken;
+    public float FoodMassConsumed;
+    public float HabitatSettledTime;
+    public float ZoneExposureTime;
+    public float EnvironmentalPressureExposure;
+    public float HomeConfidence;
+    public int DangerMemoryEvents;
 
     public EvolutionCandidate(EvolutionGenome genome)
     {
@@ -81,6 +88,11 @@ public class EvolutionCandidate
         fitness += BiteDamageDealt * 0.18f;
         fitness += ReproductionCount * 45f;
         fitness += DistanceTravelled * 0.02f;
+        fitness += FoodMassConsumed * 0.16f;
+        fitness += HabitatSettledTime * 0.18f;
+        fitness += HomeConfidence * 8f;
+        fitness -= StarvationDamageTaken * 0.18f;
+        fitness -= EnvironmentalPressureExposure * 0.08f;
 
         return Mathf.Max(0f, fitness);
     }
@@ -151,5 +163,12 @@ public class EvolutionCandidate
         AverageFoodDistance += other.AverageFoodDistance;
         AveragePreyDistance += other.AveragePreyDistance;
         AverageCarrionDistance += other.AverageCarrionDistance;
+        FoodBitesTaken += other.FoodBitesTaken;
+        FoodMassConsumed += other.FoodMassConsumed;
+        HabitatSettledTime += other.HabitatSettledTime;
+        ZoneExposureTime += other.ZoneExposureTime;
+        EnvironmentalPressureExposure += other.EnvironmentalPressureExposure;
+        HomeConfidence = Mathf.Max(HomeConfidence, other.HomeConfidence);
+        DangerMemoryEvents += other.DangerMemoryEvents;
     }
 }

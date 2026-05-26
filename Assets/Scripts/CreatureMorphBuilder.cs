@@ -492,7 +492,6 @@ public class CreatureMorphBuilder : MonoBehaviour
         {
             if (PreserveAuthoredPrefabScale)
             {
-                // Custom prefabs keep their authored root scale.
                 // Genome/socket/fallback scale only affects generated fallback primitives.
                 instance.transform.localScale = authoredPrefabScale;
             }

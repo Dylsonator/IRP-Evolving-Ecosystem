@@ -29,6 +29,27 @@ public class EvolutionStatsTracker : MonoBehaviour
     public float AverageMeatDiet;
     public float AverageCarrionDiet;
     public string DominantDietMode;
+    public int PlantLockedCount;
+    public int MeatLockedCount;
+    public int CarrionLockedCount;
+
+    [Header("Autonomy / Habitat Averages")]
+    public float AverageLeadership;
+    public float AverageFoodSharing;
+    public float AverageBravery;
+    public float AverageSelfishness;
+    public float AverageMetabolism;
+    public float AverageStomachSize;
+    public float AverageHabitatLoyalty;
+    public float AverageNestingDrive;
+    public float AverageStealth;
+    public float AverageHearing;
+    public float AverageFoodMemoryStrength;
+    public float AverageEnvironmentalPressure;
+    public float AverageHabitatTime;
+    public float AverageFoodMassConsumed;
+    public float AverageFoodBites;
+    public int MorphGroupCount;
 
     [Header("Grouped Behaviour Counts")]
     public int BalancedCount;
@@ -59,10 +80,11 @@ public class EvolutionStatsTracker : MonoBehaviour
     public float DietDiversity;
     public float TraitDiversity;
     public float BehaviourTypeDiversity;
+    public float MorphDiversity;
 
     [Header("Logging")]
     public bool WriteCsvLog = true;
-    public string CsvFileName = "IRP_EvolutionStats.csv";
+    public string CsvFileName = "IRP_EvolutionOutputStats.csv";
 
     public readonly List<int> GenerationHistory = new List<int>();
     public readonly List<float> AverageFitnessHistory = new List<float>();
@@ -79,8 +101,7 @@ public class EvolutionStatsTracker : MonoBehaviour
 
         if (WriteCsvLog && !File.Exists(csvPath))
         {
-            File.WriteAllText(csvPath,
-                "Generation,Population,Offspring,AverageFitness,AverageSpeed,AverageVisionRange,AverageBodySize,AverageMutationRate,AverageFoodEaten,AverageCarrionEaten,AveragePreyBites,AveragePreyKills,AverageSurvivalTime,AverageHealth,AverageStomachFullness,BehaviourDiversity,MovementDiversity,FeedingDiversity,DietDiversity,TraitDiversity,BehaviourTypeDiversity,ActiveNicheCount,DominantGroup,DominantDietMode,Balanced,Grazer,Predator,Scavenger,Omnivore,Sprinter,Scout,Schooling,Skittish,Aggressive,Heavy,AveragePlantDiet,AverageMeatDiet,AverageCarrionDiet,AverageHungerDrive,AverageAggression,AverageRiskTolerance,AverageGroupingChance,AverageThreatRange\n");
+            File.WriteAllText(csvPath, BuildCsvHeader());
         }
     }
 
@@ -117,10 +138,26 @@ public class EvolutionStatsTracker : MonoBehaviour
         float totalRisk = 0f;
         float totalGrouping = 0f;
         float totalThreat = 0f;
+        float totalLeadership = 0f;
+        float totalFoodSharing = 0f;
+        float totalBravery = 0f;
+        float totalSelfishness = 0f;
+        float totalMetabolism = 0f;
+        float totalStomachSize = 0f;
+        float totalHabitatLoyalty = 0f;
+        float totalNestingDrive = 0f;
+        float totalStealth = 0f;
+        float totalHearing = 0f;
+        float totalMemory = 0f;
+        float totalPressure = 0f;
+        float totalHabitatTime = 0f;
+        float totalFoodMass = 0f;
+        float totalFoodBites = 0f;
 
         List<Vector2> descriptors = new List<Vector2>();
         List<Vector2> dietDescriptors = new List<Vector2>();
         List<EvolutionGenome> genomes = new List<EvolutionGenome>();
+        HashSet<string> morphGroups = new HashSet<string>();
 
         for (int i = 0; i < evaluatedCandidates.Count; i++)
         {
@@ -134,6 +171,7 @@ public class EvolutionStatsTracker : MonoBehaviour
             EvolutionGenome genome = candidate.Genome;
             CreatureBehaviourType type = CreatureDebugTypeUtility.GetBehaviourType(genome);
             AddGroupedCount(type);
+            morphGroups.Add(genome.GetMorphSignature());
 
             totalFitness += candidate.GetFitness();
             totalSpeed += genome.Speed;
@@ -155,6 +193,25 @@ public class EvolutionStatsTracker : MonoBehaviour
             totalRisk += genome.RiskTolerance;
             totalGrouping += genome.GroupingChance;
             totalThreat += genome.ThreatRange;
+            totalLeadership += genome.Leadership;
+            totalFoodSharing += genome.FoodSharing;
+            totalBravery += genome.Bravery;
+            totalSelfishness += genome.Selfishness;
+            totalMetabolism += genome.Metabolism;
+            totalStomachSize += genome.StomachSize;
+            totalHabitatLoyalty += genome.HabitatLoyalty;
+            totalNestingDrive += genome.NestingDrive;
+            totalStealth += genome.Stealth;
+            totalHearing += genome.HearingSensitivity;
+            totalMemory += genome.FoodMemoryStrength;
+            totalPressure += candidate.EnvironmentalPressureExposure;
+            totalHabitatTime += candidate.HabitatSettledTime;
+            totalFoodMass += candidate.FoodMassConsumed;
+            totalFoodBites += candidate.FoodBitesTaken;
+
+            if (genome.PlantDietLocked) PlantLockedCount++;
+            if (genome.MeatDietLocked) MeatLockedCount++;
+            if (genome.CarrionDietLocked) CarrionLockedCount++;
 
             descriptors.Add(candidate.GetBehaviourDescriptor());
             dietDescriptors.Add(candidate.GetDietDescriptor());
@@ -183,6 +240,22 @@ public class EvolutionStatsTracker : MonoBehaviour
         AverageRiskTolerance = totalRisk / count;
         AverageGroupingChance = totalGrouping / count;
         AverageThreatRange = totalThreat / count;
+        AverageLeadership = totalLeadership / count;
+        AverageFoodSharing = totalFoodSharing / count;
+        AverageBravery = totalBravery / count;
+        AverageSelfishness = totalSelfishness / count;
+        AverageMetabolism = totalMetabolism / count;
+        AverageStomachSize = totalStomachSize / count;
+        AverageHabitatLoyalty = totalHabitatLoyalty / count;
+        AverageNestingDrive = totalNestingDrive / count;
+        AverageStealth = totalStealth / count;
+        AverageHearing = totalHearing / count;
+        AverageFoodMemoryStrength = totalMemory / count;
+        AverageEnvironmentalPressure = totalPressure / count;
+        AverageHabitatTime = totalHabitatTime / count;
+        AverageFoodMassConsumed = totalFoodMass / count;
+        AverageFoodBites = totalFoodBites / count;
+        MorphGroupCount = morphGroups.Count;
 
         BehaviourDiversity = CalculateDescriptorSpread(descriptors);
         MovementDiversity = CalculateSingleAxisSpread(descriptors, true);
@@ -190,6 +263,7 @@ public class EvolutionStatsTracker : MonoBehaviour
         DietDiversity = CalculateDescriptorSpread(dietDescriptors);
         TraitDiversity = CalculateTraitDiversity(genomes);
         BehaviourTypeDiversity = CalculateBehaviourTypeDiversity(count);
+        MorphDiversity = Mathf.Clamp01(MorphGroupCount / Mathf.Max(1f, count));
         ActiveNicheCount = CountActiveNiches();
         DominantBehaviourGroup = GetDominantGroupName();
         DominantDietMode = GetDominantDietMode();
@@ -202,9 +276,8 @@ public class EvolutionStatsTracker : MonoBehaviour
             " | Avg Fit: " + AverageFitness.ToString("F1") +
             " | Dominant: " + DominantBehaviourGroup +
             " | Diet: " + DominantDietMode +
-            " | Niches: " + ActiveNicheCount +
-            " | Diversity: " + BehaviourDiversity.ToString("F2") +
-            " | Groups: " + BehaviourGroupSummary
+            " | Morph Groups: " + MorphGroupCount +
+            " | Diversity: " + BehaviourDiversity.ToString("F2")
         );
 
         GenerationHistory.Add(generation);
@@ -220,6 +293,11 @@ public class EvolutionStatsTracker : MonoBehaviour
         }
     }
 
+    private string BuildCsvHeader()
+    {
+        return "Generation,Population,Offspring,AverageFitness,AverageSpeed,AverageVisionRange,AverageBodySize,AverageMutationRate,AverageFoodEaten,AverageCarrionEaten,AveragePreyBites,AveragePreyKills,AverageSurvivalTime,AverageHealth,AverageStomachFullness,BehaviourDiversity,MovementDiversity,FeedingDiversity,DietDiversity,TraitDiversity,BehaviourTypeDiversity,MorphDiversity,ActiveNicheCount,MorphGroupCount,DominantGroup,DominantDietMode,Balanced,Grazer,Predator,Scavenger,Omnivore,Sprinter,Scout,Schooling,Skittish,Aggressive,Heavy,AveragePlantDiet,AverageMeatDiet,AverageCarrionDiet,PlantLocked,MeatLocked,CarrionLocked,AverageHungerDrive,AverageAggression,AverageRiskTolerance,AverageGroupingChance,AverageThreatRange,AverageLeadership,AverageFoodSharing,AverageBravery,AverageSelfishness,AverageMetabolism,AverageStomachSize,AverageHabitatLoyalty,AverageNestingDrive,AverageStealth,AverageHearing,AverageFoodMemoryStrength,AverageEnvironmentalPressure,AverageHabitatTime,AverageFoodMassConsumed,AverageFoodBites\n";
+    }
+
     private void ResetGroupedCounts()
     {
         BalancedCount = 0;
@@ -233,6 +311,10 @@ public class EvolutionStatsTracker : MonoBehaviour
         SkittishCount = 0;
         AggressiveCount = 0;
         HeavyCount = 0;
+        PlantLockedCount = 0;
+        MeatLockedCount = 0;
+        CarrionLockedCount = 0;
+        MorphGroupCount = 0;
         ActiveNicheCount = 0;
         DominantBehaviourGroup = "None";
         DominantDietMode = "None";
@@ -262,11 +344,27 @@ public class EvolutionStatsTracker : MonoBehaviour
         AverageRiskTolerance = 0f;
         AverageGroupingChance = 0f;
         AverageThreatRange = 0f;
+        AverageLeadership = 0f;
+        AverageFoodSharing = 0f;
+        AverageBravery = 0f;
+        AverageSelfishness = 0f;
+        AverageMetabolism = 0f;
+        AverageStomachSize = 0f;
+        AverageHabitatLoyalty = 0f;
+        AverageNestingDrive = 0f;
+        AverageStealth = 0f;
+        AverageHearing = 0f;
+        AverageFoodMemoryStrength = 0f;
+        AverageEnvironmentalPressure = 0f;
+        AverageHabitatTime = 0f;
+        AverageFoodMassConsumed = 0f;
+        AverageFoodBites = 0f;
         MovementDiversity = 0f;
         FeedingDiversity = 0f;
         DietDiversity = 0f;
         TraitDiversity = 0f;
         BehaviourTypeDiversity = 0f;
+        MorphDiversity = 0f;
         ActiveNicheCount = 0;
     }
 
@@ -397,21 +495,11 @@ public class EvolutionStatsTracker : MonoBehaviour
         }
 
         Vector2 average = Vector2.zero;
-
-        for (int i = 0; i < descriptors.Count; i++)
-        {
-            average += descriptors[i];
-        }
-
+        for (int i = 0; i < descriptors.Count; i++) average += descriptors[i];
         average /= descriptors.Count;
 
         float spread = 0f;
-
-        for (int i = 0; i < descriptors.Count; i++)
-        {
-            spread += Vector2.Distance(average, descriptors[i]);
-        }
-
+        for (int i = 0; i < descriptors.Count; i++) spread += Vector2.Distance(average, descriptors[i]);
         return spread / descriptors.Count;
     }
 
@@ -423,16 +511,10 @@ public class EvolutionStatsTracker : MonoBehaviour
         }
 
         float average = 0f;
-
-        for (int i = 0; i < descriptors.Count; i++)
-        {
-            average += useX ? descriptors[i].x : descriptors[i].y;
-        }
-
+        for (int i = 0; i < descriptors.Count; i++) average += useX ? descriptors[i].x : descriptors[i].y;
         average /= descriptors.Count;
 
         float spread = 0f;
-
         for (int i = 0; i < descriptors.Count; i++)
         {
             float value = useX ? descriptors[i].x : descriptors[i].y;
@@ -460,28 +542,21 @@ public class EvolutionStatsTracker : MonoBehaviour
         float meatDiet = AverageAbsoluteDeviation(genomes, g => g.MeatDiet);
         float carrionDiet = AverageAbsoluteDeviation(genomes, g => g.CarrionDiet);
         float mutation = AverageAbsoluteDeviation(genomes, g => g.MutationRate / 0.35f);
+        float habitat = AverageAbsoluteDeviation(genomes, g => g.HabitatLoyalty);
+        float stealth = AverageAbsoluteDeviation(genomes, g => g.Stealth);
+        float memory = AverageAbsoluteDeviation(genomes, g => g.FoodMemoryStrength);
 
-        return (speed + vision + size + hunger + aggression + risk + grouping + plantDiet + meatDiet + carrionDiet + mutation) / 11f;
+        return (speed + vision + size + hunger + aggression + risk + grouping + plantDiet + meatDiet + carrionDiet + mutation + habitat + stealth + memory) / 14f;
     }
 
     private float AverageAbsoluteDeviation(List<EvolutionGenome> genomes, System.Func<EvolutionGenome, float> getter)
     {
         float average = 0f;
-
-        for (int i = 0; i < genomes.Count; i++)
-        {
-            average += getter(genomes[i]);
-        }
-
+        for (int i = 0; i < genomes.Count; i++) average += getter(genomes[i]);
         average /= genomes.Count;
 
         float spread = 0f;
-
-        for (int i = 0; i < genomes.Count; i++)
-        {
-            spread += Mathf.Abs(getter(genomes[i]) - average);
-        }
-
+        for (int i = 0; i < genomes.Count; i++) spread += Mathf.Abs(getter(genomes[i]) - average);
         return spread / genomes.Count;
     }
 
@@ -520,7 +595,9 @@ public class EvolutionStatsTracker : MonoBehaviour
         line.Append(DietDiversity.ToString("F4")).Append(",");
         line.Append(TraitDiversity.ToString("F4")).Append(",");
         line.Append(BehaviourTypeDiversity.ToString("F4")).Append(",");
+        line.Append(MorphDiversity.ToString("F4")).Append(",");
         line.Append(ActiveNicheCount).Append(",");
+        line.Append(MorphGroupCount).Append(",");
         line.Append(DominantBehaviourGroup).Append(",");
         line.Append(DominantDietMode).Append(",");
         line.Append(BalancedCount).Append(",");
@@ -537,11 +614,29 @@ public class EvolutionStatsTracker : MonoBehaviour
         line.Append(AveragePlantDiet.ToString("F3")).Append(",");
         line.Append(AverageMeatDiet.ToString("F3")).Append(",");
         line.Append(AverageCarrionDiet.ToString("F3")).Append(",");
+        line.Append(PlantLockedCount).Append(",");
+        line.Append(MeatLockedCount).Append(",");
+        line.Append(CarrionLockedCount).Append(",");
         line.Append(AverageHungerDrive.ToString("F3")).Append(",");
         line.Append(AverageAggression.ToString("F3")).Append(",");
         line.Append(AverageRiskTolerance.ToString("F3")).Append(",");
         line.Append(AverageGroupingChance.ToString("F3")).Append(",");
-        line.Append(AverageThreatRange.ToString("F3")).Append("\n");
+        line.Append(AverageThreatRange.ToString("F3")).Append(",");
+        line.Append(AverageLeadership.ToString("F3")).Append(",");
+        line.Append(AverageFoodSharing.ToString("F3")).Append(",");
+        line.Append(AverageBravery.ToString("F3")).Append(",");
+        line.Append(AverageSelfishness.ToString("F3")).Append(",");
+        line.Append(AverageMetabolism.ToString("F3")).Append(",");
+        line.Append(AverageStomachSize.ToString("F3")).Append(",");
+        line.Append(AverageHabitatLoyalty.ToString("F3")).Append(",");
+        line.Append(AverageNestingDrive.ToString("F3")).Append(",");
+        line.Append(AverageStealth.ToString("F3")).Append(",");
+        line.Append(AverageHearing.ToString("F3")).Append(",");
+        line.Append(AverageFoodMemoryStrength.ToString("F3")).Append(",");
+        line.Append(AverageEnvironmentalPressure.ToString("F3")).Append(",");
+        line.Append(AverageHabitatTime.ToString("F3")).Append(",");
+        line.Append(AverageFoodMassConsumed.ToString("F3")).Append(",");
+        line.Append(AverageFoodBites.ToString("F3")).Append("\n");
 
         File.AppendAllText(csvPath, line.ToString());
     }

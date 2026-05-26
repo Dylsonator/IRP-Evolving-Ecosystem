@@ -377,6 +377,68 @@ MonoBehaviour:
   m_LightCookieSize: {x: 1, y: 1}
   m_LightCookieOffset: {x: 0, y: 0}
   m_SoftShadowQuality: 1
+--- !u!1 &523615328
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 523615330}
+  - component: {fileID: 523615329}
+  m_Layer: 0
+  m_Name: Pressurezone
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &523615329
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 523615328}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 64bcd553f63b6f646bb1a20973ff00b6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ZoneName: Habitat Zone
+  ZoneType: 0
+  Radius: 18
+  VerticalRadius: 8
+  PreferredDepth01: 0.5
+  DepthInfluence: 0.55
+  PlantFoodWeight: 1
+  CarrionWeight: 0.25
+  DangerPressure: 0
+  PredatorCover: 0
+  Shelter: 0.35
+  EnergyDrainMultiplier: 1
+  MutationPressure: 1
+  PlantAffinity: 0.75
+  MeatAffinity: 0.25
+  CarrionAffinity: 0.25
+  SchoolingAffinity: 0.5
+  LargeBodyAffinity: 0.5
+--- !u!4 &523615330
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 523615328}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -20.34, y: -2.4327362, z: 25.66}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &832575517
 GameObject:
   m_ObjectHideFlags: 0
@@ -421,6 +483,68 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1177106547
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1177106549}
+  - component: {fileID: 1177106548}
+  m_Layer: 0
+  m_Name: Pressurezone (2)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1177106548
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1177106547}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 64bcd553f63b6f646bb1a20973ff00b6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ZoneName: Habitat Zone
+  ZoneType: 5
+  Radius: 18
+  VerticalRadius: 8
+  PreferredDepth01: 0.5
+  DepthInfluence: 0.55
+  PlantFoodWeight: 1
+  CarrionWeight: 0.25
+  DangerPressure: 0
+  PredatorCover: 0
+  Shelter: 0.35
+  EnergyDrainMultiplier: 1
+  MutationPressure: 1
+  PlantAffinity: 0.75
+  MeatAffinity: 0.25
+  CarrionAffinity: 0.25
+  SchoolingAffinity: 0.5
+  LargeBodyAffinity: 0.5
+--- !u!4 &1177106549
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1177106547}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 5.4, y: -14.8, z: 4}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -503,8 +627,13 @@ MonoBehaviour:
   Environment: {fileID: 1204215837}
   StatsTracker: {fileID: 1204215839}
   DebugSettings: {fileID: 1204215842}
-  SimulationAreaSize: {x: 80, y: 25, z: 80}
+  SimulationAreaSize: {x: 80, y: 60, z: 80}
   SpawnPaddingFromBounds: 4
+  AutoFindPressureZones: 1
+  PressureZones: []
+  FoodZoneSpawnChance: 0.78
+  CreatureZoneSpawnChance: 0.62
+  ZoneRefreshInterval: 3
   StartingPopulation: 35
   FixedPopulationSize: 35
   GenerationDuration: 120
@@ -562,11 +691,32 @@ MonoBehaviour:
   AveragePreyBites: 0
   AveragePreyKills: 0
   AverageSurvivalTime: 0
+  AverageHealth: 0
+  AverageStomachFullness: 0
   BehaviourDiversity: 0
   AveragePlantDiet: 0
   AverageMeatDiet: 0
   AverageCarrionDiet: 0
   DominantDietMode: 
+  PlantLockedCount: 0
+  MeatLockedCount: 0
+  CarrionLockedCount: 0
+  AverageLeadership: 0
+  AverageFoodSharing: 0
+  AverageBravery: 0
+  AverageSelfishness: 0
+  AverageMetabolism: 0
+  AverageStomachSize: 0
+  AverageHabitatLoyalty: 0
+  AverageNestingDrive: 0
+  AverageStealth: 0
+  AverageHearing: 0
+  AverageFoodMemoryStrength: 0
+  AverageEnvironmentalPressure: 0
+  AverageHabitatTime: 0
+  AverageFoodMassConsumed: 0
+  AverageFoodBites: 0
+  MorphGroupCount: 0
   BalancedCount: 0
   GrazerCount: 0
   PredatorCount: 0
@@ -591,6 +741,7 @@ MonoBehaviour:
   DietDiversity: 0
   TraitDiversity: 0
   BehaviourTypeDiversity: 0
+  MorphDiversity: 0
   WriteCsvLog: 1
   CsvFileName: IRP_EvolutionStats.csv
 --- !u!114 &1204215840
@@ -721,6 +872,68 @@ MonoBehaviour:
   PanelPosition: {x: 12, y: 235}
   PanelSize: {x: 430, y: 520}
   SnapshotFolder: IRP_SelectedFishSnapshots
+--- !u!1 &1419945721
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1419945723}
+  - component: {fileID: 1419945722}
+  m_Layer: 0
+  m_Name: Pressurezone (1)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1419945722
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1419945721}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 64bcd553f63b6f646bb1a20973ff00b6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ZoneName: Habitat Zone
+  ZoneType: 1
+  Radius: 18
+  VerticalRadius: 8
+  PreferredDepth01: 0.5
+  DepthInfluence: 0.55
+  PlantFoodWeight: 1
+  CarrionWeight: 0.25
+  DangerPressure: 0
+  PredatorCover: 0
+  Shelter: 0.35
+  EnergyDrainMultiplier: 1
+  MutationPressure: 1
+  PlantAffinity: 0.75
+  MeatAffinity: 0.25
+  CarrionAffinity: 0.25
+  SchoolingAffinity: 0.5
+  LargeBodyAffinity: 0.5
+--- !u!4 &1419945723
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1419945721}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 16.4, y: 4.1, z: -17.1}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -729,3 +942,6 @@ SceneRoots:
   - {fileID: 410087041}
   - {fileID: 832575519}
   - {fileID: 1204215836}
+  - {fileID: 523615330}
+  - {fileID: 1419945723}
+  - {fileID: 1177106549}

@@ -113,6 +113,7 @@ public class FishSelectionDebugPanel : MonoBehaviour
         GUILayout.Label("Group: " + CreatureDebugTypeUtility.GetSpeciesGroupName(g));
         GUILayout.Label("Morph: " + CreatureDebugTypeUtility.GetMorphologyName(g));
         GUILayout.Label("Move: " + SelectedFish.GetDebugMoveState() + " | Vertical: " + SelectedFish.GetDebugVerticalReason());
+        GUILayout.Label("Habitat: " + SelectedFish.GetHabitatDebugSummary());
         GUILayout.Label("Schoolmates: " + SelectedFish.GetFriendlySchoolmateCount() + " | Threats: " + SelectedFish.GetThreatCount());
         GUILayout.Space(4f);
         GUILayout.Label("Energy: " + SelectedFish.CurrentEnergy.ToString("F1") + " / " + (s != null ? s.EnergyCapacity.ToString("F1") : g.EnergyCapacity.ToString("F1")));
@@ -125,6 +126,8 @@ public class FishSelectionDebugPanel : MonoBehaviour
         GUILayout.Label("Grouping: " + g.GroupingChance.ToString("F2") + " | Tightness: " + g.SchoolTightness.ToString("F2") + " | Leader: " + g.Leadership.ToString("F2"));
         GUILayout.Label("Hunger T: " + g.HungerThreshold.ToString("F2") + " | Metabolism: " + g.Metabolism.ToString("F2") + " | Stomach Size: " + g.StomachSize.ToString("F2"));
         GUILayout.Label("Bravery: " + g.Bravery.ToString("F2") + " | Selfish: " + g.Selfishness.ToString("F2") + " | Memory: " + g.FoodMemoryStrength.ToString("F2"));
+        GUILayout.Label("Habitat: " + g.HabitatLoyalty.ToString("F2") + " | Nest: " + g.NestingDrive.ToString("F2") + " | Egg Def: " + g.EggProtection.ToString("F2"));
+        GUILayout.Label("Stealth: " + g.Stealth.ToString("F2") + " | Hearing: " + g.HearingSensitivity.ToString("F2") + " | Sex Gene: " + g.SexGene.ToString("F2"));
         GUILayout.Label("Diet Lock P/M/C: " + g.PlantDietLocked + " / " + g.MeatDietLocked + " / " + g.CarrionDietLocked);
         GUILayout.Label("Depth: " + g.PreferredDepth01.ToString("F2") + " | Flexibility: " + g.DepthFlexibility.ToString("F2"));
         GUILayout.Space(4f);
@@ -195,6 +198,15 @@ public class FishSelectionDebugPanel : MonoBehaviour
         AppendJson(sb, "bravery", g.Bravery, true);
         AppendJson(sb, "selfishness", g.Selfishness, true);
         AppendJson(sb, "foodMemoryStrength", g.FoodMemoryStrength, true);
+        AppendJson(sb, "habitatLoyalty", g.HabitatLoyalty, true);
+        AppendJson(sb, "nestingDrive", g.NestingDrive, true);
+        AppendJson(sb, "eggProtection", g.EggProtection, true);
+        AppendJson(sb, "stealth", g.Stealth, true);
+        AppendJson(sb, "hearingSensitivity", g.HearingSensitivity, true);
+        AppendJson(sb, "sexGene", g.SexGene, true);
+        AppendJson(sb, "foodMassConsumed", c.FoodMassConsumed, true);
+        AppendJson(sb, "environmentalPressure", c.EnvironmentalPressureExposure, true);
+        AppendJson(sb, "habitat", fish.GetHabitatDebugSummary(), true);
         AppendJson(sb, "bodyMorph", g.BodyMorphId, true);
         AppendJson(sb, "tailMorph", g.TailMorphId, true);
         AppendJson(sb, "finMorph", g.FinMorphId, true);

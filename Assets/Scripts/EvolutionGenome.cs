@@ -64,7 +64,7 @@ public class EvolutionGenome
 
 
 
-    [Header("Emergent Schooling / Habitat Traits")]
+    [Header("Schooling / Habitat Traits")]
     [Range(0f, 1f)] public float PreferredDepth01 = 0.5f;
     [Range(0f, 1f)] public float DepthFlexibility = 0.35f;
     [Range(0f, 1f)] public float SchoolTightness = 0.45f;
@@ -84,6 +84,14 @@ public class EvolutionGenome
     public bool PlantDietLocked;
     public bool MeatDietLocked;
     public bool CarrionDietLocked;
+
+    [Header("Habitat / Reproduction Prep")]
+    [Range(0f, 1f)] public float HabitatLoyalty = 0.45f;
+    [Range(0f, 1f)] public float NestingDrive = 0.25f;
+    [Range(0f, 1f)] public float EggProtection = 0.25f;
+    [Range(0f, 1f)] public float Stealth = 0.25f;
+    [Range(0f, 1f)] public float HearingSensitivity = 0.45f;
+    [Range(0f, 1f)] public float SexGene = 0.5f;
 
     [Header("Reproduction / Mutation")]
     public float ReproductionEnergyThreshold = 80f;
@@ -161,6 +169,12 @@ public class EvolutionGenome
         genome.PlantDietLocked = false;
         genome.MeatDietLocked = false;
         genome.CarrionDietLocked = false;
+        genome.HabitatLoyalty = 0.45f;
+        genome.NestingDrive = 0.25f;
+        genome.EggProtection = 0.25f;
+        genome.Stealth = 0.25f;
+        genome.HearingSensitivity = 0.45f;
+        genome.SexGene = UnityEngine.Random.value;
         genome.ReproductionEnergyThreshold = 82f;
         genome.MutationRate = 0.08f;
         genome.MutationStrength = 1f;
@@ -235,6 +249,12 @@ public class EvolutionGenome
         genome.Selfishness = UnityEngine.Random.Range(0f, 0.45f);
         genome.ExplorationDrive = UnityEngine.Random.Range(0.15f, 0.85f);
         genome.FoodMemoryStrength = UnityEngine.Random.Range(0.15f, 0.85f);
+        genome.HabitatLoyalty = UnityEngine.Random.Range(0.05f, 0.95f);
+        genome.NestingDrive = UnityEngine.Random.Range(0.05f, 0.95f);
+        genome.EggProtection = UnityEngine.Random.Range(0.05f, 0.95f);
+        genome.Stealth = UnityEngine.Random.Range(0.05f, 0.95f);
+        genome.HearingSensitivity = UnityEngine.Random.Range(0.05f, 0.95f);
+        genome.SexGene = UnityEngine.Random.value;
         genome.ReproductionEnergyThreshold = UnityEngine.Random.Range(60f, 105f);
         genome.MutationRate = UnityEngine.Random.Range(0.04f, 0.14f);
         genome.MutationStrength = UnityEngine.Random.Range(0.65f, 1.4f);
@@ -339,6 +359,12 @@ public class EvolutionGenome
         child.Selfishness = MutateFloat(Selfishness, 0.10f, finalMutationRate, finalMutationStrength);
         child.ExplorationDrive = MutateFloat(ExplorationDrive, 0.10f, finalMutationRate, finalMutationStrength);
         child.FoodMemoryStrength = MutateFloat(FoodMemoryStrength, 0.10f, finalMutationRate, finalMutationStrength);
+        child.HabitatLoyalty = MutateFloat(HabitatLoyalty, 0.10f, finalMutationRate, finalMutationStrength);
+        child.NestingDrive = MutateFloat(NestingDrive, 0.10f, finalMutationRate, finalMutationStrength);
+        child.EggProtection = MutateFloat(EggProtection, 0.10f, finalMutationRate, finalMutationStrength);
+        child.Stealth = MutateFloat(Stealth, 0.10f, finalMutationRate, finalMutationStrength);
+        child.HearingSensitivity = MutateFloat(HearingSensitivity, 0.10f, finalMutationRate, finalMutationStrength);
+        child.SexGene = MutateFloat(SexGene, 0.18f, finalMutationRate, finalMutationStrength);
         child.PlantDietLocked = PlantDietLocked;
         child.MeatDietLocked = MeatDietLocked;
         child.CarrionDietLocked = CarrionDietLocked;
@@ -432,6 +458,12 @@ public class EvolutionGenome
         Selfishness = Mathf.Clamp01(Selfishness);
         ExplorationDrive = Mathf.Clamp01(ExplorationDrive);
         FoodMemoryStrength = Mathf.Clamp01(FoodMemoryStrength);
+        HabitatLoyalty = Mathf.Clamp01(HabitatLoyalty);
+        NestingDrive = Mathf.Clamp01(NestingDrive);
+        EggProtection = Mathf.Clamp01(EggProtection);
+        Stealth = Mathf.Clamp01(Stealth);
+        HearingSensitivity = Mathf.Clamp01(HearingSensitivity);
+        SexGene = Mathf.Clamp01(SexGene);
         ApplyDietLocks();
         ReproductionEnergyThreshold = Mathf.Clamp(ReproductionEnergyThreshold, 25f, EnergyCapacity * 0.95f);
         MutationRate = Mathf.Clamp(MutationRate, 0.005f, 0.35f);
@@ -528,6 +560,8 @@ public class EvolutionGenome
             PlantDiet = Mathf.Max(0.88f, PlantDiet);
             MeatDiet = Mathf.Min(MeatDiet, 0.07f);
             CarrionDiet = Mathf.Min(CarrionDiet, 0.08f);
+            HabitatLoyalty = Mathf.Max(HabitatLoyalty, 0.42f);
+            FoodSharing = Mathf.Max(FoodSharing, 0.42f);
         }
         else if (MeatDietLocked)
         {
@@ -536,6 +570,8 @@ public class EvolutionGenome
             CarrionDiet = Mathf.Min(CarrionDiet, 0.10f);
             Aggression = Mathf.Max(Aggression, 0.35f);
             Selfishness = Mathf.Max(Selfishness, 0.35f);
+            Bravery = Mathf.Max(Bravery, 0.45f);
+            Stealth = Mathf.Max(Stealth, 0.35f);
         }
         else if (CarrionDietLocked)
         {
@@ -543,6 +579,7 @@ public class EvolutionGenome
             PlantDiet = Mathf.Min(PlantDiet, 0.08f);
             MeatDiet = Mathf.Min(MeatDiet, 0.12f);
             FoodMemoryStrength = Mathf.Max(FoodMemoryStrength, 0.55f);
+            ExplorationDrive = Mathf.Max(ExplorationDrive, 0.45f);
         }
     }
 

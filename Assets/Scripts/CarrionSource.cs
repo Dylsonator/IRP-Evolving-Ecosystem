@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public class CarrionSource : MonoBehaviour
@@ -15,6 +16,11 @@ public class CarrionSource : MonoBehaviour
 
     public bool IsConsumed { get; private set; }
 
+    [Header("Feeding Pressure")]
+    public float RecentFeederMemoryTime = 4.0f;
+
+    private readonly List<int> recentFeederIds = new List<int>();
+    private readonly List<float> recentFeederTimes = new List<float>();
     private Vector3 initialScale;
 
     private void Awake()
@@ -66,10 +72,17 @@ public class CarrionSource : MonoBehaviour
 
     public float ConsumeBite(float requestedMass)
     {
+        return ConsumeBiteBy(requestedMass, 0);
+    }
+
+    public float ConsumeBiteBy(float requestedMass, int feederId)
+    {
         if (IsConsumed || requestedMass <= 0f)
         {
             return 0f;
         }
+
+        RegisterRecentFeeder(feederId);
 
         float eaten = Mathf.Min(requestedMass, RemainingMass);
         RemainingMass -= eaten;
@@ -85,6 +98,49 @@ public class CarrionSource : MonoBehaviour
         }
 
         return eaten;
+    }
+
+    public int GetRecentFeederCount()
+    {
+        CleanRecentFeeders();
+        return recentFeederIds.Count;
+    }
+
+    public float GetMassRatio()
+    {
+        return MaxMass > 0f ? Mathf.Clamp01(RemainingMass / MaxMass) : 0f;
+    }
+
+    private void RegisterRecentFeeder(int feederId)
+    {
+        if (feederId == 0)
+        {
+            return;
+        }
+
+        CleanRecentFeeders();
+        int index = recentFeederIds.IndexOf(feederId);
+        if (index >= 0)
+        {
+            recentFeederTimes[index] = Time.time;
+            return;
+        }
+
+        recentFeederIds.Add(feederId);
+        recentFeederTimes.Add(Time.time);
+    }
+
+    private void CleanRecentFeeders()
+    {
+        float cutoff = Time.time - Mathf.Max(0.1f, RecentFeederMemoryTime);
+        for (int i = recentFeederTimes.Count - 1; i >= 0; i--)
+        {
+            if (recentFeederTimes[i] < cutoff)
+            {
+                recentFeederTimes.RemoveAt(i);
+                recentFeederIds.RemoveAt(i);
+            }
+        }
     }
 
     public float Consume()
