@@ -47,7 +47,9 @@ public static class EvolutionBreedingUtility
         }
 
         child.SexGene = Random.value;
-        child.Brain = baseParent.Brain != null ? baseParent.Brain.CreateMutatedCopy(child.MutationRate, child.MutationStrength * mutationMultiplier) : SimpleNeuralNetwork.CreateRandom(EvolutionGenome.BrainInputCount, EvolutionGenome.BrainHiddenCount, EvolutionGenome.BrainOutputCount);
+        child.Brain = baseParent.Brain != null
+            ? baseParent.Brain.CreateMutatedCopy(child.MutationRate, child.MutationStrength * mutationMultiplier, child.BrainStructuralMutationRate * mutationMultiplier, EvolutionGenome.BrainMaxHiddenCount)
+            : SimpleNeuralNetwork.CreateRandom(EvolutionGenome.BrainInputCount, EvolutionGenome.BrainHiddenCount, EvolutionGenome.BrainOutputCount);
 
         child.ClampValues();
         return child;

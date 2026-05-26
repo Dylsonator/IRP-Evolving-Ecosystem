@@ -4,10 +4,10 @@ using UnityEngine;
 [Serializable]
 public class EvolutionGenome
 {
-    public const int BrainInputCount = 20;
-    public const int BrainHiddenCount = 12;
-    public const int BrainOutputCount = 8;
-    public const int BrainMaxHiddenCount = 22;
+    public const int BrainInputCount = 24;
+    public const int BrainHiddenCount = 14;
+    public const int BrainOutputCount = 10;
+    public const int BrainMaxHiddenCount = 28;
 
     [Header("Core Body Traits")]
     public float Speed = 4f;
@@ -104,6 +104,8 @@ public class EvolutionGenome
     [Header("Evolvable Behaviour Controller")]
     [Tooltip("Chance for NEAT-lite structural growth. This can add hidden nodes over generations while keeping old weights.")]
     [Range(0f, 0.2f)] public float BrainStructuralMutationRate = 0.025f;
+    [Tooltip("How strongly short-term neural memory carries over between decisions. Higher values make agents less twitchy and more context aware.")]
+    [Range(0f, 0.98f)] public float BrainMemoryDecay = 0.82f;
     public SimpleNeuralNetwork Brain;
 
     public static EvolutionGenome CreateBaseline()
@@ -184,6 +186,7 @@ public class EvolutionGenome
         genome.MutationStrength = 1f;
         genome.MorphPartMutationRate = 0.035f;
         genome.BrainStructuralMutationRate = 0.025f;
+        genome.BrainMemoryDecay = 0.82f;
         genome.Brain = SimpleNeuralNetwork.CreateRandom(BrainInputCount, BrainHiddenCount, BrainOutputCount);
         genome.ClampValues();
         return genome;
@@ -265,6 +268,7 @@ public class EvolutionGenome
         genome.MutationStrength = UnityEngine.Random.Range(0.65f, 1.4f);
         genome.MorphPartMutationRate = UnityEngine.Random.Range(0.02f, 0.06f);
         genome.BrainStructuralMutationRate = UnityEngine.Random.Range(0.01f, 0.055f);
+        genome.BrainMemoryDecay = UnityEngine.Random.Range(0.68f, 0.94f);
         genome.Brain = SimpleNeuralNetwork.CreateRandom(inputCount, hiddenCount, outputCount);
         genome.ClampValues();
         return genome;
@@ -383,6 +387,7 @@ public class EvolutionGenome
         child.MutationStrength = MutateFloat(MutationStrength, 0.15f, finalMutationRate, finalMutationStrength);
         child.MorphPartMutationRate = MutateFloat(MorphPartMutationRate, 0.015f, finalMutationRate, finalMutationStrength);
         child.BrainStructuralMutationRate = MutateFloat(BrainStructuralMutationRate, 0.012f, finalMutationRate, finalMutationStrength);
+        child.BrainMemoryDecay = MutateFloat(BrainMemoryDecay, 0.045f, finalMutationRate, finalMutationStrength);
 
         child.Brain = Brain != null
             ? Brain.CreateMutatedCopy(finalMutationRate, finalMutationStrength, BrainStructuralMutationRate * environmentMutationMultiplier, BrainMaxHiddenCount)
@@ -481,6 +486,7 @@ public class EvolutionGenome
         MutationStrength = Mathf.Clamp(MutationStrength, 0.1f, 3f);
         MorphPartMutationRate = Mathf.Clamp(MorphPartMutationRate, 0f, 0.25f);
         BrainStructuralMutationRate = Mathf.Clamp(BrainStructuralMutationRate, 0f, 0.2f);
+        BrainMemoryDecay = Mathf.Clamp(BrainMemoryDecay, 0f, 0.98f);
 
         if (Brain == null)
         {

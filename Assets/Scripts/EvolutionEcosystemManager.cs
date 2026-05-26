@@ -67,16 +67,27 @@ public class EvolutionEcosystemManager : MonoBehaviour
     [Tooltip("Small pressure against uncontrolled neural bloat. Keeps NEAT-lite complexification useful instead of endlessly growing.")]
     public float BrainComplexityPenalty = 0.08f;
 
+    [Header("Natural Anti-Convergence")]
+    [Tooltip("Uses novelty search and fitness sharing in continuous behaviour space. This is the IRP-facing anti-convergence method, not role injection.")]
+    public bool UseNaturalDiversitySelection = true;
+    public bool UseFitnessSharing = true;
+    [Range(0.05f, 0.65f)] public float FitnessSharingSigma = 0.24f;
+    public float FitnessSharingStrength = 0.55f;
+    public float BehaviourNoveltySelectionBonus = 85f;
+    [Tooltip("When false, anti-convergence does not hard-cap roles. Diversity comes from MAP-Elites-style buckets, novelty and sharing instead.")]
+    public bool UseHardNicheCaps = false;
+
     [Header("Anti-Convergence / Diversity Rescue")]
     [Tooltip("Prevents one successful ecological role from taking over the whole population too early.")]
     public bool UseAntiConvergence = true;
     [Range(0.12f, 0.75f)] public float MaxSameCoreNicheFraction = 0.30f;
     [Tooltip("If fewer broad ecological roles survive selection, the manager injects rescue mutants into weak/missing roles.")]
     public int MinimumSurvivingCoreNiches = 6;
-    public int MaximumDiversityRescueMutants = 6;
-    public float RareNicheSelectionBonus = 55f;
-    public float CollapseMutationMultiplier = 1.65f;
-    public bool InjectMissingNichesWhenCollapsed = true;
+    public int MaximumDiversityRescueMutants = 0;
+    public float RareNicheSelectionBonus = 70f;
+    public float CollapseMutationMultiplier = 1.35f;
+    [Tooltip("When false, anti-convergence uses selection pressure only. This is more natural for IRP runs than injecting forced rescue mutants.")]
+    public bool InjectMissingNichesWhenCollapsed = false;
 
     public bool UseFixedRandomSeed = false;
     public int RandomSeed = 12345;
@@ -169,6 +180,8 @@ public class EvolutionEcosystemManager : MonoBehaviour
     private int nextCreatureId = 1;
     private EvolutionGenome baselineGenome;
     private Coroutine bootstrapRoutine;
+    private EvolutionDiversityArchive diversityArchive;
+    private List<EvolutionCandidate> selectionEvaluationContext;
 
     private void Awake()
     {
@@ -221,11 +234,18 @@ public class EvolutionEcosystemManager : MonoBehaviour
         MinimumScavengerSeedsPerGeneration = 0;
 
         UseAntiConvergence = true;
+        UseNaturalDiversitySelection = true;
+        UseFitnessSharing = true;
+        UseHardNicheCaps = false;
+        InjectMissingNichesWhenCollapsed = false;
         MaxSameCoreNicheFraction = Mathf.Clamp(MaxSameCoreNicheFraction, 0.22f, 0.42f);
         MinimumSurvivingCoreNiches = Mathf.Clamp(MinimumSurvivingCoreNiches, 4, Mathf.Max(4, FixedPopulationSize / 3));
-        MaximumDiversityRescueMutants = Mathf.Clamp(MaximumDiversityRescueMutants, 2, Mathf.Max(2, FixedPopulationSize / 4));
-        RareNicheSelectionBonus = Mathf.Max(RareNicheSelectionBonus, 45f);
-        CollapseMutationMultiplier = Mathf.Clamp(CollapseMutationMultiplier, 1.15f, 2.5f);
+        MaximumDiversityRescueMutants = 0;
+        RareNicheSelectionBonus = Mathf.Max(RareNicheSelectionBonus, 0f);
+        FitnessSharingSigma = Mathf.Clamp(FitnessSharingSigma, 0.16f, 0.38f);
+        FitnessSharingStrength = Mathf.Clamp(FitnessSharingStrength, 0.25f, 0.95f);
+        BehaviourNoveltySelectionBonus = Mathf.Max(BehaviourNoveltySelectionBonus, 55f);
+        CollapseMutationMultiplier = Mathf.Clamp(CollapseMutationMultiplier, 1.05f, 1.75f);
 
         SpawnCarrionFromDeaths = true;
         SpawnCarrionFromExtinctionEvents = ExtinctionCreatesCarrion;
@@ -408,6 +428,11 @@ public class EvolutionEcosystemManager : MonoBehaviour
             StatsTracker.RecordGeneration(CurrentGeneration, evaluated, activeCreatures.Count, offspringPool.Count);
         }
 
+        if (diversityArchive != null)
+        {
+            diversityArchive.RecordGeneration(CurrentGeneration, evaluated);
+        }
+
         List<EvolutionCandidate> nextGeneration = SelectNextGeneration(evaluated);
 
         if (bootstrapRoutine != null)
@@ -514,6 +539,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         Dictionary<string, List<EvolutionCandidate>> buckets = new Dictionary<string, List<EvolutionCandidate>>();
         Dictionary<string, int> evaluatedCoreCounts = BuildCoreNicheCounts(evaluated);
         Dictionary<string, int> selectedCoreCounts = new Dictionary<string, int>();
+        selectionEvaluationContext = evaluated;
         int maxPerCore = Mathf.Max(1, Mathf.CeilToInt(target * Mathf.Clamp01(MaxSameCoreNicheFraction)));
 
         for (int i = 0; i < evaluated.Count; i++)
@@ -560,7 +586,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
                 EvolutionCandidate parent = pair.Value[roundIndex];
                 string coreKey = BuildCoreNicheKey(parent);
 
-                if (UseAntiConvergence && GetDictionaryCount(selectedCoreCounts, coreKey) >= maxPerCore)
+                if (UseAntiConvergence && UseHardNicheCaps && GetDictionaryCount(selectedCoreCounts, coreKey) >= maxPerCore)
                 {
                     continue;
                 }
@@ -592,7 +618,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
             }
 
             string coreKey = BuildCoreNicheKey(parent);
-            if (UseAntiConvergence && GetDictionaryCount(selectedCoreCounts, coreKey) >= maxPerCore && selectedCoreCounts.Count >= MinimumSurvivingCoreNiches)
+            if (UseAntiConvergence && UseHardNicheCaps && GetDictionaryCount(selectedCoreCounts, coreKey) >= maxPerCore && selectedCoreCounts.Count >= MinimumSurvivingCoreNiches)
             {
                 continue;
             }
@@ -612,6 +638,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
             selected.Add(parent.CreateChild(GetAdaptiveMutationMultiplier(evaluatedCoreCounts)));
         }
 
+        selectionEvaluationContext = null;
         return selected;
     }
 
@@ -1077,7 +1104,18 @@ public class EvolutionEcosystemManager : MonoBehaviour
             score += GetBehaviourNoveltyScore(candidate) * Mathf.Max(0f, NoveltySelectionBonus);
         }
 
-        if (UseAntiConvergence && coreCounts != null && RareNicheSelectionBonus > 0f)
+        if (UseAntiConvergence && UseNaturalDiversitySelection && diversityArchive != null)
+        {
+            float novelty = diversityArchive.GetNoveltyScore(candidate, selectionEvaluationContext);
+            score += novelty * Mathf.Max(0f, BehaviourNoveltySelectionBonus);
+
+            if (UseFitnessSharing)
+            {
+                float density = diversityArchive.GetSharingDensity(candidate, selectionEvaluationContext, FitnessSharingSigma);
+                score /= 1f + Mathf.Max(0f, density) * Mathf.Max(0f, FitnessSharingStrength);
+            }
+        }
+        else if (UseAntiConvergence && coreCounts != null && RareNicheSelectionBonus > 0f)
         {
             int count = Mathf.Max(1, GetDictionaryCount(coreCounts, BuildCoreNicheKey(candidate)));
             score += RareNicheSelectionBonus / count;
@@ -1239,6 +1277,13 @@ public class EvolutionEcosystemManager : MonoBehaviour
             archive = gameObject.AddComponent<IRPBehaviourArchive>();
         }
         archive.Manager = this;
+
+        diversityArchive = GetComponent<EvolutionDiversityArchive>();
+        if (diversityArchive == null)
+        {
+            diversityArchive = gameObject.AddComponent<EvolutionDiversityArchive>();
+        }
+        diversityArchive.Manager = this;
 
         IRPExperimentController experiment = GetComponent<IRPExperimentController>();
         if (experiment == null)
@@ -1732,25 +1777,29 @@ public class EvolutionEcosystemManager : MonoBehaviour
 
     public MarineCreatureAgent GetNearestPrey(MarineCreatureAgent requester, Vector3 position, float searchRadius)
     {
-        if (!EnablePredation || requester == null)
+        if (!EnablePredation || requester == null || requester.Candidate == null || requester.Candidate.Genome == null)
         {
             return null;
         }
 
-        MarineCreatureAgent nearest = null;
-        float bestDistanceSqr = searchRadius * searchRadius;
+        MarineCreatureAgent best = null;
+        float bestScore = float.MinValue;
+        float radiusSqr = searchRadius * searchRadius;
+        float ownSize = requester.EffectiveStats != null ? requester.EffectiveStats.BodySize : requester.Candidate.Genome.BodySize;
+        float hunterDrive = requester.Candidate.Genome.MeatDiet * 0.55f + requester.Candidate.Genome.Aggression * 0.35f + requester.Candidate.Genome.RiskTolerance * 0.15f;
 
         List<MarineCreatureAgent> preyCandidates = GetNearbyCreatures(position, searchRadius);
         for (int i = 0; i < preyCandidates.Count; i++)
         {
             MarineCreatureAgent creature = preyCandidates[i];
-            if (creature == null || creature == requester)
+            if (creature == null || creature == requester || creature.Candidate == null || creature.Candidate.Genome == null)
             {
                 continue;
             }
 
-            float distanceSqr = (creature.transform.position - position).sqrMagnitude;
-            if (distanceSqr >= bestDistanceSqr)
+            Vector3 offset = creature.transform.position - position;
+            float distanceSqr = offset.sqrMagnitude;
+            if (distanceSqr > radiusSqr)
             {
                 continue;
             }
@@ -1760,11 +1809,35 @@ public class EvolutionEcosystemManager : MonoBehaviour
                 continue;
             }
 
-            bestDistanceSqr = distanceSqr;
-            nearest = creature;
+            float distance = Mathf.Sqrt(distanceSqr);
+            float distance01 = Mathf.Clamp01(distance / Mathf.Max(0.01f, searchRadius));
+            float preyHealth = creature.GetHealthRatio();
+            float preyEnergy = creature.GetEffectiveEnergyRatio();
+            float preySize = creature.EffectiveStats != null ? creature.EffectiveStats.BodySize : creature.Candidate.Genome.BodySize;
+            float sizeAdvantage = Mathf.Clamp01((ownSize / Mathf.Max(0.1f, preySize) - 0.65f) / 1.65f);
+            float injuredBonus = 1f - preyHealth;
+            float weakBonus = 1f - preyEnergy;
+            float juvenileBonus = creature.IsJuvenile ? 0.45f : 0f;
+            float dangerPenalty = creature.EffectiveStats != null ? creature.EffectiveStats.DangerFactor * 0.10f + creature.EffectiveStats.Defence * 0.08f : 0f;
+
+            // Predators should not just pick the closest fish. They should prefer wounded, weak and smaller prey.
+            float score = 0f;
+            score += injuredBonus * 2.6f;
+            score += weakBonus * 1.35f;
+            score += sizeAdvantage * 1.8f;
+            score += juvenileBonus;
+            score += hunterDrive * 0.45f;
+            score += (1f - distance01) * 0.95f;
+            score -= dangerPenalty;
+
+            if (score > bestScore)
+            {
+                bestScore = score;
+                best = creature;
+            }
         }
 
-        return nearest;
+        return best;
     }
 
     public bool CanSpawnMoreActiveCreatures()

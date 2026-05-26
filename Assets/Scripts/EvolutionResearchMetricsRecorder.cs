@@ -12,7 +12,7 @@ public class EvolutionResearchMetricsRecorder : MonoBehaviour
 {
     public EvolutionEcosystemManager Manager;
     public bool WriteCsv = true;
-    public string CsvFileName = "IRP_EcosystemResearchMetrics_V2.csv";
+    public string CsvFileName = "IRP_EcosystemResearchMetrics_V3.csv";
     public bool LogEveryGeneration = true;
     public bool LogWhenGenerationChanges = true;
 
@@ -91,6 +91,7 @@ public class EvolutionResearchMetricsRecorder : MonoBehaviour
         float totalStomach = 0f;
         HashSet<string> niches = new HashSet<string>();
         Dictionary<string, int> coreNicheCounts = new Dictionary<string, int>();
+        List<EvolutionCandidate> evaluatedCandidates = new List<EvolutionCandidate>();
 
         for (int i = 0; i < creatures.Count; i++)
         {
@@ -103,6 +104,7 @@ public class EvolutionResearchMetricsRecorder : MonoBehaviour
             population++;
             EvolutionCandidate candidate = creature.Candidate;
             EvolutionGenome genome = candidate.Genome;
+            evaluatedCandidates.Add(candidate);
             totalFitness += candidate.GetFitness();
             totalPlant += genome.PlantDiet;
             totalMeat += genome.MeatDiet;
@@ -164,6 +166,10 @@ public class EvolutionResearchMetricsRecorder : MonoBehaviour
         float populationStability = Manager.FixedPopulationSize > 0 ? Mathf.Clamp01(population / (float)Manager.FixedPopulationSize) : 0f;
         float reproductionRate = population > 0 ? (Manager.GetOffspringPool().Count + totalReproduction) / Mathf.Max(1f, population) : 0f;
         float predatorFraction = population > 0 ? predators / (float)population : 0f;
+        float naturalFeatureSpread = EvolutionBehaviourDescriptorUtility.CalculateFeatureSpread(evaluatedCandidates);
+        EvolutionDiversityArchive diversityArchive = Manager.GetComponent<EvolutionDiversityArchive>();
+        float noveltyArchiveSize = diversityArchive != null ? diversityArchive.Count : 0f;
+        float noveltyArchiveSpread = diversityArchive != null ? diversityArchive.GetArchiveSpread() : 0f;
         float pressureZoneCount = Manager.GetActivePressureZones() != null ? Manager.GetActivePressureZones().Count : 0;
         float activeFoodCount = Manager.GetActiveFood() != null ? Manager.GetActiveFood().Count : 0;
         float activeCarrionCount = Manager.GetActiveCarrion() != null ? Manager.GetActiveCarrion().Count : 0;
@@ -204,6 +210,9 @@ public class EvolutionResearchMetricsRecorder : MonoBehaviour
         line.Append((totalSurvival * inv).ToString("F3")).Append(',');
         line.Append((totalHidden * inv).ToString("F3")).Append(',');
         line.Append((totalConnections * inv).ToString("F3")).Append(',');
+        line.Append(naturalFeatureSpread.ToString("F3")).Append(',');
+        line.Append(noveltyArchiveSize.ToString("F0")).Append(',');
+        line.Append(noveltyArchiveSpread.ToString("F3")).Append(',');
         line.Append((totalPlant * inv).ToString("F3")).Append(',');
         line.Append((totalMeat * inv).ToString("F3")).Append(',');
         line.Append((totalCarrion * inv).ToString("F3")).Append(',');
@@ -265,7 +274,7 @@ public class EvolutionResearchMetricsRecorder : MonoBehaviour
         }
 
         File.WriteAllText(csvPath,
-            "RunId,ExperimentPhase,Generation,GenerationTimer,Population,OffspringPool,ActiveFood,ActiveCarrion,EggClusters,PressureZones,Season,FoodMultiplier,EnergyDrainMultiplier,MutationMultiplier,NicheCount,CoreNicheCount,DominantCoreNiche,DominantCoreFraction,CoreNicheShannon,CoreNicheEvenness,PopulationStability,ReproductionRate,AdaptationScore,AverageFitness,AverageSurvival,AverageBrainHidden,AverageBrainConnections,AveragePlantDiet,AverageMeatDiet,AverageCarrionDiet,AverageEnergyRatio,AverageHealthRatio,AverageStomachRatio,AveragePreyBites,AveragePreyKills,AverageFoodEvents,Grazers,Predators,Scavengers,Ambushers,Schoolers,EggGuardians,Defensive,MatureCount,LowHealthCount,HungryCount,PredatorFraction,Reason\n");
+            "RunId,ExperimentPhase,Generation,GenerationTimer,Population,OffspringPool,ActiveFood,ActiveCarrion,EggClusters,PressureZones,Season,FoodMultiplier,EnergyDrainMultiplier,MutationMultiplier,NicheCount,CoreNicheCount,DominantCoreNiche,DominantCoreFraction,CoreNicheShannon,CoreNicheEvenness,PopulationStability,ReproductionRate,AdaptationScore,AverageFitness,AverageSurvival,AverageBrainHidden,AverageBrainConnections,NaturalFeatureSpread,NoveltyArchiveSize,NoveltyArchiveSpread,AveragePlantDiet,AverageMeatDiet,AverageCarrionDiet,AverageEnergyRatio,AverageHealthRatio,AverageStomachRatio,AveragePreyBites,AveragePreyKills,AverageFoodEvents,Grazers,Predators,Scavengers,Ambushers,Schoolers,EggGuardians,Defensive,MatureCount,LowHealthCount,HungryCount,PredatorFraction,Reason\n");
     }
 
     private string Safe(string value)

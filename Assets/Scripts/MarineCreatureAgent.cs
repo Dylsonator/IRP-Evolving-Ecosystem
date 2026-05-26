@@ -90,6 +90,26 @@ public class MarineCreatureAgent : MonoBehaviour
     public float PredatorBiteScanRadiusMultiplier = 2.4f;
     public float PredatorContactBiteBodyPadding = 1.05f;
     public float PredatorContactBiteMouthPadding = 0.65f;
+    [Tooltip("Predators gain some meat from every successful bite, not only from final kills. This stops hunters starving before they can finish prey.")]
+    public float PredatorBiteMeatFromDamageMultiplier = 0.38f;
+    [Tooltip("Extra meat chunk taken on successful predator bites. This makes hunting viable without needing dozens of bites.")]
+    public float PredatorBiteBaseMeatReward = 2.4f;
+    [Tooltip("Bite damage multiplier for committed hunters so prey cannot simply out-heal repeated attacks.")]
+    public float PredatorCommittedBiteDamageMultiplier = 1.35f;
+    [Tooltip("Predators below this energy ratio are willing to attack more dangerous prey instead of giving up.")]
+    [Range(0f, 1f)] public float HungryPredatorCommitEnergyRatio = 0.42f;
+    [Tooltip("Strong meat/aggression hunters can attack similar morphs rather than refusing most of the population.")]
+    [Range(0f, 1f)] public float CommittedPredatorMorphAttackThreshold = 0.52f;
+    [Tooltip("After seeing or biting prey, hunters keep focus instead of instantly switching back to plants.")]
+    public float HunterPreyFocusTime = 6.5f;
+    [Tooltip("Successful bites create stronger focus so predators finish weak/injured prey instead of circling away.")]
+    public float HunterBiteFocusTime = 10.0f;
+    [Tooltip("Predators above this energy/stomach level stop suppressing plants and may opportunistically feed again.")]
+    [Range(0f, 1f)] public float HunterPlantSuppressionStopRatio = 0.82f;
+    [Tooltip("Extra chase pull while locked onto wounded prey.")]
+    public float HunterStickyChaseWeight = 5.2f;
+    [Tooltip("Damage scaling from predator/prey size difference. Large predators kill small prey quickly, small predators need repeated bites.")]
+    public float PredatorSizeDamageScale = 0.85f;
 
     [Header("Predator Kill Feeding")]
     [Tooltip("When a predator kills prey, it claims the fresh carrion and keeps eating it instead of instantly switching to plants.")]
@@ -106,14 +126,14 @@ public class MarineCreatureAgent : MonoBehaviour
     [Tooltip("Current/pressure stress where fish start treating the area as dangerous.")]
     public float CurrentEscapeStressThreshold = 0.34f;
     public float CurrentEscapeFlowThreshold = 1.15f;
-    public float CurrentEscapeWeight = 4.8f;
-    public float CurrentEscapeMemoryTime = 5.5f;
-    public float CurrentEscapeCentreBias = 0.85f;
-    public float CurrentEscapeSideBias = 0.95f;
-    public float CurrentEscapeAgainstFlowBias = 0.28f;
+    public float CurrentEscapeWeight = 6.4f;
+    public float CurrentEscapeMemoryTime = 11.0f;
+    public float CurrentEscapeCentreBias = 1.25f;
+    public float CurrentEscapeSideBias = 1.15f;
+    public float CurrentEscapeAgainstFlowBias = 0.12f;
     public float CurrentEscapeBoundaryBoost = 1.75f;
     public float CurrentEscapeStuckBoost = 1.45f;
-    [Range(0f, 1f)] public float CurrentEscapeCurrentDriftMultiplier = 0.45f;
+    [Range(0f, 1f)] public float CurrentEscapeCurrentDriftMultiplier = 0.18f;
     public float CurrentEscapeSprintStress = 0.48f;
 
     [Header("Evolved Movement Model")]
@@ -426,11 +446,19 @@ public class MarineCreatureAgent : MonoBehaviour
     private float brainOutputFleeBias;
     private float brainOutputMateSocialBias;
     private float brainOutputExploreHomeBias;
+    private float brainOutputRestBias;
+    private float brainOutputSprintBias;
+    private float brainMemoryFood;
+    private float brainMemoryPrey;
+    private float brainMemoryThreat;
+    private float brainMemoryEnergyStress;
 
     private FoodSource nearestFood;
     private CarrionSource nearestCarrion;
     private MarineCreatureAgent nearestCreature;
     private MarineCreatureAgent nearestPrey;
+    private MarineCreatureAgent focusedPrey;
+    private float hunterPreyFocusTimer;
 
     private FoodSource retainedFood;
     private CarrionSource retainedCarrion;
@@ -645,6 +673,12 @@ public class MarineCreatureAgent : MonoBehaviour
         brainOutputFleeBias = 0f;
         brainOutputMateSocialBias = 0f;
         brainOutputExploreHomeBias = 0f;
+        brainOutputRestBias = 0f;
+        brainOutputSprintBias = 0f;
+        brainMemoryFood = 0f;
+        brainMemoryPrey = 0f;
+        brainMemoryThreat = 0f;
+        brainMemoryEnergyStress = 0f;
         brainWantsFood = false;
         brainWantsMate = false;
         brainWantsHunt = false;
@@ -685,6 +719,17 @@ public class MarineCreatureAgent : MonoBehaviour
         SleepingHealMultiplier = Mathf.Clamp(SleepingHealMultiplier, 1.75f, 3.25f);
         SprintSpeedMultiplier = Mathf.Clamp(SprintSpeedMultiplier, 1.25f, 1.85f);
         SprintEnergyCostMultiplier = Mathf.Max(2.0f, SprintEnergyCostMultiplier);
+        HunterPreyFocusTime = Mathf.Clamp(HunterPreyFocusTime, 4.0f, 12.0f);
+        HunterBiteFocusTime = Mathf.Clamp(HunterBiteFocusTime, HunterPreyFocusTime, 16.0f);
+        HunterStickyChaseWeight = Mathf.Clamp(HunterStickyChaseWeight, 3.2f, 8.0f);
+        PredatorCommittedBiteDamageMultiplier = Mathf.Clamp(PredatorCommittedBiteDamageMultiplier, 1.35f, 2.15f);
+        PredatorSizeDamageScale = Mathf.Clamp(PredatorSizeDamageScale, 0.55f, 1.4f);
+        CurrentEscapeWeight = Mathf.Clamp(CurrentEscapeWeight, 5.5f, 8.5f);
+        CurrentEscapeMemoryTime = Mathf.Clamp(CurrentEscapeMemoryTime, 8.0f, 16.0f);
+        CurrentEscapeCentreBias = Mathf.Clamp(CurrentEscapeCentreBias, 1.0f, 1.65f);
+        CurrentEscapeSideBias = Mathf.Clamp(CurrentEscapeSideBias, 0.85f, 1.45f);
+        CurrentEscapeAgainstFlowBias = Mathf.Clamp(CurrentEscapeAgainstFlowBias, 0.05f, 0.32f);
+        CurrentEscapeCurrentDriftMultiplier = Mathf.Clamp01(CurrentEscapeCurrentDriftMultiplier * 0.75f);
         BaseStomachCapacity = Mathf.Clamp(BaseStomachCapacity, 54f, 76f);
         BaseDigestionPerSecond = Mathf.Clamp(BaseDigestionPerSecond, 4.2f, 6.2f);
         BaseBiteMass = Mathf.Clamp(BaseBiteMass, 3.4f, 5.0f);
@@ -701,14 +746,15 @@ public class MarineCreatureAgent : MonoBehaviour
 
         MaturityAgeSeconds = Mathf.Min(MaturityAgeSeconds, generationDuration * 0.24f);
         JuvenileGrowTime = Mathf.Min(JuvenileGrowTime, generationDuration * 0.24f);
-        MateEnergyRatioRequired = Mathf.Min(MateEnergyRatioRequired, 0.42f);
-        MateSeekingEnergyRatio = Mathf.Min(MateSeekingEnergyRatio, 0.42f);
-        MateSeekingStomachRatio = Mathf.Min(MateSeekingStomachRatio, 0.18f);
-        RequiredMateMorphSimilarity = Mathf.Min(RequiredMateMorphSimilarity, 0.50f);
-        EggLayCooldown = Mathf.Min(EggLayCooldown, generationDuration * 0.16f);
-        EggLayEnergyCost = Mathf.Min(EggLayEnergyCost, 10f);
-        EggHatchTime = Mathf.Min(EggHatchTime, generationDuration * 0.26f);
-        MateSearchRadius = Mathf.Max(MateSearchRadius, 26f);
+        MateEnergyRatioRequired = Mathf.Min(MateEnergyRatioRequired, 0.38f);
+        MateSeekingEnergyRatio = Mathf.Min(MateSeekingEnergyRatio, 0.38f);
+        MateSeekingStomachRatio = Mathf.Min(MateSeekingStomachRatio, 0.16f);
+        RequiredMateMorphSimilarity = Mathf.Min(RequiredMateMorphSimilarity, 0.42f);
+        MatePairDistance = Mathf.Max(MatePairDistance, 4.8f);
+        EggLayCooldown = Mathf.Min(EggLayCooldown, Mathf.Min(16f, generationDuration * 0.13f));
+        EggLayEnergyCost = Mathf.Min(EggLayEnergyCost, 8f);
+        EggHatchTime = Mathf.Min(EggHatchTime, Mathf.Min(32f, generationDuration * 0.22f));
+        MateSearchRadius = Mathf.Max(MateSearchRadius, 30f);
         MatePairDistance = Mathf.Max(MatePairDistance, 4.25f);
         MateTargetRefreshTime = Mathf.Min(MateTargetRefreshTime, 1.4f);
 
@@ -776,6 +822,15 @@ public class MarineCreatureAgent : MonoBehaviour
         isSprintingThisTick = false;
         senseTimer -= Time.fixedDeltaTime;
         retainedTargetTimer -= Time.fixedDeltaTime;
+        if (hunterPreyFocusTimer > 0f)
+        {
+            hunterPreyFocusTimer -= Time.fixedDeltaTime;
+            if (hunterPreyFocusTimer <= 0f || focusedPrey == null || focusedPrey.CurrentHealth <= 0f || !CanAttackPrey(focusedPrey))
+            {
+                focusedPrey = null;
+                hunterPreyFocusTimer = 0f;
+            }
+        }
         ignoredResourceTimer -= Time.fixedDeltaTime;
         feedingHoldTimer -= Time.fixedDeltaTime;
         socialScanTimer -= Time.fixedDeltaTime;
@@ -1062,6 +1117,16 @@ public class MarineCreatureAgent : MonoBehaviour
 
         nearestCreature = manager.GetNearestCreature(this, transform.position, senseRange);
         nearestPrey = manager.GetNearestPrey(this, transform.position, senseRange);
+        if (focusedPrey != null && hunterPreyFocusTimer > 0f && CanAttackPrey(focusedPrey))
+        {
+            nearestPrey = focusedPrey;
+        }
+        else if (nearestPrey != null && IsCommittedPredatorForTargeting())
+        {
+            FocusPrey(nearestPrey, HunterPreyFocusTime);
+        }
+
+        SuppressPlantTargetsWhileHunting();
 
         if (nearestFood != null && !nearestFood.IsConsumed)
         {
@@ -1119,7 +1184,7 @@ public class MarineCreatureAgent : MonoBehaviour
         float mature01 = IsMatureForMating() ? 1f : 0f;
         bool closeFood = HasCloseFoodTarget();
         bool hasStaticFood = GetPrimaryStaticFoodTargetPosition().HasValue;
-        bool canHunt = nearestPrey != null && CanAttackPrey(nearestPrey);
+        bool canHunt = (nearestPrey != null && CanAttackPrey(nearestPrey)) || (focusedPrey != null && hunterPreyFocusTimer > 0f && CanAttackPrey(focusedPrey));
         bool hasThreat = CountCurrentThreatsForBrain() > 0 || dangerMemoryTimer > 0f || mobbingPressureTimer > 0f;
         EvaluateEvolvedBrain(energyRatio, healthRatio, stomachRatio, hungerPressure);
 
@@ -1147,8 +1212,13 @@ public class MarineCreatureAgent : MonoBehaviour
             ? Mathf.Clamp01(GetAmbushScore01() * (0.45f + hungerPressure * 0.65f + Candidate.Genome.Stealth * 0.20f))
             : 0f;
         brainHuntDesire = canHunt
-            ? Mathf.Clamp01(Candidate.Genome.MeatDiet * 0.42f + Candidate.Genome.Aggression * 0.35f + hungerPressure * 0.35f + lowHealthNeed * 0.18f)
+            ? Mathf.Clamp01(Candidate.Genome.MeatDiet * 0.48f + Candidate.Genome.Aggression * 0.38f + hungerPressure * 0.32f + lowHealthNeed * 0.14f)
             : ambushPotential;
+        if (hunterPreyFocusTimer > 0f && focusedPrey != null)
+        {
+            brainHuntDesire = Mathf.Clamp01(brainHuntDesire + 0.28f);
+            brainFoodDesire *= Mathf.Lerp(0.35f, 0.78f, GetEffectiveEnergyRatio());
+        }
 
         brainMateDesire = ShouldSeekMate()
             ? Mathf.Clamp01(Candidate.Genome.MateDrive * 0.45f + mature01 * 0.25f + energyRatio * 0.18f + stomachRatio * 0.18f - hungerPressure * 0.55f)
@@ -1177,7 +1247,7 @@ public class MarineCreatureAgent : MonoBehaviour
         brainHomeDesire = Mathf.Clamp01((hasHomeArea ? homeConfidence : 0.15f) * 0.42f + (1f - Candidate.Genome.ExplorationDrive) * 0.35f + healthRatio * 0.15f - hungerPressure * 0.42f);
         brainExploreDesire = Mathf.Clamp01(Candidate.Genome.ExplorationDrive * ExplorationBehaviourWeight * (0.35f + Candidate.Genome.Bravery * 0.65f) + fedEnoughForSocial * 0.14f - hungerPressure * 0.28f - brainMateDesire * 0.12f);
         brainRestDesire = Mathf.Clamp01(healthRatio * 0.24f + stomachRatio * 0.32f + energyRatio * 0.24f + brainHomeDesire * 0.20f - Candidate.Genome.ActivityCycle * 0.18f - hungerPressure * 0.45f);
-        ApplyEvolvedBrainDecisionBiases(ref brainFoodDesire, ref brainHuntDesire, ref brainMateDesire, ref brainSchoolDesire, ref brainExploreDesire, ref brainHomeDesire, ref brainFleeDesire);
+        ApplyEvolvedBrainDecisionBiases(ref brainFoodDesire, ref brainHuntDesire, ref brainMateDesire, ref brainSchoolDesire, ref brainExploreDesire, ref brainHomeDesire, ref brainFleeDesire, ref brainRestDesire);
 
         FishAutonomousBehaviourMode chosen = PickBrainMode();
         bool emergencySwitch = chosen == FishAutonomousBehaviourMode.Fleeing
@@ -1238,7 +1308,14 @@ public class MarineCreatureAgent : MonoBehaviour
             return HasCloseFoodTarget() ? FishAutonomousBehaviourMode.Feeding : FishAutonomousBehaviourMode.Foraging;
         }
 
-        if (brainHuntDesire > 0.58f && brainHuntDesire >= brainFoodDesire * 0.85f)
+        if (hunterPreyFocusTimer > 0f && focusedPrey != null && CanAttackPrey(focusedPrey))
+        {
+            brainReason = "committed hunter finishing prey";
+            nearestPrey = focusedPrey;
+            return FishAutonomousBehaviourMode.Hunting;
+        }
+
+        if (brainHuntDesire > 0.48f && brainHuntDesire >= brainFoodDesire * 0.62f)
         {
             if (ShouldAmbushHunt())
             {
@@ -1722,14 +1799,20 @@ public class MarineCreatureAgent : MonoBehaviour
             }
         }
 
-        if (currentBrainMode == FishAutonomousBehaviourMode.Hunting && nearestPrey != null && CanAttackPrey(nearestPrey))
+        if (currentBrainMode == FishAutonomousBehaviourMode.Hunting)
         {
-            Vector3 toPrey = nearestPrey.GetBiteTargetPosition() - GetMouthWorldPosition();
-            if (toPrey.sqrMagnitude > 0.001f)
+            MarineCreatureAgent preyTarget = focusedPrey != null && hunterPreyFocusTimer > 0f && CanAttackPrey(focusedPrey) ? focusedPrey : nearestPrey;
+            if (preyTarget != null && CanAttackPrey(preyTarget))
             {
-                float distance = toPrey.magnitude;
-                float closeBoost = 1f - Mathf.Clamp01(distance / Mathf.Max(0.1f, SprintChaseDistance));
-                pull += toPrey.normalized * Mathf.Lerp(2.0f, 4.6f, closeBoost) * Mathf.Lerp(0.75f, 1.35f, Candidate.Genome.Aggression);
+                nearestPrey = preyTarget;
+                Vector3 toPrey = preyTarget.GetBiteTargetPosition() - GetMouthWorldPosition();
+                if (toPrey.sqrMagnitude > 0.001f)
+                {
+                    float distance = toPrey.magnitude;
+                    float closeBoost = 1f - Mathf.Clamp01(distance / Mathf.Max(0.1f, SprintChaseDistance));
+                    float sticky = hunterPreyFocusTimer > 0f ? HunterStickyChaseWeight : Mathf.Lerp(2.0f, 4.6f, closeBoost);
+                    pull += toPrey.normalized * sticky * Mathf.Lerp(0.85f, 1.45f, Candidate.Genome.Aggression);
+                }
             }
         }
 
@@ -1988,11 +2071,15 @@ public class MarineCreatureAgent : MonoBehaviour
                 break;
 
             case FishAutonomousBehaviourMode.Hunting:
-                targetPull *= Mathf.Lerp(1.15f, 1.75f, Candidate.Genome.Aggression);
+                targetPull *= Mathf.Lerp(1.25f, 1.95f, Candidate.Genome.Aggression);
+                rawStaticFeedingPull *= ShouldSuppressPlantsForHunter() ? 0.0f : 0.35f;
+                closeTargetPull *= ShouldSuppressPlantsForHunter() ? 0.25f : 0.65f;
+                queuePull *= 0.25f;
+                crowdPull *= 0.35f;
                 schoolPull *= Mathf.Lerp(0.25f, 0.75f, Candidate.Genome.GroupingChance);
                 matePull = Vector3.zero;
                 homePull *= 0.2f;
-                wanderPull *= 0.15f;
+                wanderPull *= 0.08f;
                 break;
 
             case FishAutonomousBehaviourMode.Feeding:
@@ -2333,6 +2420,11 @@ public class MarineCreatureAgent : MonoBehaviour
             return "Carrion";
         }
 
+        if (ShouldSuppressPlantsForHunter() && (nearestPrey != null || focusedPrey != null))
+        {
+            return "Meat";
+        }
+
         float plant = Candidate.Genome.PlantDiet;
         float meat = Candidate.Genome.MeatDiet;
         float carrion = Candidate.Genome.CarrionDiet;
@@ -2348,6 +2440,62 @@ public class MarineCreatureAgent : MonoBehaviour
         }
 
         return "Plant";
+    }
+
+    private bool IsCommittedPredatorForTargeting()
+    {
+        if (Candidate == null || Candidate.Genome == null)
+        {
+            return false;
+        }
+
+        float predatorDrive = Candidate.Genome.MeatDiet * 0.60f + Candidate.Genome.Aggression * 0.30f + Candidate.Genome.CarrionDiet * 0.15f;
+        return predatorDrive >= 0.38f || currentBrainMode == FishAutonomousBehaviourMode.Hunting || currentBrainMode == FishAutonomousBehaviourMode.Ambushing || brainWantsHunt;
+    }
+
+    private bool ShouldSuppressPlantsForHunter()
+    {
+        if (!IsCommittedPredatorForTargeting())
+        {
+            return false;
+        }
+
+        if (ShouldContinueEatingFreshKillCarrion())
+        {
+            return false;
+        }
+
+        if (GetEffectiveEnergyRatio() >= HunterPlantSuppressionStopRatio && GetStomachFullness01() >= 0.55f)
+        {
+            return false;
+        }
+
+        return (nearestPrey != null && CanAttackPrey(nearestPrey)) || (focusedPrey != null && hunterPreyFocusTimer > 0f && CanAttackPrey(focusedPrey));
+    }
+
+    private void SuppressPlantTargetsWhileHunting()
+    {
+        if (!ShouldSuppressPlantsForHunter())
+        {
+            return;
+        }
+
+        nearestFood = null;
+        retainedFood = null;
+    }
+
+    private void FocusPrey(MarineCreatureAgent prey, float duration)
+    {
+        if (prey == null || prey == this || !CanAttackPrey(prey))
+        {
+            return;
+        }
+
+        focusedPrey = prey;
+        nearestPrey = prey;
+        retainedPrey = prey;
+        retainedTargetTimer = Mathf.Max(retainedTargetTimer, TargetRetainTime);
+        hunterPreyFocusTimer = Mathf.Max(hunterPreyFocusTimer, duration);
     }
 
     private bool ShouldContinueEatingFreshKillCarrion()
@@ -3169,7 +3317,17 @@ public class MarineCreatureAgent : MonoBehaviour
         SetBrainInput(16, mateDirection.z);
         SetBrainInput(17, social01);
         SetBrainInput(18, homeDistance01);
+        float memoryDecay = Candidate.Genome != null ? Mathf.Clamp01(Candidate.Genome.BrainMemoryDecay) : 0.82f;
+        brainMemoryFood = Mathf.Lerp(food01, brainMemoryFood, memoryDecay);
+        brainMemoryPrey = Mathf.Lerp(prey01, brainMemoryPrey, memoryDecay);
+        brainMemoryThreat = Mathf.Lerp(threat01, brainMemoryThreat, memoryDecay);
+        brainMemoryEnergyStress = Mathf.Lerp(Mathf.Clamp01((1f - energyRatio) * 0.55f + (1f - healthRatio) * 0.45f), brainMemoryEnergyStress, memoryDecay);
+
         SetBrainInput(19, Mathf.Clamp01(food01 * 0.35f + prey01 * 0.25f + mate01 * 0.2f + mode01 * 0.2f));
+        SetBrainInput(20, brainMemoryFood);
+        SetBrainInput(21, brainMemoryPrey);
+        SetBrainInput(22, brainMemoryThreat);
+        SetBrainInput(23, Mathf.Clamp01(brainMemoryEnergyStress + lastCurrentStress * 0.35f));
 
         if (!network.EvaluateNonAlloc(brainInputs, brainOutputs, brainHiddenScratch))
         {
@@ -3183,6 +3341,8 @@ public class MarineCreatureAgent : MonoBehaviour
         brainOutputFleeBias = GetBrainOutput(5);
         brainOutputMateSocialBias = GetBrainOutput(6);
         brainOutputExploreHomeBias = GetBrainOutput(7);
+        brainOutputRestBias = GetBrainOutput(8);
+        brainOutputSprintBias = GetBrainOutput(9);
         return true;
     }
 
@@ -3211,7 +3371,8 @@ public class MarineCreatureAgent : MonoBehaviour
         ref float schoolDesire,
         ref float exploreDesire,
         ref float homeDesire,
-        ref float fleeDesire)
+        ref float fleeDesire,
+        ref float restDesire)
     {
         if (BrainDecisionInfluence <= 0f || Candidate == null || Candidate.Genome == null || Candidate.Genome.Brain == null)
         {
@@ -3224,6 +3385,7 @@ public class MarineCreatureAgent : MonoBehaviour
         fleeDesire = Mathf.Clamp01(fleeDesire + brainOutputFleeBias * strength * Mathf.Lerp(0.45f, 1.25f, 1f - Candidate.Genome.RiskTolerance));
         mateDesire = Mathf.Clamp01(mateDesire + brainOutputMateSocialBias * strength * 0.85f);
         schoolDesire = Mathf.Clamp01(schoolDesire + brainOutputMateSocialBias * strength * 0.65f * Mathf.Lerp(0.5f, 1.25f, Candidate.Genome.GroupingChance));
+        restDesire = Mathf.Clamp01(restDesire + brainOutputRestBias * strength * Mathf.Lerp(0.35f, 1.15f, 1f - GetHealthRatio()));
 
         if (brainOutputExploreHomeBias >= 0f)
         {
@@ -3980,6 +4142,11 @@ public class MarineCreatureAgent : MonoBehaviour
             return true;
         }
 
+        if (ShouldSuppressPlantsForHunter() && nearestCarrion == null && !ShouldContinueEatingFreshKillCarrion())
+        {
+            return false;
+        }
+
         if (GetHealthRatio() <= DesperateHealthRatio)
         {
             return true;
@@ -4060,6 +4227,11 @@ public class MarineCreatureAgent : MonoBehaviour
 
     private Vector3? GetPrimaryTargetPosition()
     {
+        if (focusedPrey != null && hunterPreyFocusTimer > 0f && CanAttackPrey(focusedPrey))
+        {
+            return focusedPrey.GetBiteTargetPosition();
+        }
+
         if (nearestPrey != null && CanAttackPrey(nearestPrey))
         {
             return nearestPrey.GetBiteTargetPosition();
@@ -4622,6 +4794,21 @@ public class MarineCreatureAgent : MonoBehaviour
             return false;
         }
 
+        // The evolved brain can learn to conserve energy by suppressing sprinting, or spend energy
+        // aggressively when a valuable chase/escape target exists.
+        bool highValueSprintContext = currentBrainMode == FishAutonomousBehaviourMode.Hunting
+            || currentBrainMode == FishAutonomousBehaviourMode.Ambushing
+            || currentBrainMode == FishAutonomousBehaviourMode.Fleeing
+            || currentEscapeTimer > 0f;
+        if (brainOutputSprintBias < -0.45f && currentBrainMode != FishAutonomousBehaviourMode.Fleeing)
+        {
+            return false;
+        }
+        if (brainOutputSprintBias > 0.55f && highValueSprintContext && currentTarget.HasValue)
+        {
+            return true;
+        }
+
         if (currentBrainMode == FishAutonomousBehaviourMode.Fleeing)
         {
             return cStartBurstTimer > 0f || GetHealthRatio() <= SprintFleeHealthRatio || lastThreatCount > 0;
@@ -4771,8 +4958,32 @@ public class MarineCreatureAgent : MonoBehaviour
         }
 
         Vector3 preyDeathPosition = biteTarget.transform.position;
-        float damage = GetBiteDamage();
+        float damage = GetBiteDamageAgainst(biteTarget);
+        bool committedHunter = currentBrainMode == FishAutonomousBehaviourMode.Hunting
+            || currentBrainMode == FishAutonomousBehaviourMode.Ambushing
+            || brainWantsHunt
+            || GetEffectiveEnergyRatio() <= HungryPredatorCommitEnergyRatio;
+
+        if (committedHunter)
+        {
+            damage *= Mathf.Max(1f, PredatorCommittedBiteDamageMultiplier);
+        }
+
         bool killed = biteTarget.ReceiveBite(this, damage, out float energyGained);
+        if (!killed)
+        {
+            FocusPrey(biteTarget, HunterBiteFocusTime);
+        }
+
+        // Important: predators must gain usable meat from successful bites, not only from final kills.
+        // Otherwise hunters can land hits but still starve/converge out before getting a kill.
+        if (energyGained <= 0f)
+        {
+            float biteMeat = PredatorBiteBaseMeatReward + damage * Mathf.Max(0f, PredatorBiteMeatFromDamageMultiplier);
+            biteMeat *= Mathf.Lerp(0.75f, 1.35f, Candidate.Genome.MeatDiet);
+            energyGained = biteMeat;
+        }
+
         float meatStored = Mathf.Min(energyGained, GetRemainingStomachSpace());
         AddToStomach(0f, meatStored, 0f);
         Candidate.MeatEnergyConsumed += meatStored;
@@ -4887,8 +5098,27 @@ public class MarineCreatureAgent : MonoBehaviour
 
         float damage = BaseBiteDamage + EffectiveStats.BiteDamage;
         damage += Candidate.Genome.Aggression * 4f;
-        damage *= Mathf.Lerp(0.45f, 1.15f, Candidate.Genome.MeatDiet);
-        return Mathf.Max(1f, damage);
+        damage += Mathf.Max(0f, Candidate.Genome.JawSize - 1f) * 3.5f;
+        damage *= Mathf.Lerp(0.55f, 1.35f, Candidate.Genome.MeatDiet);
+        damage *= Mathf.Lerp(0.9f, 1.22f, Candidate.Genome.Aggression);
+        return Mathf.Max(2f, damage);
+    }
+
+    private float GetBiteDamageAgainst(MarineCreatureAgent prey)
+    {
+        float damage = GetBiteDamage();
+        if (prey == null || prey.Candidate == null || prey.Candidate.Genome == null || Candidate == null || Candidate.Genome == null)
+        {
+            return damage;
+        }
+
+        float ownSize = Mathf.Max(0.1f, EffectiveStats != null ? EffectiveStats.BodySize : Candidate.Genome.BodySize);
+        float preySize = Mathf.Max(0.1f, prey.EffectiveStats != null ? prey.EffectiveStats.BodySize : prey.Candidate.Genome.BodySize);
+        float sizeRatio = Mathf.Clamp(ownSize / preySize, 0.35f, 3.5f);
+        float sizeMultiplier = Mathf.Lerp(0.55f, 1.85f, Mathf.InverseLerp(0.45f, 2.6f, sizeRatio));
+        damage *= Mathf.Lerp(1f, sizeMultiplier, Mathf.Clamp01(PredatorSizeDamageScale));
+        damage *= Mathf.Lerp(1.28f, 1.0f, prey.GetHealthRatio());
+        return Mathf.Max(1.2f, damage);
     }
 
     public bool CanAttackPrey(MarineCreatureAgent prey)
@@ -4904,17 +5134,23 @@ public class MarineCreatureAgent : MonoBehaviour
             return false;
         }
 
+        float energyRatio = Mathf.Clamp01(CurrentEnergy / Mathf.Max(0.01f, EffectiveStats.EnergyCapacity));
+        bool committedPredator = energyRatio <= HungryPredatorCommitEnergyRatio
+            || Candidate.Genome.MeatDiet >= CommittedPredatorMorphAttackThreshold
+            || Candidate.Genome.Aggression >= 0.46f
+            || currentBrainMode == FishAutonomousBehaviourMode.Hunting
+            || currentBrainMode == FishAutonomousBehaviourMode.Ambushing;
+
         float morphSimilarity = Candidate.Genome.GetMorphSimilarity(prey.Candidate.Genome);
         if (morphSimilarity >= MorphSimilarityForSchool)
         {
-            bool hungryEnoughToBreakSchool = GetEffectiveEnergyRatio() <= 0.42f;
-            if (!hungryEnoughToBreakSchool && (Candidate.Genome.Aggression < SameMorphAttackAggressionRequired || Candidate.Genome.MeatDiet < SameMorphAttackMeatRequired))
+            bool hungryEnoughToBreakSchool = energyRatio <= HungryPredatorCommitEnergyRatio;
+            if (!hungryEnoughToBreakSchool && !committedPredator && (Candidate.Genome.Aggression < SameMorphAttackAggressionRequired || Candidate.Genome.MeatDiet < SameMorphAttackMeatRequired))
             {
                 return false;
             }
         }
 
-        float energyRatio = Mathf.Clamp01(CurrentEnergy / Mathf.Max(0.01f, EffectiveStats.EnergyCapacity));
         bool normalPredator = Candidate.Genome.MeatDiet >= manager.MinimumMeatDietToHunt && Candidate.Genome.Aggression >= manager.MinimumAggressionToHunt;
         bool starvingPredator = energyRatio <= StarvingAttackEnergyRatio && Candidate.Genome.MeatDiet >= StarvingAttackMeatRequired && Candidate.Genome.Aggression >= StarvingAttackAggressionRequired;
         if (!normalPredator && !starvingPredator)
@@ -4952,7 +5188,12 @@ public class MarineCreatureAgent : MonoBehaviour
 
         if (prey.Candidate.Genome.PlantDiet >= prey.Candidate.Genome.MeatDiet && scareStrength > attackerConfidence + 0.25f)
         {
-            return false;
+            // Defensive prey should discourage weak predators, but not completely delete the hunter niche.
+            // Committed or starving predators can still try; the bite damage/armour system handles the cost.
+            if (!committedPredator)
+            {
+                return false;
+            }
         }
 
         return true;
@@ -5256,7 +5497,7 @@ public class MarineCreatureAgent : MonoBehaviour
         }
 
         float mateDistance = Vector3.Distance(transform.position, mate.transform.position);
-        if (mateDistance > MatePairDistance)
+        if (mateDistance > MatePairDistance * 1.35f)
         {
             eggLayTimer = Mathf.Min(eggLayTimer, 1.0f);
             return;
@@ -5549,7 +5790,7 @@ public class MarineCreatureAgent : MonoBehaviour
             + brainExploreDesire.ToString("F2") + "/"
             + brainHomeDesire.ToString("F2") + "/"
             + brainFleeDesire.ToString("F2")
-            + " | NN bias " + brainOutputFoodBias.ToString("F1") + "/" + brainOutputHuntBias.ToString("F1") + "/" + brainOutputFleeBias.ToString("F1")
+            + " | NN bias F/H/Fl/R/S " + brainOutputFoodBias.ToString("F1") + "/" + brainOutputHuntBias.ToString("F1") + "/" + brainOutputFleeBias.ToString("F1") + "/" + brainOutputRestBias.ToString("F1") + "/" + brainOutputSprintBias.ToString("F1")
             + complexity;
     }
 

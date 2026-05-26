@@ -34,7 +34,7 @@ public class PlantResource : MonoBehaviour
     public float RandomBudRadius = 1.25f;
     public float BudMass = 38f;
     public float BudNutritionQuality = 1.25f;
-    public float DetachChancePerMinute = 0.01f;
+    public float DetachChancePerMinute = 0.06f;
     public float DetachedBudLifeTime = 55f;
     public bool BudsDetachWhenBitten = true;
     public float DetachImpulseMin = 0.25f;
@@ -112,7 +112,7 @@ public class PlantResource : MonoBehaviour
         BudNutritionQuality = Mathf.Clamp(BudNutritionQuality, 1.05f, 1.35f);
         RegrowDelay = Mathf.Clamp(RegrowDelay, 5f, 10f);
         RegrowInterval = Mathf.Clamp(RegrowInterval, 2.5f, 4.5f);
-        DetachChancePerMinute = Mathf.Min(DetachChancePerMinute, 0.015f);
+        DetachChancePerMinute = Mathf.Clamp(DetachChancePerMinute, 0.035f, 0.09f);
         DetachedBudLifeTime = Mathf.Max(DetachedBudLifeTime, 75f);
     }
 

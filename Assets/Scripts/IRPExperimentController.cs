@@ -147,6 +147,7 @@ public class IRPExperimentController : MonoBehaviour
             {
                 BehaviourArchive.RunId = CurrentRunId;
                 BehaviourArchive.RecordCurrentPopulation("GenerationChanged");
+                BehaviourArchive.ExportArchiveSnapshot("GenerationChanged");
             }
 
             LogEvent("GenerationChanged", "Generation changed to " + Manager.CurrentGeneration + ".");
@@ -211,6 +212,7 @@ public class IRPExperimentController : MonoBehaviour
         if (BehaviourArchive != null)
         {
             BehaviourArchive.RecordCurrentPopulation("ManualObservation");
+            BehaviourArchive.ExportArchiveSnapshot("ManualObservation");
         }
     }
 

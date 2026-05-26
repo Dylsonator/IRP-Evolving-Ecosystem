@@ -41,7 +41,7 @@ public class IRPBehaviourArchive : MonoBehaviour
     [Header("Logging")]
     public bool WriteCsv = true;
     public string CsvFileName = "IRP_BehaviourArchive.csv";
-    public bool ExportEveryGeneration = false;
+    public bool ExportEveryGeneration = true;
 
     private readonly Dictionary<string, ArchiveEntry> archive = new Dictionary<string, ArchiveEntry>();
     private string csvPath;

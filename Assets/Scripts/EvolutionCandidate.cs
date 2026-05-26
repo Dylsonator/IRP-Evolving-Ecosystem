@@ -93,15 +93,23 @@ public class EvolutionCandidate
         fitness += FoodMassConsumed * 0.18f;
         fitness += PreyBites * 6f;
         fitness += PreyKills * 28f;
-        fitness += BiteDamageDealt * 0.18f;
-        fitness += ReproductionCount * 45f;
-        fitness += EggsLaid * 4f;
+        fitness += BiteDamageDealt * 0.22f;
+        fitness += ReproductionCount * 52f;
+        fitness += EggsLaid * 5f;
         fitness += EggsHatched * 18f;
         fitness += FoodMemoryUses * 1.2f;
         fitness += LeaderFollowEvents * 0.6f;
         fitness += Mathf.Min(ForagingTime, SurvivalTime) * 0.08f;
         fitness += Mathf.Min(MateSeekingTime, SurvivalTime) * 0.05f;
         fitness += DistanceTravelled * 0.02f;
+
+        // Natural anti-convergence support: a creature that only survives by slowly starving should not dominate selection.
+        // This lets heavy armour remain useful, but prevents barely-functional armoured builds taking over every niche.
+        fitness -= StarvationDamageTaken * 0.55f;
+        if (FinalHealth > 0f && FinalHealth < 35f)
+        {
+            fitness -= (35f - FinalHealth) * 0.35f;
+        }
 
         return Mathf.Max(0f, fitness);
     }
