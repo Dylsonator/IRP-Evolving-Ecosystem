@@ -30,7 +30,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
     [Header("Real Ecosystem Objects")]
     public bool UsePlacedPlantsForFood = true;
     public bool EnableRandomFoodFallback = false;
-    public int MaxActiveCreatures = 180;
+    public int MaxActiveCreatures = 90;
 
     [Header("Terrain / Water Height")]
     public Terrain TerrainSource;
@@ -52,13 +52,43 @@ public class EvolutionEcosystemManager : MonoBehaviour
     public float SpawnPaddingFromBounds = 4f;
 
     [Header("Generation Settings")]
-    public int StartingPopulation = 60;
-    public int FixedPopulationSize = 60;
-    public float GenerationDuration = 100f;
+    public int StartingPopulation = 35;
+    public int FixedPopulationSize = 35;
+    public float GenerationDuration = 150f;
     public SelectionMode Selection = SelectionMode.QualityDiversityLite;
     public int TournamentSize = 4;
+
+    [Header("Quality Diversity / Brain Selection")]
+    [Tooltip("Uses diet, movement and feeding feature bins instead of only readable species names. This better matches MAP-Elites style diversity preservation.")]
+    public bool UseBehaviourFeatureBuckets = true;
+    public int QualityDiversityBins = 4;
+    public bool UseNoveltySelectionBias = true;
+    public float NoveltySelectionBonus = 35f;
+    [Tooltip("Small pressure against uncontrolled neural bloat. Keeps NEAT-lite complexification useful instead of endlessly growing.")]
+    public float BrainComplexityPenalty = 0.08f;
+
+    [Header("Anti-Convergence / Diversity Rescue")]
+    [Tooltip("Prevents one successful ecological role from taking over the whole population too early.")]
+    public bool UseAntiConvergence = true;
+    [Range(0.12f, 0.75f)] public float MaxSameCoreNicheFraction = 0.30f;
+    [Tooltip("If fewer broad ecological roles survive selection, the manager injects rescue mutants into weak/missing roles.")]
+    public int MinimumSurvivingCoreNiches = 6;
+    public int MaximumDiversityRescueMutants = 6;
+    public float RareNicheSelectionBonus = 55f;
+    public float CollapseMutationMultiplier = 1.65f;
+    public bool InjectMissingNichesWhenCollapsed = true;
+
     public bool UseFixedRandomSeed = false;
     public int RandomSeed = 12345;
+
+    [Header("Ecology Balance Safeguards")]
+    public bool UseEcologyBalanceSafeguards = true;
+    public bool SeedStartingDietNiches = true;
+    [Range(0f, 0.45f)] public float StartingPredatorFraction = 0.10f;
+    [Range(0f, 0.35f)] public float StartingScavengerFraction = 0.10f;
+    public bool ReplaceMissingDietNichesEachGeneration = false;
+    public int MinimumPredatorSeedsPerGeneration = 0;
+    public int MinimumScavengerSeedsPerGeneration = 0;
 
     [Header("Initial Genome")]
     [Tooltip("If true, generation 1 starts from the same base genome so roles emerge through mutation/selection instead of being predefined.")]
@@ -72,13 +102,13 @@ public class EvolutionEcosystemManager : MonoBehaviour
 
     [Header("Predation / Carrion")]
     public bool EnablePredation = true;
-    [Range(0f, 1f)] public float MinimumMeatDietToHunt = 0.46f;
-    [Range(0f, 1f)] public float MinimumAggressionToHunt = 0.28f;
+    [Range(0f, 1f)] public float MinimumMeatDietToHunt = 0.34f;
+    [Range(0f, 1f)] public float MinimumAggressionToHunt = 0.20f;
     public float MaxPreySizeRatio = 1.15f;
-    public float BiteEnergyGainMultiplier = 0.32f;
+    public float BiteEnergyGainMultiplier = 0.72f;
     public bool SpawnCarrionFromDeaths = true;
-    public bool SpawnCarrionFromExtinctionEvents = false;
-    public float CarrionEnergyFromBodySize = 34f;
+    public bool SpawnCarrionFromExtinctionEvents = true;
+    public float CarrionEnergyFromBodySize = 58f;
     public int MaxCarrionSources = 130;
 
     [Header("Defensive Morphology")]
@@ -87,8 +117,10 @@ public class EvolutionEcosystemManager : MonoBehaviour
 
     [Header("Extinction Pressure")]
     public bool UseExtinctionEvents = true;
-    public float ExtinctionEventInterval = 160f;
-    [Range(0f, 1f)] public float ExtinctionKillPercentage = 0.16f;
+    public float ExtinctionEventInterval = 190f;
+    [Range(0f, 1f)] public float ExtinctionKillPercentage = 0.22f;
+    public bool ExtinctionChangesEnvironment = true;
+    public bool ExtinctionCreatesCarrion = true;
 
     [Header("Performance / Startup")]
     [Tooltip("Spreads initial spawning across several frames to avoid a large first-frame spike.")]
@@ -108,7 +140,23 @@ public class EvolutionEcosystemManager : MonoBehaviour
     private readonly List<PlantResource> activePlants = new List<PlantResource>();
     private readonly List<FishEggCluster> activeEggClusters = new List<FishEggCluster>();
     private readonly List<EcosystemWaterCurrentZone> activeCurrentZones = new List<EcosystemWaterCurrentZone>();
+    private readonly List<EcosystemPressureZone> activePressureZones = new List<EcosystemPressureZone>();
     private readonly List<EvolutionCandidate> offspringPool = new List<EvolutionCandidate>();
+
+    [Header("Spatial Lookup")]
+    public bool UseSpatialGrid = true;
+    public EcosystemSpatialGrid SpatialGrid;
+    public float SpatialGridCellSize = 12f;
+    public float SpatialGridRefreshInterval = 0.25f;
+
+    [Header("Research Tools")]
+    public bool AutoAttachResearchTools = true;
+
+    [Header("Environmental Pressure Events")]
+    public bool SpawnPressureZoneOnExtinction = true;
+    public EcosystemPressureZone PressureZonePrefab;
+    public float ExtinctionPressureZoneRadius = 18f;
+    public float ExtinctionPressureZoneLifetime = 80f;
 
     [Header("Performance")]
     [Tooltip("How often manager lists are cleaned for destroyed/null entries. Registration still removes objects immediately on disable.")]
@@ -117,6 +165,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
     private float foodSpawnTimer;
     private float extinctionTimer;
     private float listCleanTimer;
+    private float spatialGridTimer;
     private int nextCreatureId = 1;
     private EvolutionGenome baselineGenome;
     private Coroutine bootstrapRoutine;
@@ -135,7 +184,60 @@ public class EvolutionEcosystemManager : MonoBehaviour
             DebugSettings = FindFirstObjectByType<EcosystemDebugSettings>();
         }
 
+        ApplyEcologyBalanceSafeguards();
+        EnsureSpatialGrid();
+        EnsureResearchTools();
         CreatureMorphLibrary.SetActiveLibrary(MorphLibrary);
+    }
+
+
+    private void ApplyEcologyBalanceSafeguards()
+    {
+        if (!UseEcologyBalanceSafeguards)
+        {
+            return;
+        }
+
+        // Respect the population the scene is actually tuned for. The previous safeguard
+        // forced the demo back up to a much heavier population, which caused start-up spikes.
+        StartingPopulation = Mathf.Max(1, StartingPopulation);
+        FixedPopulationSize = Mathf.Max(1, FixedPopulationSize);
+        MaxActiveCreatures = Mathf.Max(MaxActiveCreatures, FixedPopulationSize + 35);
+
+        // 150s generations need enough time for feeding -> socialising -> mating -> hatching.
+        GenerationDuration = Mathf.Max(GenerationDuration, 150f);
+
+        MinimumMeatDietToHunt = Mathf.Min(MinimumMeatDietToHunt, 0.34f);
+        MinimumAggressionToHunt = Mathf.Min(MinimumAggressionToHunt, 0.20f);
+        BiteEnergyGainMultiplier = Mathf.Max(BiteEnergyGainMultiplier, 0.72f);
+        CarrionEnergyFromBodySize = Mathf.Max(CarrionEnergyFromBodySize, 58f);
+        MaxCarrionSources = Mathf.Max(MaxCarrionSources, 90);
+
+        // Predators/scavengers should be possible, not forcibly guaranteed every generation.
+        StartingPredatorFraction = Mathf.Clamp(StartingPredatorFraction, 0.04f, 0.16f);
+        StartingScavengerFraction = Mathf.Clamp(StartingScavengerFraction, 0.04f, 0.16f);
+        ReplaceMissingDietNichesEachGeneration = false;
+        MinimumPredatorSeedsPerGeneration = 0;
+        MinimumScavengerSeedsPerGeneration = 0;
+
+        UseAntiConvergence = true;
+        MaxSameCoreNicheFraction = Mathf.Clamp(MaxSameCoreNicheFraction, 0.22f, 0.42f);
+        MinimumSurvivingCoreNiches = Mathf.Clamp(MinimumSurvivingCoreNiches, 4, Mathf.Max(4, FixedPopulationSize / 3));
+        MaximumDiversityRescueMutants = Mathf.Clamp(MaximumDiversityRescueMutants, 2, Mathf.Max(2, FixedPopulationSize / 4));
+        RareNicheSelectionBonus = Mathf.Max(RareNicheSelectionBonus, 45f);
+        CollapseMutationMultiplier = Mathf.Clamp(CollapseMutationMultiplier, 1.15f, 2.5f);
+
+        SpawnCarrionFromDeaths = true;
+        SpawnCarrionFromExtinctionEvents = ExtinctionCreatesCarrion;
+        ExtinctionKillPercentage = Mathf.Clamp(ExtinctionKillPercentage, 0.18f, 0.34f);
+        ExtinctionEventInterval = Mathf.Max(ExtinctionEventInterval, GenerationDuration * 1.1f);
+
+        if (!UsePlacedPlantsForFood || EnableRandomFoodFallback)
+        {
+            StartingFood = Mathf.Max(StartingFood, FixedPopulationSize * 5);
+            TargetFoodAmount = Mathf.Max(TargetFoodAmount, FixedPopulationSize * 6);
+            FoodSpawnInterval = Mathf.Min(FoodSpawnInterval, 0.10f);
+        }
     }
 
     private void Start()
@@ -166,6 +268,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
             EvolutionGenome genome = StartFromUniformBaseline
                 ? baselineGenome.CreateInitialVariant(InitialGenomeVariation)
                 : EvolutionGenome.CreateRandom();
+            ApplyStartingDietNicheSeed(genome, i, creatureAmount);
 
             SpawnCreature(new EvolutionCandidate(genome), GetSpawnPointForCreature());
 
@@ -189,6 +292,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
             }
         }
 
+        EnsureSpatialGrid();
         bootstrapRoutine = null;
     }
 
@@ -209,6 +313,8 @@ public class EvolutionEcosystemManager : MonoBehaviour
             listCleanTimer = Mathf.Max(0.05f, ListCleanInterval);
             CleanLists();
         }
+
+        UpdateSpatialGridIfNeeded();
 
         HandleFoodSpawning();
         HandleExtinctionEvents();
@@ -240,6 +346,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
             EvolutionGenome genome = StartFromUniformBaseline
                 ? baselineGenome.CreateInitialVariant(InitialGenomeVariation)
                 : EvolutionGenome.CreateRandom();
+            ApplyStartingDietNicheSeed(genome, i, amount);
 
             EvolutionCandidate candidate = new EvolutionCandidate(genome);
             SpawnCreature(candidate, GetSpawnPointForCreature());
@@ -329,6 +436,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
             }
         }
 
+        EnsureSpatialGrid();
         bootstrapRoutine = null;
         Debug.Log("Started generation " + CurrentGeneration + " with " + nextGeneration.Count + " creatures.");
     }
@@ -360,6 +468,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
             for (int i = 0; i < FixedPopulationSize; i++)
             {
                 EvolutionGenome fallback = StartFromUniformBaseline ? EvolutionGenome.CreateBaseline() : EvolutionGenome.CreateRandom();
+                ApplyStartingDietNicheSeed(fallback, i, FixedPopulationSize);
                 evaluated.Add(new EvolutionCandidate(fallback));
             }
         }
@@ -382,12 +491,12 @@ public class EvolutionEcosystemManager : MonoBehaviour
                 selected.Add(parent.CreateChild(GetEnvironmentMutationMultiplier()));
             }
 
-            return selected;
+            return FinaliseSelectedGeneration(selected, target, evaluated);
         }
 
         if (Selection == SelectionMode.QualityDiversityLite)
         {
-            return SelectQualityDiversityLite(evaluated, target);
+            return FinaliseSelectedGeneration(SelectQualityDiversityLite(evaluated, target), target, evaluated);
         }
 
         for (int i = 0; i < target; i++)
@@ -396,13 +505,16 @@ public class EvolutionEcosystemManager : MonoBehaviour
             selected.Add(parent.CreateChild(GetEnvironmentMutationMultiplier()));
         }
 
-        return selected;
+        return FinaliseSelectedGeneration(selected, target, evaluated);
     }
 
     private List<EvolutionCandidate> SelectQualityDiversityLite(List<EvolutionCandidate> evaluated, int target)
     {
         List<EvolutionCandidate> selected = new List<EvolutionCandidate>();
         Dictionary<string, List<EvolutionCandidate>> buckets = new Dictionary<string, List<EvolutionCandidate>>();
+        Dictionary<string, int> evaluatedCoreCounts = BuildCoreNicheCounts(evaluated);
+        Dictionary<string, int> selectedCoreCounts = new Dictionary<string, int>();
+        int maxPerCore = Mathf.Max(1, Mathf.CeilToInt(target * Mathf.Clamp01(MaxSameCoreNicheFraction)));
 
         for (int i = 0; i < evaluated.Count; i++)
         {
@@ -412,7 +524,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
                 continue;
             }
 
-            string key = CreatureDebugTypeUtility.GetSpeciesGroupName(candidate.Genome);
+            string key = BuildQualityDiversityKey(candidate);
             if (!buckets.ContainsKey(key))
             {
                 buckets[key] = new List<EvolutionCandidate>();
@@ -423,12 +535,12 @@ public class EvolutionEcosystemManager : MonoBehaviour
 
         foreach (KeyValuePair<string, List<EvolutionCandidate>> pair in buckets)
         {
-            pair.Value.Sort((a, b) => b.GetFitness().CompareTo(a.GetFitness()));
+            pair.Value.Sort((a, b) => GetSelectionScore(b, evaluatedCoreCounts).CompareTo(GetSelectionScore(a, evaluatedCoreCounts)));
         }
 
         int roundIndex = 0;
         int safety = 0;
-        while (selected.Count < target && safety < target * 20)
+        while (selected.Count < target && safety < target * 30)
         {
             safety++;
             bool addedThisRound = false;
@@ -446,7 +558,15 @@ public class EvolutionEcosystemManager : MonoBehaviour
                 }
 
                 EvolutionCandidate parent = pair.Value[roundIndex];
-                selected.Add(parent.CreateChild(GetEnvironmentMutationMultiplier()));
+                string coreKey = BuildCoreNicheKey(parent);
+
+                if (UseAntiConvergence && GetDictionaryCount(selectedCoreCounts, coreKey) >= maxPerCore)
+                {
+                    continue;
+                }
+
+                selected.Add(parent.CreateChild(GetAdaptiveMutationMultiplier(evaluatedCoreCounts)));
+                IncrementDictionaryCount(selectedCoreCounts, coreKey);
                 addedThisRound = true;
             }
 
@@ -458,17 +578,555 @@ public class EvolutionEcosystemManager : MonoBehaviour
             roundIndex++;
         }
 
+        // Fill remaining slots. Still respect the cap when possible, then relax it only if the
+        // population would otherwise fail to fill. This keeps the sim stable without letting one
+        // niche instantly dominate after a lucky generation.
+        int fallbackSafety = 0;
+        while (selected.Count < target && fallbackSafety < target * 20)
+        {
+            fallbackSafety++;
+            EvolutionCandidate parent = RunTournament(evaluated, evaluatedCoreCounts);
+            if (parent == null)
+            {
+                break;
+            }
+
+            string coreKey = BuildCoreNicheKey(parent);
+            if (UseAntiConvergence && GetDictionaryCount(selectedCoreCounts, coreKey) >= maxPerCore && selectedCoreCounts.Count >= MinimumSurvivingCoreNiches)
+            {
+                continue;
+            }
+
+            selected.Add(parent.CreateChild(GetAdaptiveMutationMultiplier(evaluatedCoreCounts)));
+            IncrementDictionaryCount(selectedCoreCounts, coreKey);
+        }
+
         while (selected.Count < target)
         {
-            EvolutionCandidate parent = RunTournament(evaluated);
-            selected.Add(parent.CreateChild(GetEnvironmentMutationMultiplier()));
+            EvolutionCandidate parent = RunTournament(evaluated, evaluatedCoreCounts);
+            if (parent == null)
+            {
+                break;
+            }
+
+            selected.Add(parent.CreateChild(GetAdaptiveMutationMultiplier(evaluatedCoreCounts)));
         }
 
         return selected;
     }
 
-    private EvolutionCandidate RunTournament(List<EvolutionCandidate> evaluated)
+
+    private List<EvolutionCandidate> FinaliseSelectedGeneration(List<EvolutionCandidate> selected, int target, List<EvolutionCandidate> evaluated)
     {
+        if (selected == null)
+        {
+            selected = new List<EvolutionCandidate>();
+        }
+
+        while (selected.Count < target)
+        {
+            EvolutionGenome genome = StartFromUniformBaseline && baselineGenome != null ? baselineGenome.Clone() : EvolutionGenome.CreateRandom();
+            ApplyStartingDietNicheSeed(genome, selected.Count, target);
+            selected.Add(new EvolutionCandidate(genome));
+        }
+
+        if (!ReplaceMissingDietNichesEachGeneration)
+        {
+            return UseAntiConvergence ? RescueCollapsedDiversity(selected, target, evaluated) : selected;
+        }
+
+        int predatorCount = 0;
+        int scavengerCount = 0;
+        for (int i = 0; i < selected.Count; i++)
+        {
+            EvolutionCandidate candidate = selected[i];
+            if (candidate == null || candidate.Genome == null)
+            {
+                continue;
+            }
+
+            if (IsPredatorGenome(candidate.Genome))
+            {
+                predatorCount++;
+            }
+            else if (IsScavengerGenome(candidate.Genome))
+            {
+                scavengerCount++;
+            }
+        }
+
+        int replaceIndex = selected.Count - 1;
+        int predatorTarget = Mathf.Clamp(MinimumPredatorSeedsPerGeneration, 0, Mathf.Max(1, target / 4));
+        while (predatorCount < predatorTarget && replaceIndex >= 0)
+        {
+            EvolutionGenome genome = StartFromUniformBaseline && baselineGenome != null ? baselineGenome.Clone() : EvolutionGenome.CreateRandom();
+            ForcePredatorGenome(genome);
+            selected[replaceIndex] = new EvolutionCandidate(genome);
+            predatorCount++;
+            replaceIndex--;
+        }
+
+        int scavengerTarget = Mathf.Clamp(MinimumScavengerSeedsPerGeneration, 0, Mathf.Max(1, target / 5));
+        while (scavengerCount < scavengerTarget && replaceIndex >= 0)
+        {
+            EvolutionGenome genome = StartFromUniformBaseline && baselineGenome != null ? baselineGenome.Clone() : EvolutionGenome.CreateRandom();
+            ForceScavengerGenome(genome);
+            selected[replaceIndex] = new EvolutionCandidate(genome);
+            scavengerCount++;
+            replaceIndex--;
+        }
+
+        return UseAntiConvergence ? RescueCollapsedDiversity(selected, target, evaluated) : selected;
+    }
+
+    private List<EvolutionCandidate> RescueCollapsedDiversity(List<EvolutionCandidate> selected, int target, List<EvolutionCandidate> evaluated)
+    {
+        if (!UseAntiConvergence || !InjectMissingNichesWhenCollapsed || selected == null || selected.Count == 0)
+        {
+            return selected;
+        }
+
+        Dictionary<string, int> selectedCounts = BuildCoreNicheCounts(selected);
+        int dominantCount = 0;
+        foreach (KeyValuePair<string, int> pair in selectedCounts)
+        {
+            dominantCount = Mathf.Max(dominantCount, pair.Value);
+        }
+
+        float dominantFraction = selected.Count > 0 ? dominantCount / (float)selected.Count : 0f;
+        bool collapsed = selectedCounts.Count < MinimumSurvivingCoreNiches || dominantFraction > MaxSameCoreNicheFraction;
+        if (!collapsed)
+        {
+            return selected;
+        }
+
+        string[] desiredNiches =
+        {
+            "grazer",
+            "schooling_grazer",
+            "defensive_grazer",
+            "omnivore",
+            "scavenger",
+            "active_predator",
+            "ambush_predator",
+            "egg_guardian"
+        };
+
+        int injected = 0;
+        for (int i = 0; i < desiredNiches.Length && injected < MaximumDiversityRescueMutants; i++)
+        {
+            string desired = desiredNiches[i];
+            if (selectedCounts.ContainsKey(desired))
+            {
+                continue;
+            }
+
+            int replaceIndex = FindReplaceableDominantIndex(selected, selectedCounts);
+            if (replaceIndex < 0)
+            {
+                break;
+            }
+
+            EvolutionCandidate rescue = CreateDiversityRescueCandidate(desired, evaluated);
+            if (rescue == null)
+            {
+                continue;
+            }
+
+            string oldKey = BuildCoreNicheKey(selected[replaceIndex]);
+            if (selectedCounts.ContainsKey(oldKey))
+            {
+                selectedCounts[oldKey] = Mathf.Max(0, selectedCounts[oldKey] - 1);
+            }
+
+            selected[replaceIndex] = rescue;
+            IncrementDictionaryCount(selectedCounts, desired);
+            injected++;
+        }
+
+        if (injected > 0)
+        {
+            Debug.Log("[IRP Anti-Convergence] Injected " + injected + " rescue mutants. Core niches now: " + selectedCounts.Count + ".");
+        }
+
+        return selected;
+    }
+
+    private int FindReplaceableDominantIndex(List<EvolutionCandidate> selected, Dictionary<string, int> selectedCounts)
+    {
+        if (selected == null || selectedCounts == null || selected.Count == 0)
+        {
+            return -1;
+        }
+
+        string dominantKey = "";
+        int dominantCount = 0;
+        foreach (KeyValuePair<string, int> pair in selectedCounts)
+        {
+            if (pair.Value > dominantCount)
+            {
+                dominantKey = pair.Key;
+                dominantCount = pair.Value;
+            }
+        }
+
+        if (dominantCount <= 1)
+        {
+            return -1;
+        }
+
+        for (int i = selected.Count - 1; i >= 0; i--)
+        {
+            EvolutionCandidate candidate = selected[i];
+            if (candidate == null || candidate.Genome == null)
+            {
+                return i;
+            }
+
+            if (BuildCoreNicheKey(candidate) == dominantKey)
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    private EvolutionCandidate CreateDiversityRescueCandidate(string desiredNiche, List<EvolutionCandidate> evaluated)
+    {
+        EvolutionGenome genome = null;
+
+        if (evaluated != null && evaluated.Count > 0 && Random.value < 0.65f)
+        {
+            EvolutionCandidate parent = evaluated[Random.Range(0, evaluated.Count)];
+            if (parent != null && parent.Genome != null)
+            {
+                genome = parent.Genome.CreateMutatedCopy(Mathf.Max(1f, CollapseMutationMultiplier));
+            }
+        }
+
+        if (genome == null)
+        {
+            genome = StartFromUniformBaseline && baselineGenome != null ? baselineGenome.CreateMutatedCopy(Mathf.Max(1f, CollapseMutationMultiplier)) : EvolutionGenome.CreateRandom();
+        }
+
+        ForceGenomeTowardCoreNiche(genome, desiredNiche);
+        return new EvolutionCandidate(genome);
+    }
+
+    private void ForceGenomeTowardCoreNiche(EvolutionGenome genome, string desiredNiche)
+    {
+        if (genome == null)
+        {
+            return;
+        }
+
+        switch (desiredNiche)
+        {
+            case "active_predator":
+                ForcePredatorGenome(genome);
+                genome.Stealth = Mathf.Min(genome.Stealth, Random.Range(0.12f, 0.38f));
+                genome.Speed = Mathf.Max(genome.Speed, Random.Range(5.4f, 7.0f));
+                break;
+
+            case "ambush_predator":
+                ForcePredatorGenome(genome);
+                genome.Stealth = Mathf.Max(genome.Stealth, Random.Range(0.58f, 0.88f));
+                genome.Territoriality = Mathf.Max(genome.Territoriality, Random.Range(0.42f, 0.78f));
+                genome.Speed = Mathf.Clamp(genome.Speed, 3.4f, 5.5f);
+                break;
+
+            case "scavenger":
+                ForceScavengerGenome(genome);
+                break;
+
+            case "omnivore":
+                ForceOmnivoreGenome(genome);
+                break;
+
+            case "defensive_grazer":
+                ForceGrazerGenome(genome);
+                genome.Armour = Mathf.Max(genome.Armour, Random.Range(0.55f, 0.95f));
+                genome.SpikeSize = Mathf.Max(genome.SpikeSize, Random.Range(0.65f, 1.15f));
+                genome.DangerFactor = Mathf.Max(genome.DangerFactor, Random.Range(0.75f, 1.35f));
+                genome.RiskTolerance = Mathf.Clamp(genome.RiskTolerance, 0.22f, 0.58f);
+                break;
+
+            case "schooling_grazer":
+                ForceGrazerGenome(genome);
+                genome.GroupingChance = Mathf.Max(genome.GroupingChance, Random.Range(0.62f, 0.92f));
+                genome.SchoolTightness = Mathf.Max(genome.SchoolTightness, Random.Range(0.52f, 0.88f));
+                genome.FoodSharing = Mathf.Max(genome.FoodSharing, Random.Range(0.62f, 0.92f));
+                genome.Selfishness = Mathf.Min(genome.Selfishness, Random.Range(0.02f, 0.22f));
+                break;
+
+            case "egg_guardian":
+                ForceGrazerGenome(genome);
+                genome.EggProtection = Mathf.Max(genome.EggProtection, Random.Range(0.68f, 0.95f));
+                genome.NestingDrive = Mathf.Max(genome.NestingDrive, Random.Range(0.58f, 0.90f));
+                genome.Territoriality = Mathf.Max(genome.Territoriality, Random.Range(0.38f, 0.72f));
+                genome.MateDrive = Mathf.Max(genome.MateDrive, Random.Range(0.62f, 0.92f));
+                break;
+
+            default:
+                ForceGrazerGenome(genome);
+                break;
+        }
+
+        genome.MutationRate = Mathf.Max(genome.MutationRate, 0.075f);
+        genome.MutationStrength = Mathf.Max(genome.MutationStrength, 1.0f);
+        genome.MorphPartMutationRate = Mathf.Max(genome.MorphPartMutationRate, 0.035f);
+        genome.NormaliseDietTraits();
+        genome.ClampValues();
+    }
+
+    private void ForceGrazerGenome(EvolutionGenome genome)
+    {
+        if (genome == null)
+        {
+            return;
+        }
+
+        genome.PlantDiet = Random.Range(0.58f, 0.78f);
+        genome.MeatDiet = Random.Range(0.04f, 0.18f);
+        genome.CarrionDiet = Random.Range(0.08f, 0.22f);
+        genome.Aggression = Mathf.Min(genome.Aggression, Random.Range(0.05f, 0.24f));
+        genome.RiskTolerance = Mathf.Clamp(genome.RiskTolerance, 0.25f, 0.72f);
+        genome.HungerDrive = Mathf.Clamp(genome.HungerDrive, 0.48f, 0.82f);
+        genome.MateDrive = Mathf.Max(genome.MateDrive, 0.42f);
+        genome.NormaliseDietTraits();
+        genome.ClampValues();
+    }
+
+    private void ApplyStartingDietNicheSeed(EvolutionGenome genome, int index, int total)
+    {
+        if (!SeedStartingDietNiches || genome == null || total <= 0)
+        {
+            return;
+        }
+
+        // Random niche bias. Predators/scavengers can appear in generation 1,
+        // but the ecosystem is not guaranteed to start with a fixed ratio.
+        float roll = Random.value;
+        float predatorChance = Mathf.Clamp01(StartingPredatorFraction);
+        float scavengerChance = Mathf.Clamp01(StartingScavengerFraction);
+        float omnivoreChance = 0.18f;
+
+        if (roll < predatorChance)
+        {
+            ForcePredatorGenome(genome);
+        }
+        else if (roll < predatorChance + scavengerChance)
+        {
+            ForceScavengerGenome(genome);
+        }
+        else if (roll < predatorChance + scavengerChance + omnivoreChance)
+        {
+            ForceOmnivoreGenome(genome);
+        }
+    }
+
+    private bool IsPredatorGenome(EvolutionGenome genome)
+    {
+        return genome != null && genome.MeatDiet >= MinimumMeatDietToHunt && genome.Aggression >= MinimumAggressionToHunt;
+    }
+
+    private bool IsScavengerGenome(EvolutionGenome genome)
+    {
+        return genome != null && genome.CarrionDiet >= 0.38f;
+    }
+
+    private void ForcePredatorGenome(EvolutionGenome genome)
+    {
+        if (genome == null)
+        {
+            return;
+        }
+
+        genome.PlantDiet = Random.Range(0.12f, 0.24f);
+        genome.MeatDiet = Random.Range(0.56f, 0.76f);
+        genome.CarrionDiet = Random.Range(0.10f, 0.24f);
+        genome.Aggression = Mathf.Max(genome.Aggression, Random.Range(0.42f, 0.72f));
+        genome.RiskTolerance = Mathf.Max(genome.RiskTolerance, Random.Range(0.55f, 0.86f));
+        genome.JawSize = Mathf.Max(genome.JawSize, Random.Range(1.12f, 1.55f));
+        genome.JawLength = Mathf.Max(genome.JawLength, Random.Range(1.05f, 1.45f));
+        genome.Speed = Mathf.Max(genome.Speed, Random.Range(4.8f, 6.8f));
+        genome.HungerThreshold = Mathf.Min(genome.HungerThreshold, 0.42f);
+        genome.MateDrive = Mathf.Max(genome.MateDrive, 0.42f);
+        genome.NormaliseDietTraits();
+        genome.ClampValues();
+    }
+
+    private void ForceScavengerGenome(EvolutionGenome genome)
+    {
+        if (genome == null)
+        {
+            return;
+        }
+
+        genome.PlantDiet = Random.Range(0.18f, 0.34f);
+        genome.MeatDiet = Random.Range(0.12f, 0.28f);
+        genome.CarrionDiet = Random.Range(0.48f, 0.68f);
+        genome.Aggression = Mathf.Max(genome.Aggression, Random.Range(0.18f, 0.42f));
+        genome.SensorSize = Mathf.Max(genome.SensorSize, Random.Range(1.15f, 1.65f));
+        genome.VisionRange = Mathf.Max(genome.VisionRange, Random.Range(20f, 32f));
+        genome.FoodMemoryStrength = Mathf.Max(genome.FoodMemoryStrength, 0.55f);
+        genome.HungerThreshold = Mathf.Min(genome.HungerThreshold, 0.46f);
+        genome.MateDrive = Mathf.Max(genome.MateDrive, 0.42f);
+        genome.NormaliseDietTraits();
+        genome.ClampValues();
+    }
+
+    private void ForceOmnivoreGenome(EvolutionGenome genome)
+    {
+        if (genome == null)
+        {
+            return;
+        }
+
+        genome.PlantDiet = Random.Range(0.34f, 0.46f);
+        genome.MeatDiet = Random.Range(0.24f, 0.36f);
+        genome.CarrionDiet = Random.Range(0.18f, 0.30f);
+        genome.Aggression = Mathf.Max(genome.Aggression, Random.Range(0.18f, 0.36f));
+        genome.RiskTolerance = Mathf.Max(genome.RiskTolerance, Random.Range(0.42f, 0.70f));
+        genome.MateDrive = Mathf.Max(genome.MateDrive, 0.45f);
+        genome.NormaliseDietTraits();
+        genome.ClampValues();
+    }
+
+
+    private string BuildQualityDiversityKey(EvolutionCandidate candidate)
+    {
+        if (candidate == null || candidate.Genome == null)
+        {
+            return "unknown";
+        }
+
+        if (!UseBehaviourFeatureBuckets)
+        {
+            return CreatureDebugTypeUtility.GetSpeciesGroupName(candidate.Genome);
+        }
+
+        int bins = Mathf.Clamp(QualityDiversityBins, 2, 8);
+        return EvolutionNicheUtility.BuildSelectionKey(candidate, bins);
+    }
+
+    private string BuildCoreNicheKey(EvolutionCandidate candidate)
+    {
+        return EvolutionNicheUtility.BuildCoreNicheKey(candidate);
+    }
+
+    private Dictionary<string, int> BuildCoreNicheCounts(List<EvolutionCandidate> candidates)
+    {
+        Dictionary<string, int> counts = new Dictionary<string, int>();
+        if (candidates == null)
+        {
+            return counts;
+        }
+
+        for (int i = 0; i < candidates.Count; i++)
+        {
+            EvolutionCandidate candidate = candidates[i];
+            if (candidate == null || candidate.Genome == null)
+            {
+                continue;
+            }
+
+            IncrementDictionaryCount(counts, BuildCoreNicheKey(candidate));
+        }
+
+        return counts;
+    }
+
+    private int GetDictionaryCount(Dictionary<string, int> counts, string key)
+    {
+        if (counts == null || string.IsNullOrEmpty(key) || !counts.ContainsKey(key))
+        {
+            return 0;
+        }
+
+        return counts[key];
+    }
+
+    private void IncrementDictionaryCount(Dictionary<string, int> counts, string key)
+    {
+        if (counts == null || string.IsNullOrEmpty(key))
+        {
+            return;
+        }
+
+        if (!counts.ContainsKey(key))
+        {
+            counts[key] = 0;
+        }
+
+        counts[key]++;
+    }
+
+    private float GetSelectionScore(EvolutionCandidate candidate, Dictionary<string, int> coreCounts = null)
+    {
+        if (candidate == null)
+        {
+            return 0f;
+        }
+
+        float score = candidate.GetFitness();
+
+        if (UseNoveltySelectionBias)
+        {
+            score += GetBehaviourNoveltyScore(candidate) * Mathf.Max(0f, NoveltySelectionBonus);
+        }
+
+        if (UseAntiConvergence && coreCounts != null && RareNicheSelectionBonus > 0f)
+        {
+            int count = Mathf.Max(1, GetDictionaryCount(coreCounts, BuildCoreNicheKey(candidate)));
+            score += RareNicheSelectionBonus / count;
+        }
+
+        if (candidate.Genome != null && candidate.Genome.Brain != null && BrainComplexityPenalty > 0f)
+        {
+            int excessHidden = Mathf.Max(0, candidate.Genome.Brain.HiddenCount - EvolutionGenome.BrainHiddenCount);
+            score -= excessHidden * BrainComplexityPenalty;
+        }
+
+        return Mathf.Max(0f, score);
+    }
+
+    private float GetBehaviourNoveltyScore(EvolutionCandidate candidate)
+    {
+        if (candidate == null || candidate.Genome == null)
+        {
+            return 0f;
+        }
+
+        float activeModeCount = 0f;
+        if (candidate.RestingTime > 1f) activeModeCount += 1f;
+        if (candidate.ExploringTime > 1f) activeModeCount += 1f;
+        if (candidate.SchoolingTime > 1f) activeModeCount += 1f;
+        if (candidate.ForagingTime > 1f) activeModeCount += 1f;
+        if (candidate.FeedingTime > 1f) activeModeCount += 1f;
+        if (candidate.MateSeekingTime > 1f) activeModeCount += 1f;
+        if (candidate.HuntingTime > 1f) activeModeCount += 1f;
+        if (candidate.FleeingTime > 1f) activeModeCount += 1f;
+        if (candidate.RecoveryTime > 1f) activeModeCount += 0.5f;
+
+        float modeDiversity = Mathf.Clamp01(activeModeCount / 8f);
+        float dietSpecialisation = Mathf.Max(candidate.Genome.PlantDiet, Mathf.Max(candidate.Genome.MeatDiet, candidate.Genome.CarrionDiet));
+        float dietNovelty = 1f - Mathf.Clamp01(dietSpecialisation);
+        float reproductionNovelty = candidate.EggsLaid > 0 || candidate.ReproductionCount > 0 ? 0.15f : 0f;
+        float predatorNovelty = candidate.PreyBites > 0 || candidate.PreyKills > 0 ? 0.15f : 0f;
+        float mobilityNovelty = Mathf.Clamp01(candidate.DistanceTravelled / 450f) * 0.2f;
+
+        return Mathf.Clamp01(modeDiversity * 0.42f + dietNovelty * 0.28f + reproductionNovelty + predatorNovelty + mobilityNovelty);
+    }
+
+    private EvolutionCandidate RunTournament(List<EvolutionCandidate> evaluated, Dictionary<string, int> coreCounts = null)
+    {
+        if (evaluated == null || evaluated.Count == 0)
+        {
+            return null;
+        }
+
         EvolutionCandidate best = null;
         int size = Mathf.Max(1, TournamentSize);
 
@@ -476,7 +1134,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         {
             EvolutionCandidate candidate = evaluated[Random.Range(0, evaluated.Count)];
 
-            if (best == null || candidate.GetFitness() > best.GetFitness())
+            if (best == null || GetSelectionScore(candidate, coreCounts) > GetSelectionScore(best, coreCounts))
             {
                 best = candidate;
             }
@@ -485,9 +1143,193 @@ public class EvolutionEcosystemManager : MonoBehaviour
         return best;
     }
 
+    private float GetAdaptiveMutationMultiplier(Dictionary<string, int> coreCounts)
+    {
+        float multiplier = GetEnvironmentMutationMultiplier();
+
+        if (!UseAntiConvergence || coreCounts == null)
+        {
+            return multiplier;
+        }
+
+        if (coreCounts.Count < MinimumSurvivingCoreNiches)
+        {
+            multiplier *= CollapseMutationMultiplier;
+        }
+
+        return Mathf.Clamp(multiplier, 0.5f, 3.0f);
+    }
+
     private float GetEnvironmentMutationMultiplier()
     {
-        return Environment != null ? Environment.MutationMultiplier : 1f;
+        float baseMultiplier = Environment != null ? Environment.MutationMultiplier : 1f;
+
+        if (activePressureZones.Count == 0)
+        {
+            return baseMultiplier;
+        }
+
+        // End-of-generation selection uses a population-wide average pressure, while
+        // egg reproduction uses local pressure in MarineCreatureAgent.
+        float total = 0f;
+        int count = 0;
+        for (int i = 0; i < activePressureZones.Count; i++)
+        {
+            EcosystemPressureZone zone = activePressureZones[i];
+            if (zone == null)
+            {
+                continue;
+            }
+
+            total += Mathf.Max(0.1f, zone.MutationMultiplier);
+            count++;
+        }
+
+        return count > 0 ? baseMultiplier * Mathf.Clamp(total / count, 0.75f, 1.8f) : baseMultiplier;
+    }
+
+    public float GetEnvironmentMutationMultiplierAt(Vector3 position)
+    {
+        float multiplier = Environment != null ? Environment.MutationMultiplier : 1f;
+
+        for (int i = activePressureZones.Count - 1; i >= 0; i--)
+        {
+            EcosystemPressureZone zone = activePressureZones[i];
+            if (zone == null)
+            {
+                activePressureZones.RemoveAt(i);
+                continue;
+            }
+
+            float influence = zone.GetInfluence01(position);
+            if (influence > 0f)
+            {
+                multiplier *= Mathf.Lerp(1f, Mathf.Max(0.1f, zone.MutationMultiplier), influence);
+            }
+        }
+
+        return Mathf.Clamp(multiplier, 0.5f, 2.2f);
+    }
+
+
+    private void EnsureResearchTools()
+    {
+        if (!AutoAttachResearchTools)
+        {
+            return;
+        }
+
+        EvolutionPopulationSaveLoad saveLoad = GetComponent<EvolutionPopulationSaveLoad>();
+        if (saveLoad == null)
+        {
+            saveLoad = gameObject.AddComponent<EvolutionPopulationSaveLoad>();
+        }
+        saveLoad.Manager = this;
+
+        EvolutionResearchMetricsRecorder recorder = GetComponent<EvolutionResearchMetricsRecorder>();
+        if (recorder == null)
+        {
+            recorder = gameObject.AddComponent<EvolutionResearchMetricsRecorder>();
+        }
+        recorder.Manager = this;
+
+        IRPBehaviourArchive archive = GetComponent<IRPBehaviourArchive>();
+        if (archive == null)
+        {
+            archive = gameObject.AddComponent<IRPBehaviourArchive>();
+        }
+        archive.Manager = this;
+
+        IRPExperimentController experiment = GetComponent<IRPExperimentController>();
+        if (experiment == null)
+        {
+            experiment = gameObject.AddComponent<IRPExperimentController>();
+        }
+        experiment.Manager = this;
+        experiment.Environment = Environment;
+        experiment.MetricsRecorder = recorder;
+        experiment.BehaviourArchive = archive;
+    }
+
+    private void EnsureSpatialGrid()
+    {
+        if (!UseSpatialGrid)
+        {
+            return;
+        }
+
+        if (SpatialGrid == null)
+        {
+            SpatialGrid = GetComponent<EcosystemSpatialGrid>();
+        }
+
+        if (SpatialGrid == null)
+        {
+            SpatialGrid = gameObject.AddComponent<EcosystemSpatialGrid>();
+        }
+
+        SpatialGrid.CellSize = Mathf.Max(1f, SpatialGridCellSize);
+        SpatialGrid.Rebuild(activeCreatures, activeFood, activeCarrion, activeEggClusters);
+    }
+
+    private void UpdateSpatialGridIfNeeded()
+    {
+        if (!UseSpatialGrid)
+        {
+            return;
+        }
+
+        spatialGridTimer -= Time.deltaTime;
+        if (SpatialGrid == null || spatialGridTimer <= 0f)
+        {
+            spatialGridTimer = Mathf.Max(0.05f, SpatialGridRefreshInterval);
+            EnsureSpatialGrid();
+        }
+    }
+
+    private bool HasUsableSpatialGrid()
+    {
+        return UseSpatialGrid && SpatialGrid != null;
+    }
+
+    public List<MarineCreatureAgent> GetNearbyCreatures(Vector3 position, float radius)
+    {
+        if (HasUsableSpatialGrid())
+        {
+            return SpatialGrid.QueryCreatures(position, radius);
+        }
+
+        return activeCreatures;
+    }
+
+    public List<FoodSource> GetNearbyFood(Vector3 position, float radius)
+    {
+        if (HasUsableSpatialGrid())
+        {
+            return SpatialGrid.QueryFood(position, radius);
+        }
+
+        return activeFood;
+    }
+
+    public List<CarrionSource> GetNearbyCarrion(Vector3 position, float radius)
+    {
+        if (HasUsableSpatialGrid())
+        {
+            return SpatialGrid.QueryCarrion(position, radius);
+        }
+
+        return activeCarrion;
+    }
+
+    public List<FishEggCluster> GetNearbyEggClusters(Vector3 position, float radius)
+    {
+        if (HasUsableSpatialGrid())
+        {
+            return SpatialGrid.QueryEggClusters(position, radius);
+        }
+
+        return activeEggClusters;
     }
 
     public MarineCreatureAgent SpawnCreature(EvolutionCandidate candidate, Vector3 position)
@@ -692,37 +1534,61 @@ public class EvolutionEcosystemManager : MonoBehaviour
         activeCurrentZones.Remove(zone);
     }
 
+    public void RegisterPressureZone(EcosystemPressureZone zone)
+    {
+        if (zone != null && !activePressureZones.Contains(zone))
+        {
+            activePressureZones.Add(zone);
+        }
+    }
+
+    public void UnregisterPressureZone(EcosystemPressureZone zone)
+    {
+        activePressureZones.Remove(zone);
+    }
+
 
     public FoodSource GetBestFoodForCreature(MarineCreatureAgent requester, Vector3 position, float searchRadius, float crowdRadius, int comfortableCrowdLimit, float crowdPenalty)
     {
+        // Emergency optimisation:
+        // Closest useful food wins. The previous crowd-aware scoring checked every food
+        // against every creature, which is brutal with lots of plant buds.
         FoodSource best = null;
         float bestScore = float.MaxValue;
         float searchRadiusSqr = searchRadius * searchRadius;
-        float crowdRadiusSafe = Mathf.Max(0.25f, crowdRadius);
-        int comfort = Mathf.Max(0, comfortableCrowdLimit);
+        int requesterId = requester != null && requester.Candidate != null ? requester.Candidate.Id : 0;
 
-        for (int i = 0; i < activeFood.Count; i++)
+        List<FoodSource> foodCandidates = GetNearbyFood(position, searchRadius);
+        for (int i = 0; i < foodCandidates.Count; i++)
         {
-            FoodSource food = activeFood[i];
+            FoodSource food = foodCandidates[i];
             if (food == null || food.IsConsumed)
             {
                 continue;
             }
 
-            Vector3 foodPosition = food.transform.position;
-            float distanceSqr = (foodPosition - position).sqrMagnitude;
+            float distanceSqr = (food.transform.position - position).sqrMagnitude;
             if (distanceSqr > searchRadiusSqr)
             {
                 continue;
             }
 
-            int crowd = CountCreaturesNearPoint(foodPosition, crowdRadiusSafe, requester);
-            int recentFeeders = food.GetRecentFeederCount();
-            int excessCrowd = Mathf.Max(0, crowd + recentFeeders - comfort);
-            float distance = Mathf.Sqrt(distanceSqr);
-            float massBonus = Mathf.Lerp(6f, 0f, food.GetMassRatio());
-            float score = distance + excessCrowd * Mathf.Max(0f, crowdPenalty) + massBonus;
-            score += crowd * 0.35f + recentFeeders * 1.75f;
+            float score = distanceSqr;
+
+            if (requesterId != 0 && food.WasRecentlyFedBy(requesterId))
+            {
+                score *= 0.20f;
+            }
+
+            if (food.IsDetachedPlantBud())
+            {
+                score *= 0.75f;
+            }
+
+            if (food.GetMassRatio() < 0.08f)
+            {
+                score *= 1.35f;
+            }
 
             if (score < bestScore)
             {
@@ -736,38 +1602,23 @@ public class EvolutionEcosystemManager : MonoBehaviour
 
     public CarrionSource GetBestCarrionForCreature(MarineCreatureAgent requester, Vector3 position, float searchRadius, float crowdRadius, int comfortableCrowdLimit, float crowdPenalty)
     {
+        // Emergency optimisation: closest valid carrion wins.
         CarrionSource best = null;
-        float bestScore = float.MaxValue;
-        float searchRadiusSqr = searchRadius * searchRadius;
-        float crowdRadiusSafe = Mathf.Max(0.25f, crowdRadius);
-        int comfort = Mathf.Max(0, comfortableCrowdLimit);
+        float bestScore = searchRadius * searchRadius;
 
-        for (int i = 0; i < activeCarrion.Count; i++)
+        List<CarrionSource> carrionCandidates = GetNearbyCarrion(position, searchRadius);
+        for (int i = 0; i < carrionCandidates.Count; i++)
         {
-            CarrionSource carrion = activeCarrion[i];
+            CarrionSource carrion = carrionCandidates[i];
             if (carrion == null || carrion.IsConsumed)
             {
                 continue;
             }
 
-            Vector3 carrionPosition = carrion.transform.position;
-            float distanceSqr = (carrionPosition - position).sqrMagnitude;
-            if (distanceSqr > searchRadiusSqr)
+            float distanceSqr = (carrion.transform.position - position).sqrMagnitude;
+            if (distanceSqr < bestScore)
             {
-                continue;
-            }
-
-            int crowd = CountCreaturesNearPoint(carrionPosition, crowdRadiusSafe, requester);
-            int recentFeeders = carrion.GetRecentFeederCount();
-            int excessCrowd = Mathf.Max(0, crowd + recentFeeders - comfort);
-            float distance = Mathf.Sqrt(distanceSqr);
-            float massBonus = Mathf.Lerp(6f, 0f, carrion.GetMassRatio());
-            float score = distance + excessCrowd * Mathf.Max(0f, crowdPenalty) + massBonus;
-            score += crowd * 0.35f + recentFeeders * 1.75f;
-
-            if (score < bestScore)
-            {
-                bestScore = score;
+                bestScore = distanceSqr;
                 best = carrion;
             }
         }
@@ -780,9 +1631,10 @@ public class EvolutionEcosystemManager : MonoBehaviour
         float radiusSqr = radius * radius;
         int count = 0;
 
-        for (int i = 0; i < activeCreatures.Count; i++)
+        List<MarineCreatureAgent> creatureCandidates = GetNearbyCreatures(point, radius);
+        for (int i = 0; i < creatureCandidates.Count; i++)
         {
-            MarineCreatureAgent creature = activeCreatures[i];
+            MarineCreatureAgent creature = creatureCandidates[i];
             if (creature == null || creature == ignoredCreature)
             {
                 continue;
@@ -802,9 +1654,10 @@ public class EvolutionEcosystemManager : MonoBehaviour
         FoodSource nearest = null;
         float bestDistanceSqr = searchRadius * searchRadius;
 
-        for (int i = 0; i < activeFood.Count; i++)
+        List<FoodSource> foodCandidates = GetNearbyFood(position, searchRadius);
+        for (int i = 0; i < foodCandidates.Count; i++)
         {
-            FoodSource food = activeFood[i];
+            FoodSource food = foodCandidates[i];
 
             if (food == null || food.IsConsumed)
             {
@@ -828,9 +1681,10 @@ public class EvolutionEcosystemManager : MonoBehaviour
         CarrionSource nearest = null;
         float bestDistanceSqr = searchRadius * searchRadius;
 
-        for (int i = 0; i < activeCarrion.Count; i++)
+        List<CarrionSource> carrionCandidates = GetNearbyCarrion(position, searchRadius);
+        for (int i = 0; i < carrionCandidates.Count; i++)
         {
-            CarrionSource carrion = activeCarrion[i];
+            CarrionSource carrion = carrionCandidates[i];
 
             if (carrion == null || carrion.IsConsumed)
             {
@@ -854,9 +1708,10 @@ public class EvolutionEcosystemManager : MonoBehaviour
         MarineCreatureAgent nearest = null;
         float bestDistanceSqr = searchRadius * searchRadius;
 
-        for (int i = 0; i < activeCreatures.Count; i++)
+        List<MarineCreatureAgent> creatureCandidates = GetNearbyCreatures(position, searchRadius);
+        for (int i = 0; i < creatureCandidates.Count; i++)
         {
-            MarineCreatureAgent creature = activeCreatures[i];
+            MarineCreatureAgent creature = creatureCandidates[i];
 
             if (creature == null || creature == requester)
             {
@@ -885,11 +1740,17 @@ public class EvolutionEcosystemManager : MonoBehaviour
         MarineCreatureAgent nearest = null;
         float bestDistanceSqr = searchRadius * searchRadius;
 
-        for (int i = 0; i < activeCreatures.Count; i++)
+        List<MarineCreatureAgent> preyCandidates = GetNearbyCreatures(position, searchRadius);
+        for (int i = 0; i < preyCandidates.Count; i++)
         {
-            MarineCreatureAgent creature = activeCreatures[i];
-
+            MarineCreatureAgent creature = preyCandidates[i];
             if (creature == null || creature == requester)
+            {
+                continue;
+            }
+
+            float distanceSqr = (creature.transform.position - position).sqrMagnitude;
+            if (distanceSqr >= bestDistanceSqr)
             {
                 continue;
             }
@@ -899,13 +1760,8 @@ public class EvolutionEcosystemManager : MonoBehaviour
                 continue;
             }
 
-            float distanceSqr = (creature.transform.position - position).sqrMagnitude;
-
-            if (distanceSqr < bestDistanceSqr)
-            {
-                bestDistanceSqr = distanceSqr;
-                nearest = creature;
-            }
+            bestDistanceSqr = distanceSqr;
+            nearest = creature;
         }
 
         return nearest;
@@ -929,9 +1785,10 @@ public class EvolutionEcosystemManager : MonoBehaviour
         float bestScore = float.MinValue;
         float radiusSqr = searchRadius * searchRadius;
 
-        for (int i = 0; i < activeCreatures.Count; i++)
+        List<MarineCreatureAgent> mateCandidates = GetNearbyCreatures(seeker.transform.position, searchRadius);
+        for (int i = 0; i < mateCandidates.Count; i++)
         {
-            MarineCreatureAgent other = activeCreatures[i];
+            MarineCreatureAgent other = mateCandidates[i];
             if (other == null || other == seeker || other.Candidate == null || other.Candidate.Genome == null)
             {
                 continue;
@@ -1020,7 +1877,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
             cluster = obj.AddComponent<FishEggCluster>();
         }
 
-        cluster.Initialise(children, hatchTime, health, mass);
+        cluster.Initialise(children, hatchTime, health, mass, mother, father);
         RegisterEggCluster(cluster);
         return cluster;
     }
@@ -1055,7 +1912,59 @@ public class EvolutionEcosystemManager : MonoBehaviour
             }
         }
 
-        Debug.Log("Extinction event killed " + killCount + " creatures.");
+        ApplyExtinctionEnvironmentShock();
+        SpawnExtinctionPressureZone();
+        Debug.Log("Extinction event killed " + killCount + " creatures and shifted the ecosystem pressure.");
+    }
+
+    private void SpawnExtinctionPressureZone()
+    {
+        if (!SpawnPressureZoneOnExtinction)
+        {
+            return;
+        }
+
+        Vector3 position = GetRandomPointInSimulationArea();
+        EcosystemPressureZone zone;
+        if (PressureZonePrefab != null)
+        {
+            zone = Instantiate(PressureZonePrefab, position, Quaternion.identity);
+        }
+        else
+        {
+            GameObject obj = new GameObject("Extinction_Pressure_Zone");
+            obj.transform.position = position;
+            zone = obj.AddComponent<EcosystemPressureZone>();
+        }
+
+        zone.Radius = Mathf.Max(4f, ExtinctionPressureZoneRadius);
+        zone.Lifetime = Mathf.Max(5f, ExtinctionPressureZoneLifetime);
+        zone.Temporary = true;
+        zone.DriftDirection = Random.insideUnitSphere;
+        zone.DriftDirection.y *= 0.15f;
+        if (zone.DriftDirection.sqrMagnitude <= 0.001f) zone.DriftDirection = Vector3.forward;
+
+        int roll = Random.Range(0, 4);
+        EcosystemPressureZoneType type = roll == 0 ? EcosystemPressureZoneType.ColdCurrent : roll == 1 ? EcosystemPressureZoneType.DeadZone : roll == 2 ? EcosystemPressureZoneType.MutationHotspot : EcosystemPressureZoneType.WarmBloom;
+        zone.ConfigureForType(type);
+        RegisterPressureZone(zone);
+    }
+
+    private void ApplyExtinctionEnvironmentShock()
+    {
+        if (!ExtinctionChangesEnvironment)
+        {
+            return;
+        }
+
+        if (Environment != null)
+        {
+            Environment.MoveToNextSeason();
+        }
+
+        // A disaster should change opportunity as well as kill count. Extra carrion gives
+        // scavengers/predators a temporary boom instead of pure population collapse.
+        SpawnCarrionFromExtinctionEvents = ExtinctionCreatesCarrion;
     }
 
     public Vector3 GetSpawnPointForCreature()
@@ -1147,7 +2056,84 @@ public class EvolutionEcosystemManager : MonoBehaviour
 
             stress += zone.GetInfluence01(position) * (zone.EnergyDrainPressure + zone.HealthPressure + Mathf.Max(0f, zone.FlowStrength) * 0.04f);
         }
+        for (int i = activePressureZones.Count - 1; i >= 0; i--)
+        {
+            EcosystemPressureZone zone = activePressureZones[i];
+            if (zone == null)
+            {
+                activePressureZones.RemoveAt(i);
+                continue;
+            }
+
+            stress += zone.GetInfluence01(position) * Mathf.Max(0f, zone.StressScore);
+        }
+
         return stress;
+    }
+
+    public float GetLocalEnergyDrainMultiplier(Vector3 position)
+    {
+        float multiplier = Environment != null ? Environment.EnergyDrainMultiplier : 1f;
+
+        for (int i = activePressureZones.Count - 1; i >= 0; i--)
+        {
+            EcosystemPressureZone zone = activePressureZones[i];
+            if (zone == null)
+            {
+                activePressureZones.RemoveAt(i);
+                continue;
+            }
+
+            float influence = zone.GetInfluence01(position);
+            if (influence > 0f)
+            {
+                multiplier *= Mathf.Lerp(1f, Mathf.Max(0.05f, zone.EnergyDrainMultiplier), influence);
+            }
+        }
+
+        return Mathf.Clamp(multiplier, 0.35f, 2.5f);
+    }
+
+    public float GetLocalHealthPressure(Vector3 position)
+    {
+        float damage = 0f;
+
+        for (int i = activePressureZones.Count - 1; i >= 0; i--)
+        {
+            EcosystemPressureZone zone = activePressureZones[i];
+            if (zone == null)
+            {
+                activePressureZones.RemoveAt(i);
+                continue;
+            }
+
+            damage += zone.HealthDamagePerSecond * zone.GetInfluence01(position);
+        }
+
+        return Mathf.Max(0f, damage);
+    }
+
+    public float GetLocalFoodOpportunityMultiplier(Vector3 position)
+    {
+        float multiplier = 1f;
+
+        for (int i = activePressureZones.Count - 1; i >= 0; i--)
+        {
+            EcosystemPressureZone zone = activePressureZones[i];
+            if (zone == null)
+            {
+                activePressureZones.RemoveAt(i);
+                continue;
+            }
+
+            float influence = zone.GetInfluence01(position);
+            if (influence > 0f)
+            {
+                multiplier *= Mathf.Lerp(1f, Mathf.Max(0.05f, zone.FoodOpportunityMultiplier), influence);
+            }
+        }
+
+        return Mathf.Clamp(multiplier, 0.25f, 2.5f);
     }
 
     public Vector3 GetRandomPointInSimulationArea()
@@ -1216,9 +2202,18 @@ public class EvolutionEcosystemManager : MonoBehaviour
             }
         }
 
+        for (int i = activePressureZones.Count - 1; i >= 0; i--)
+        {
+            if (activePressureZones[i] != null)
+            {
+                Destroy(activePressureZones[i].gameObject);
+            }
+        }
+
         activeFood.Clear();
         activeCarrion.Clear();
         activeEggClusters.Clear();
+        activePressureZones.Clear();
         offspringPool.Clear();
     }
 
@@ -1259,6 +2254,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         RemoveNullPlants();
         RemoveNullEggClusters();
         RemoveNullCurrentZones();
+        RemoveNullPressureZones();
     }
 
     private void RemoveNullCreatures()
@@ -1309,6 +2305,14 @@ public class EvolutionEcosystemManager : MonoBehaviour
         }
     }
 
+    private void RemoveNullPressureZones()
+    {
+        for (int i = activePressureZones.Count - 1; i >= 0; i--)
+        {
+            if (activePressureZones[i] == null) activePressureZones.RemoveAt(i);
+        }
+    }
+
     public List<MarineCreatureAgent> GetActiveCreatures()
     {
         return activeCreatures;
@@ -1342,6 +2346,41 @@ public class EvolutionEcosystemManager : MonoBehaviour
     public List<EcosystemWaterCurrentZone> GetActiveCurrentZones()
     {
         return activeCurrentZones;
+    }
+
+    public List<EcosystemPressureZone> GetActivePressureZones()
+    {
+        return activePressureZones;
+    }
+
+    public void ReplacePopulationWithGenomes(List<EvolutionGenome> genomes, int generation, float generationTimerValue)
+    {
+        if (genomes == null || genomes.Count == 0)
+        {
+            Debug.LogWarning("Cannot load evolved population because no genomes were supplied.", this);
+            return;
+        }
+
+        if (bootstrapRoutine != null)
+        {
+            StopCoroutine(bootstrapRoutine);
+            bootstrapRoutine = null;
+        }
+
+        ClearCreaturesOnly();
+        offspringPool.Clear();
+        CurrentGeneration = Mathf.Max(1, generation);
+        GenerationTimer = Mathf.Max(0f, generationTimerValue);
+        nextCreatureId = 1;
+
+        int count = Mathf.Min(genomes.Count, Mathf.Max(1, MaxActiveCreatures));
+        for (int i = 0; i < count; i++)
+        {
+            EvolutionGenome genome = genomes[i] != null ? genomes[i].Clone() : EvolutionGenome.CreateBaseline();
+            SpawnCreature(new EvolutionCandidate(genome), GetSpawnPointForCreature());
+        }
+
+        EnsureSpatialGrid();
     }
 
     private void OnDrawGizmosSelected()

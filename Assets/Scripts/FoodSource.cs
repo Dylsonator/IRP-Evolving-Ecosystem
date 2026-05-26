@@ -22,6 +22,7 @@ public class FoodSource : MonoBehaviour
     private readonly List<int> recentFeederIds = new List<int>();
     private readonly List<float> recentFeederTimes = new List<float>();
     private Vector3 initialScale;
+    private PlantBudResource cachedPlantBud;
 
     private void OnEnable()
     {
@@ -41,6 +42,7 @@ public class FoodSource : MonoBehaviour
 
     private void Awake()
     {
+        cachedPlantBud = GetComponent<PlantBudResource>();
         initialScale = transform.localScale;
         if (MaxMass <= 0f)
         {
@@ -94,10 +96,14 @@ public class FoodSource : MonoBehaviour
         RemainingMass -= eaten;
         EnergyValue = RemainingMass;
 
-        PlantBudResource plantBud = GetComponent<PlantBudResource>();
-        if (plantBud != null)
+        if (cachedPlantBud == null)
         {
-            plantBud.NotifyBitten(eaten, feederId);
+            cachedPlantBud = GetComponent<PlantBudResource>();
+        }
+
+        if (cachedPlantBud != null)
+        {
+            cachedPlantBud.NotifyBitten(eaten, feederId);
         }
 
         if (RemainingMass <= 0.01f)
@@ -110,6 +116,27 @@ public class FoodSource : MonoBehaviour
         }
 
         return eaten;
+    }
+
+    public bool WasRecentlyFedBy(int feederId)
+    {
+        if (feederId == 0)
+        {
+            return false;
+        }
+
+        CleanRecentFeeders();
+        return recentFeederIds.Contains(feederId);
+    }
+
+    public bool IsDetachedPlantBud()
+    {
+        if (cachedPlantBud == null)
+        {
+            cachedPlantBud = GetComponent<PlantBudResource>();
+        }
+
+        return cachedPlantBud != null && !cachedPlantBud.AttachedToPlant;
     }
 
     public int GetRecentFeederCount()

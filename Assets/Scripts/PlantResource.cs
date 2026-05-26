@@ -30,11 +30,11 @@ public class PlantResource : MonoBehaviour
     public FoodSource BudPrefab;
     public bool UseBudSockets = true;
     public string BudSocketNameContains = "Bud";
-    public int RandomBudCount = 5;
+    public int RandomBudCount = 7;
     public float RandomBudRadius = 1.25f;
-    public float BudMass = 18f;
-    public float BudNutritionQuality = 1f;
-    public float DetachChancePerMinute = 0.08f;
+    public float BudMass = 38f;
+    public float BudNutritionQuality = 1.25f;
+    public float DetachChancePerMinute = 0.01f;
     public float DetachedBudLifeTime = 55f;
     public bool BudsDetachWhenBitten = true;
     public float DetachImpulseMin = 0.25f;
@@ -42,9 +42,10 @@ public class PlantResource : MonoBehaviour
 
     [Header("Regrowth")]
     public bool Regrows = true;
-    public float RegrowDelay = 18f;
-    public float RegrowInterval = 9f;
-    public int MaxActiveBuds = 7;
+    public float RegrowDelay = 7f;
+    public float RegrowInterval = 3.0f;
+    public int MaxActiveBuds = 10;
+    public bool UseFoodSupplySafeguards = true;
 
     [Header("Terrain Placement")]
     public bool SnapToTerrainOnStart = true;
@@ -79,6 +80,8 @@ public class PlantResource : MonoBehaviour
 
     private void Start()
     {
+        ApplyFoodSupplySafeguards();
+
         if (SnapToTerrainOnStart && EvolutionEcosystemManager.Instance != null)
         {
             Vector3 p = EvolutionEcosystemManager.Instance.ProjectPointToTerrain(transform.position, TerrainOffset);
@@ -92,6 +95,25 @@ public class PlantResource : MonoBehaviour
 
         CacheSockets();
         FillBuds();
+    }
+
+
+    private void ApplyFoodSupplySafeguards()
+    {
+        if (!UseFoodSupplySafeguards)
+        {
+            return;
+        }
+
+        // One plant should support a small group, but not become an infinite battery.
+        RandomBudCount = Mathf.Clamp(RandomBudCount, 5, 9);
+        MaxActiveBuds = Mathf.Clamp(MaxActiveBuds, 7, 12);
+        BudMass = Mathf.Clamp(BudMass, 32f, 46f);
+        BudNutritionQuality = Mathf.Clamp(BudNutritionQuality, 1.05f, 1.35f);
+        RegrowDelay = Mathf.Clamp(RegrowDelay, 5f, 10f);
+        RegrowInterval = Mathf.Clamp(RegrowInterval, 2.5f, 4.5f);
+        DetachChancePerMinute = Mathf.Min(DetachChancePerMinute, 0.015f);
+        DetachedBudLifeTime = Mathf.Max(DetachedBudLifeTime, 75f);
     }
 
     private void Update()
@@ -322,14 +344,15 @@ public class PlantResource : MonoBehaviour
             return;
         }
 
-        regrowTimer -= Time.deltaTime;
+        float foodOpportunity = EvolutionEcosystemManager.Instance != null ? EvolutionEcosystemManager.Instance.GetLocalFoodOpportunityMultiplier(transform.position) : 1f;
+        regrowTimer -= Time.deltaTime * Mathf.Max(0.1f, foodOpportunity);
         if (regrowTimer > 0f)
         {
             return;
         }
 
         SpawnBud(activeBuds.Count);
-        regrowTimer = RegrowInterval;
+        regrowTimer = RegrowInterval / Mathf.Max(0.25f, foodOpportunity);
     }
 
     private void HandleBudDetachment()
@@ -411,6 +434,7 @@ public class PlantResource : MonoBehaviour
         bud.AttachedToPlant = socket != null;
         bud.DetachedLifeTime = DetachedBudLifeTime;
         bud.DetachWhenBitten = BudsDetachWhenBitten;
+        bud.DetachOnlyBelowMassRatio = 0.02f;
         bud.DetachImpulseMin = DetachImpulseMin;
         bud.DetachImpulseMax = DetachImpulseMax;
         activeBuds.Add(bud);
@@ -423,7 +447,21 @@ public class PlantResource : MonoBehaviour
 
     private void CleanBuds()
     {
-        activeBuds.RemoveAll(bud => bud == null || bud.GetComponent<FoodSource>() == null || bud.GetComponent<FoodSource>().IsConsumed);
+        for (int i = activeBuds.Count - 1; i >= 0; i--)
+        {
+            PlantBudResource bud = activeBuds[i];
+            if (bud == null)
+            {
+                activeBuds.RemoveAt(i);
+                continue;
+            }
+
+            FoodSource food = bud.GetComponent<FoodSource>();
+            if (food == null || food.IsConsumed)
+            {
+                activeBuds.RemoveAt(i);
+            }
+        }
     }
 
     private void OnDrawGizmosSelected()

@@ -16,14 +16,14 @@ public class SimpleNeuralNetwork
     public static SimpleNeuralNetwork CreateRandom(int inputCount, int hiddenCount, int outputCount)
     {
         SimpleNeuralNetwork network = new SimpleNeuralNetwork();
-        network.InputCount = inputCount;
-        network.HiddenCount = hiddenCount;
-        network.OutputCount = outputCount;
+        network.InputCount = Mathf.Max(1, inputCount);
+        network.HiddenCount = Mathf.Max(1, hiddenCount);
+        network.OutputCount = Mathf.Max(1, outputCount);
 
-        network.InputHiddenWeights = new float[inputCount * hiddenCount];
-        network.HiddenOutputWeights = new float[hiddenCount * outputCount];
-        network.HiddenBiases = new float[hiddenCount];
-        network.OutputBiases = new float[outputCount];
+        network.InputHiddenWeights = new float[network.InputCount * network.HiddenCount];
+        network.HiddenOutputWeights = new float[network.HiddenCount * network.OutputCount];
+        network.HiddenBiases = new float[network.HiddenCount];
+        network.OutputBiases = new float[network.OutputCount];
 
         network.Randomise(network.InputHiddenWeights);
         network.Randomise(network.HiddenOutputWeights);
@@ -35,17 +35,22 @@ public class SimpleNeuralNetwork
 
     public float[] Evaluate(float[] inputs)
     {
-        float[] outputs = new float[OutputCount];
-        float[] hidden = new float[HiddenCount];
+        float[] outputs = new float[Mathf.Max(1, OutputCount)];
+        float[] hidden = new float[Mathf.Max(1, HiddenCount)];
         EvaluateNonAlloc(inputs, outputs, hidden);
         return outputs;
     }
 
     public bool EvaluateNonAlloc(float[] inputs, float[] outputs, float[] hiddenScratch)
     {
+        if (!ValidateNetwork())
+        {
+            return false;
+        }
+
         if (inputs == null || inputs.Length != InputCount || outputs == null || outputs.Length < OutputCount || hiddenScratch == null || hiddenScratch.Length < HiddenCount)
         {
-            Debug.LogWarning("SimpleNeuralNetwork received invalid input/output buffers.");
+            // Do not spam warnings during simulation. Invalid buffers can happen during hot reload / old saved assets.
             return false;
         }
 
@@ -60,7 +65,7 @@ public class SimpleNeuralNetwork
                 weightOffset += HiddenCount;
             }
 
-            hiddenScratch[h] = (float)Math.Tanh(sum);
+            hiddenScratch[h] = FastTanh(sum);
         }
 
         for (int o = 0; o < OutputCount; o++)
@@ -74,7 +79,7 @@ public class SimpleNeuralNetwork
                 weightOffset += OutputCount;
             }
 
-            outputs[o] = Mathf.Clamp((float)Math.Tanh(sum), -1f, 1f);
+            outputs[o] = Mathf.Clamp(FastTanh(sum), -1f, 1f);
         }
 
         return true;
@@ -82,21 +87,124 @@ public class SimpleNeuralNetwork
 
     public SimpleNeuralNetwork CreateMutatedCopy(float mutationRate, float mutationStrength)
     {
-        SimpleNeuralNetwork copy = new SimpleNeuralNetwork();
-        copy.InputCount = InputCount;
-        copy.HiddenCount = HiddenCount;
-        copy.OutputCount = OutputCount;
+        return CreateMutatedCopy(mutationRate, mutationStrength, 0f, HiddenCount);
+    }
+
+    public SimpleNeuralNetwork CreateMutatedCopy(float mutationRate, float mutationStrength, float structuralMutationRate, int maxHiddenCount)
+    {
+        if (!ValidateNetwork())
+        {
+            return CreateRandom(Mathf.Max(1, InputCount), Mathf.Max(1, HiddenCount), Mathf.Max(1, OutputCount));
+        }
+
+        SimpleNeuralNetwork copy = CopyStructure();
 
         copy.InputHiddenWeights = CopyAndMutate(InputHiddenWeights, mutationRate, mutationStrength);
         copy.HiddenOutputWeights = CopyAndMutate(HiddenOutputWeights, mutationRate, mutationStrength);
         copy.HiddenBiases = CopyAndMutate(HiddenBiases, mutationRate, mutationStrength);
         copy.OutputBiases = CopyAndMutate(OutputBiases, mutationRate, mutationStrength);
 
+        maxHiddenCount = Mathf.Max(copy.HiddenCount, maxHiddenCount);
+        if (structuralMutationRate > 0f && copy.HiddenCount < maxHiddenCount && UnityEngine.Random.value <= structuralMutationRate)
+        {
+            copy = copy.CreateWithAdditionalHiddenNode();
+        }
+
         return copy;
+    }
+
+    public SimpleNeuralNetwork ResizeTo(int inputCount, int hiddenCount, int outputCount)
+    {
+        inputCount = Mathf.Max(1, inputCount);
+        hiddenCount = Mathf.Max(1, hiddenCount);
+        outputCount = Mathf.Max(1, outputCount);
+
+        SimpleNeuralNetwork resized = CreateRandom(inputCount, hiddenCount, outputCount);
+
+        int inputMin = Mathf.Min(InputCount, inputCount);
+        int hiddenMin = Mathf.Min(HiddenCount, hiddenCount);
+        int outputMin = Mathf.Min(OutputCount, outputCount);
+
+        for (int i = 0; i < inputMin; i++)
+        {
+            for (int h = 0; h < hiddenMin; h++)
+            {
+                resized.InputHiddenWeights[i * hiddenCount + h] = InputHiddenWeights[i * HiddenCount + h];
+            }
+        }
+
+        for (int h = 0; h < hiddenMin; h++)
+        {
+            resized.HiddenBiases[h] = HiddenBiases[h];
+            for (int o = 0; o < outputMin; o++)
+            {
+                resized.HiddenOutputWeights[h * outputCount + o] = HiddenOutputWeights[h * OutputCount + o];
+            }
+        }
+
+        for (int o = 0; o < outputMin; o++)
+        {
+            resized.OutputBiases[o] = OutputBiases[o];
+        }
+
+        return resized;
+    }
+
+    public int GetConnectionCount()
+    {
+        return Mathf.Max(0, InputCount * HiddenCount + HiddenCount * OutputCount);
+    }
+
+    private SimpleNeuralNetwork CopyStructure()
+    {
+        SimpleNeuralNetwork copy = new SimpleNeuralNetwork();
+        copy.InputCount = InputCount;
+        copy.HiddenCount = HiddenCount;
+        copy.OutputCount = OutputCount;
+        return copy;
+    }
+
+    private SimpleNeuralNetwork CreateWithAdditionalHiddenNode()
+    {
+        int newHiddenCount = HiddenCount + 1;
+        SimpleNeuralNetwork expanded = CreateRandom(InputCount, newHiddenCount, OutputCount);
+
+        for (int i = 0; i < InputCount; i++)
+        {
+            for (int h = 0; h < HiddenCount; h++)
+            {
+                expanded.InputHiddenWeights[i * newHiddenCount + h] = InputHiddenWeights[i * HiddenCount + h];
+            }
+
+            expanded.InputHiddenWeights[i * newHiddenCount + HiddenCount] = UnityEngine.Random.Range(-0.2f, 0.2f);
+        }
+
+        for (int h = 0; h < HiddenCount; h++)
+        {
+            expanded.HiddenBiases[h] = HiddenBiases[h];
+            for (int o = 0; o < OutputCount; o++)
+            {
+                expanded.HiddenOutputWeights[h * OutputCount + o] = HiddenOutputWeights[h * OutputCount + o];
+            }
+        }
+
+        expanded.HiddenBiases[HiddenCount] = UnityEngine.Random.Range(-0.1f, 0.1f);
+        for (int o = 0; o < OutputCount; o++)
+        {
+            expanded.OutputBiases[o] = OutputBiases[o];
+            expanded.HiddenOutputWeights[HiddenCount * OutputCount + o] = UnityEngine.Random.Range(-0.2f, 0.2f);
+        }
+
+        return expanded;
     }
 
     private float[] CopyAndMutate(float[] source, float mutationRate, float mutationStrength)
     {
+        if (source == null)
+        {
+            return new float[0];
+        }
+
         float[] result = new float[source.Length];
 
         for (int i = 0; i < source.Length; i++)
@@ -119,5 +227,25 @@ public class SimpleNeuralNetwork
         {
             values[i] = UnityEngine.Random.Range(-1f, 1f);
         }
+    }
+
+    private bool ValidateNetwork()
+    {
+        return InputCount > 0
+            && HiddenCount > 0
+            && OutputCount > 0
+            && InputHiddenWeights != null
+            && HiddenOutputWeights != null
+            && HiddenBiases != null
+            && OutputBiases != null
+            && InputHiddenWeights.Length == InputCount * HiddenCount
+            && HiddenOutputWeights.Length == HiddenCount * OutputCount
+            && HiddenBiases.Length == HiddenCount
+            && OutputBiases.Length == OutputCount;
+    }
+
+    private float FastTanh(float value)
+    {
+        return (float)Math.Tanh(value);
     }
 }

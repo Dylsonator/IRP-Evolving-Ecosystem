@@ -146,6 +146,7 @@ MonoBehaviour:
       MutationRate: 0.08
       MutationStrength: 1
       MorphPartMutationRate: 0.035
+      BrainStructuralMutationRate: 0.025
       Brain:
         InputCount: 0
         HiddenCount: 0
@@ -237,6 +238,11 @@ MonoBehaviour:
   BaseDigestionPerSecond: 3.2
   BaseBiteMass: 7.5
   FullStomachSlowdown: 0.18
+  UseEcologyBalanceSafeguards: 1
+  PlantEnergyGainMultiplier: 2.15
+  MeatEnergyGainMultiplier: 2.35
+  CarrionEnergyGainMultiplier: 1.95
+  EnergyRecoveredPerStoredStomachMass: 0.28
   MinimumCruiseSpeedScale: 0.28
   NormalCruiseSpeedScale: 0.78
   HungryCruiseSpeedScale: 1.08
@@ -248,6 +254,7 @@ MonoBehaviour:
   WanderRefreshMin: 2.5
   WanderRefreshMax: 6.5
   BrainInfluence: 0.08
+  BrainDecisionInfluence: 0.18
   ShouldLeaveCurrentResource: 0
   BrainDecisionInterval: 0.65
   MinimumBehaviourHoldTime: 1.35
@@ -350,6 +357,28 @@ MonoBehaviour:
   StarvingAttackEnergyRatio: 0.26
   StarvingAttackAggressionRequired: 0.38
   StarvingAttackMeatRequired: 0.64
+  EnableAdvancedFishBehaviours: 1
+  AmbushBehaviourThreshold: 0.48
+  AmbushAnchorRefreshTime: 5.5
+  AmbushHoldRadius: 2.6
+  AmbushStrikeRange: 7.5
+  AmbushPullWeight: 1.8
+  CStartBurstDuration: 0.55
+  CStartBurstWeight: 8.5
+  CStartSideBias: 0.65
+  EggGuardSearchRadius: 22
+  EggGuardBehaviourThreshold: 0.36
+  EggGuardPullWeight: 2.4
+  EggGuardThreatInterceptWeight: 3.2
+  EggGuardScanInterval: 1.25
+  MobbingBehaviourThreshold: 0.56
+  MobbingSearchRadius: 15
+  MobbingIdealDistance: 4.4
+  MobbingPullWeight: 2.2
+  MobbingPressureDuration: 1.4
+  CourtshipStartDistance: 8
+  CourtshipDuration: 2.4
+  CourtshipCircleWeight: 1.6
   DepthPreferenceStrength: 0.95
   DepthPadding: 3
   BoundaryAvoidanceDistance: 7
@@ -365,6 +394,8 @@ MonoBehaviour:
   UseRootLogicCollider: 1
   RootColliderIsTrigger: 1
   RootColliderRadius: 0.95
+  MaxRuntimeRootColliderRadius: 0.35
+  HuntingContactSpaceMultiplier: 0.25
   DisableVisualColliders: 1
   PersonalSpaceMultiplier: 1.25
   EmergencyUnstickRadiusMultiplier: 0.85
@@ -401,6 +432,10 @@ MonoBehaviour:
   LocalDebugLabels: 0
   ScaleCreatureRootByEffectiveBodySize: 1
   DisableLegacyPhenotypeVisuals: 1
+  EmergencyPerformanceMode: 1
+  EmergencyFixedUpdateStride: 2
+  SocialScanInterval: 0.75
+  TerrainScanInterval: 0.45
 --- !u!135 &6774844043051048400
 SphereCollider:
   m_ObjectHideFlags: 0
@@ -420,5 +455,5 @@ SphereCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Radius: 0.5
+  m_Radius: 0.25
   m_Center: {x: 0, y: 0, z: 0}

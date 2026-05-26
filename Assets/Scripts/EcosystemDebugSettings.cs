@@ -6,23 +6,23 @@ public class EcosystemDebugSettings : MonoBehaviour
 
     [Header("Observation Debug Drawing")]
     public bool DrawCreatureMovementRays = false;
-    public bool DrawFoodTargetRays = true;
-    public bool DrawCarrionTargetRays = true;
-    public bool DrawPreyTargetRays = true;
-    public bool DrawSocialTargetRays = true;
-    public bool DrawVelocityRays = true;
-    public bool DrawWantedDirectionRays = true;
-    public bool DrawMouthRange = true;
-    public bool DrawBiteRange = true;
+    public bool DrawFoodTargetRays = false;
+    public bool DrawCarrionTargetRays = false;
+    public bool DrawPreyTargetRays = false;
+    public bool DrawSocialTargetRays = false;
+    public bool DrawVelocityRays = false;
+    public bool DrawWantedDirectionRays = false;
+    public bool DrawMouthRange = false;
+    public bool DrawBiteRange = false;
     public bool DrawVisionRange = false;
     public bool DrawBoundaryPush = false;
-    public bool DrawBoidRays = true;
+    public bool DrawBoidRays = false;
 
     [Header("Labels / Panels")]
     public bool ShowCreatureLabels = false;
     public bool ShowDietInLabels = true;
-    public bool ShowSelectedFishPanel = true;
-    public bool HighlightSelectedFish = true;
+    public bool ShowSelectedFishPanel = false;
+    public bool HighlightSelectedFish = false;
     public bool ShowMovementStateInLabels = true;
     public bool ShowVerticalReasonInLabels = true;
     public float LabelMaxDistance = 80f;
@@ -48,5 +48,22 @@ public class EcosystemDebugSettings : MonoBehaviour
         }
 
         Instance = this;
+
+        DrawCreatureMovementRays = false;
+        DrawFoodTargetRays = false;
+        DrawCarrionTargetRays = false;
+        DrawPreyTargetRays = false;
+        DrawSocialTargetRays = false;
+        DrawVelocityRays = false;
+        DrawWantedDirectionRays = false;
+        DrawMouthRange = false;
+        DrawBiteRange = false;
+        DrawVisionRange = false;
+        DrawBoundaryPush = false;
+        DrawBoidRays = false;
+        ShowCreatureLabels = false;
+        ShowSelectedFishPanel = false;
+        HighlightSelectedFish = false;
+        AutoCaptureGenerationScreenshots = false;
     }
 }

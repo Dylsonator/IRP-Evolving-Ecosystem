@@ -5,14 +5,20 @@ public class FishEggCluster : MonoBehaviour
 {
     [Header("Egg State")]
     public List<EvolutionCandidate> Children = new List<EvolutionCandidate>();
-    public float HatchTime = 45f;
+    public float HatchTime = 32f;
     public float Age;
-    public float Health = 25f;
+    public float Health = 36f;
     public float EggMass = 20f;
-    public float ProtectionRadius = 6f;
-    public float PredatorScanInterval = 0.5f;
-    public float PredatorBiteMass = 4f;
+    public float ProtectionRadius = 7f;
+    public float PredatorScanInterval = 0.75f;
+    public float PredatorBiteMass = 2.4f;
     public bool SpawnChildrenOnHatch = true;
+
+    [Header("Parent / Guarding")]
+    public int MotherId;
+    public int FatherId;
+    public MarineCreatureAgent Mother;
+    public MarineCreatureAgent Father;
 
     [Header("Visual")]
     public float MinimumScale = 0.25f;
@@ -76,12 +82,16 @@ public class FishEggCluster : MonoBehaviour
         }
     }
 
-    public void Initialise(List<EvolutionCandidate> children, float hatchTime, float health, float mass)
+    public void Initialise(List<EvolutionCandidate> children, float hatchTime, float health, float mass, MarineCreatureAgent mother = null, MarineCreatureAgent father = null)
     {
         Children = children ?? new List<EvolutionCandidate>();
         HatchTime = Mathf.Max(3f, hatchTime);
         Health = Mathf.Max(1f, health);
         EggMass = Mathf.Max(1f, mass);
+        Mother = mother;
+        Father = father;
+        MotherId = mother != null && mother.Candidate != null ? mother.Candidate.Id : 0;
+        FatherId = father != null && father.Candidate != null ? father.Candidate.Id : 0;
         UpdateScale();
     }
 
@@ -93,11 +103,16 @@ public class FishEggCluster : MonoBehaviour
             return;
         }
 
-        List<MarineCreatureAgent> creatures = manager.GetActiveCreatures();
+        List<MarineCreatureAgent> creatures = manager.GetNearbyCreatures(transform.position, ProtectionRadius);
         for (int i = 0; i < creatures.Count; i++)
         {
             MarineCreatureAgent fish = creatures[i];
             if (fish == null || fish.Candidate == null || fish.Candidate.Genome == null)
+            {
+                continue;
+            }
+
+            if (IsParentOrGuardian(fish) && fish.Candidate.Genome.EggProtection > 0.18f)
             {
                 continue;
             }
@@ -149,6 +164,23 @@ public class FishEggCluster : MonoBehaviour
         }
 
         Destroy(gameObject);
+    }
+
+
+    public bool IsParentOrGuardian(MarineCreatureAgent fish)
+    {
+        if (fish == null || fish.Candidate == null)
+        {
+            return false;
+        }
+
+        if (fish == Mother || fish == Father)
+        {
+            return true;
+        }
+
+        int id = fish.Candidate.Id;
+        return id != 0 && (id == MotherId || id == FatherId);
     }
 
     private void UpdateScale()

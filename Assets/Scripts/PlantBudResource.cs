@@ -12,6 +12,7 @@ public class PlantBudResource : MonoBehaviour
     public float SettleSpeed = 2.2f;
     public float GroundClearance = 0.18f;
     public bool DetachWhenBitten = true;
+    [Range(0f, 1f)] public float DetachOnlyBelowMassRatio = 0.02f;
     public float DetachImpulseMin = 0.25f;
     public float DetachImpulseMax = 0.85f;
 
@@ -29,21 +30,6 @@ public class PlantBudResource : MonoBehaviour
         food = GetComponent<FoodSource>();
     }
 
-    private void OnEnable()
-    {
-        if (EvolutionEcosystemManager.Instance != null)
-        {
-            EvolutionEcosystemManager.Instance.RegisterFood(GetComponent<FoodSource>());
-        }
-    }
-
-    private void OnDisable()
-    {
-        if (EvolutionEcosystemManager.Instance != null)
-        {
-            EvolutionEcosystemManager.Instance.UnregisterFood(GetComponent<FoodSource>());
-        }
-    }
 
     private void Update()
     {
@@ -116,14 +102,23 @@ public class PlantBudResource : MonoBehaviour
 
     public void NotifyBitten(float massTaken, int feederId)
     {
-        if (hasBeenBitten || massTaken <= 0f)
+        if (massTaken <= 0f)
         {
             return;
         }
 
-        hasBeenBitten = true;
-        if (DetachWhenBitten && AttachedToPlant)
+        // Do not knock buds off on the first nibble. They only detach when essentially
+        // finished, so creatures do not strip a plant and then ignore loose food.
+        if (!DetachWhenBitten || !AttachedToPlant)
         {
+            hasBeenBitten = true;
+            return;
+        }
+
+        float massRatio = food != null ? food.GetMassRatio() : 0f;
+        if (massRatio <= DetachOnlyBelowMassRatio)
+        {
+            hasBeenBitten = true;
             DetachFromPlant(BuildBiteImpulse());
         }
     }

@@ -4,9 +4,10 @@ using UnityEngine;
 [Serializable]
 public class EvolutionGenome
 {
-    public const int BrainInputCount = 12;
-    public const int BrainHiddenCount = 10;
-    public const int BrainOutputCount = 3;
+    public const int BrainInputCount = 20;
+    public const int BrainHiddenCount = 12;
+    public const int BrainOutputCount = 8;
+    public const int BrainMaxHiddenCount = 22;
 
     [Header("Core Body Traits")]
     public float Speed = 4f;
@@ -101,6 +102,8 @@ public class EvolutionGenome
     [Range(0f, 1f)] public float MorphPartMutationRate = 0.035f;
 
     [Header("Evolvable Behaviour Controller")]
+    [Tooltip("Chance for NEAT-lite structural growth. This can add hidden nodes over generations while keeping old weights.")]
+    [Range(0f, 0.2f)] public float BrainStructuralMutationRate = 0.025f;
     public SimpleNeuralNetwork Brain;
 
     public static EvolutionGenome CreateBaseline()
@@ -112,7 +115,7 @@ public class EvolutionGenome
         genome.VerticalControl = 1.05f;
         genome.BodySize = 1f;
         genome.VisionRange = 18f;
-        genome.EnergyCapacity = 125f;
+        genome.EnergyCapacity = 150f;
 
         genome.BodyLength = 1f;
         genome.BodyWidth = 1f;
@@ -160,7 +163,7 @@ public class EvolutionGenome
         genome.FoodSharing = 0.55f;
         genome.Territoriality = 0.08f;
         genome.ActivityCycle = 0.65f;
-        genome.HungerThreshold = 0.48f;
+        genome.HungerThreshold = 0.42f;
         genome.StomachSize = 1f;
         genome.Metabolism = 1f;
         genome.Bravery = 0.45f;
@@ -170,16 +173,17 @@ public class EvolutionGenome
         genome.SexGene = UnityEngine.Random.value;
         genome.NestingDrive = 0.45f;
         genome.EggProtection = 0.35f;
-        genome.MateDrive = 0.45f;
+        genome.MateDrive = 0.58f;
         genome.Stealth = 0.25f;
         genome.HearingSensitivity = 0.45f;
         genome.PlantDietLocked = false;
         genome.MeatDietLocked = false;
         genome.CarrionDietLocked = false;
-        genome.ReproductionEnergyThreshold = 82f;
+        genome.ReproductionEnergyThreshold = 62f;
         genome.MutationRate = 0.08f;
         genome.MutationStrength = 1f;
         genome.MorphPartMutationRate = 0.035f;
+        genome.BrainStructuralMutationRate = 0.025f;
         genome.Brain = SimpleNeuralNetwork.CreateRandom(BrainInputCount, BrainHiddenCount, BrainOutputCount);
         genome.ClampValues();
         return genome;
@@ -226,14 +230,14 @@ public class EvolutionGenome
         genome.SpikeMorphId = CreatureMorphLibrary.GetRandomPartIdFromActive(CreatureMorphSlot.Spikes, genome.SpikeMorphId);
         genome.GillMorphId = CreatureMorphLibrary.GetRandomPartIdFromActive(CreatureMorphSlot.Gills, genome.GillMorphId);
 
-        genome.PlantDiet = UnityEngine.Random.Range(0.45f, 1f);
-        genome.MeatDiet = UnityEngine.Random.Range(0f, 0.65f);
-        genome.CarrionDiet = UnityEngine.Random.Range(0f, 0.55f);
+        genome.PlantDiet = UnityEngine.Random.Range(0.10f, 1f);
+        genome.MeatDiet = UnityEngine.Random.Range(0f, 0.85f);
+        genome.CarrionDiet = UnityEngine.Random.Range(0f, 0.70f);
         genome.HungerDrive = UnityEngine.Random.Range(0.35f, 1f);
         genome.AttractionRange = UnityEngine.Random.Range(0f, 1f);
         genome.ThreatRange = UnityEngine.Random.Range(0f, 1f);
         genome.GroupingChance = UnityEngine.Random.Range(0f, 0.8f);
-        genome.Aggression = UnityEngine.Random.Range(0f, 0.8f);
+        genome.Aggression = UnityEngine.Random.Range(0f, 0.95f);
         genome.RiskTolerance = UnityEngine.Random.Range(0.15f, 1f);
         genome.DangerFactor = UnityEngine.Random.Range(0f, 0.75f);
         genome.PreferredDepth01 = UnityEngine.Random.Range(0.15f, 0.85f);
@@ -243,7 +247,7 @@ public class EvolutionGenome
         genome.FoodSharing = UnityEngine.Random.Range(0.05f, 0.95f);
         genome.Territoriality = UnityEngine.Random.Range(0f, 0.75f);
         genome.ActivityCycle = UnityEngine.Random.Range(0.15f, 1f);
-        genome.HungerThreshold = UnityEngine.Random.Range(0.35f, 0.72f);
+        genome.HungerThreshold = UnityEngine.Random.Range(0.28f, 0.62f);
         genome.StomachSize = UnityEngine.Random.Range(0.65f, 1.45f);
         genome.Metabolism = UnityEngine.Random.Range(0.65f, 1.45f);
         genome.Bravery = UnityEngine.Random.Range(0.1f, 0.9f);
@@ -253,13 +257,14 @@ public class EvolutionGenome
         genome.SexGene = UnityEngine.Random.value;
         genome.NestingDrive = UnityEngine.Random.Range(0.15f, 0.85f);
         genome.EggProtection = UnityEngine.Random.Range(0.05f, 0.85f);
-        genome.MateDrive = UnityEngine.Random.Range(0.15f, 0.85f);
+        genome.MateDrive = UnityEngine.Random.Range(0.32f, 0.95f);
         genome.Stealth = UnityEngine.Random.Range(0.05f, 0.85f);
         genome.HearingSensitivity = UnityEngine.Random.Range(0.15f, 0.9f);
-        genome.ReproductionEnergyThreshold = UnityEngine.Random.Range(60f, 105f);
+        genome.ReproductionEnergyThreshold = UnityEngine.Random.Range(45f, 90f);
         genome.MutationRate = UnityEngine.Random.Range(0.04f, 0.14f);
         genome.MutationStrength = UnityEngine.Random.Range(0.65f, 1.4f);
         genome.MorphPartMutationRate = UnityEngine.Random.Range(0.02f, 0.06f);
+        genome.BrainStructuralMutationRate = UnityEngine.Random.Range(0.01f, 0.055f);
         genome.Brain = SimpleNeuralNetwork.CreateRandom(inputCount, hiddenCount, outputCount);
         genome.ClampValues();
         return genome;
@@ -377,9 +382,10 @@ public class EvolutionGenome
         child.MutationRate = MutateFloat(MutationRate, 0.02f, finalMutationRate, finalMutationStrength);
         child.MutationStrength = MutateFloat(MutationStrength, 0.15f, finalMutationRate, finalMutationStrength);
         child.MorphPartMutationRate = MutateFloat(MorphPartMutationRate, 0.015f, finalMutationRate, finalMutationStrength);
+        child.BrainStructuralMutationRate = MutateFloat(BrainStructuralMutationRate, 0.012f, finalMutationRate, finalMutationStrength);
 
         child.Brain = Brain != null
-            ? Brain.CreateMutatedCopy(finalMutationRate, finalMutationStrength)
+            ? Brain.CreateMutatedCopy(finalMutationRate, finalMutationStrength, BrainStructuralMutationRate * environmentMutationMultiplier, BrainMaxHiddenCount)
             : SimpleNeuralNetwork.CreateRandom(BrainInputCount, BrainHiddenCount, BrainOutputCount);
 
         child.ClampValues();
@@ -474,10 +480,16 @@ public class EvolutionGenome
         MutationRate = Mathf.Clamp(MutationRate, 0.005f, 0.35f);
         MutationStrength = Mathf.Clamp(MutationStrength, 0.1f, 3f);
         MorphPartMutationRate = Mathf.Clamp(MorphPartMutationRate, 0f, 0.25f);
+        BrainStructuralMutationRate = Mathf.Clamp(BrainStructuralMutationRate, 0f, 0.2f);
 
-        if (Brain == null || Brain.InputCount != BrainInputCount || Brain.OutputCount != BrainOutputCount)
+        if (Brain == null)
         {
             Brain = SimpleNeuralNetwork.CreateRandom(BrainInputCount, BrainHiddenCount, BrainOutputCount);
+        }
+        else if (Brain.InputCount != BrainInputCount || Brain.OutputCount != BrainOutputCount || Brain.HiddenCount < 1 || Brain.HiddenCount > BrainMaxHiddenCount)
+        {
+            int targetHidden = Mathf.Clamp(Brain.HiddenCount > 0 ? Brain.HiddenCount : BrainHiddenCount, BrainHiddenCount, BrainMaxHiddenCount);
+            Brain = Brain.ResizeTo(BrainInputCount, targetHidden, BrainOutputCount);
         }
     }
 
