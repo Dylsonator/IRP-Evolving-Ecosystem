@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 
+// Saves/loads evolved populations so good runs can become demo baselines.
 [System.Serializable]
 public class EvolutionPopulationSaveData
 {
@@ -11,10 +12,7 @@ public class EvolutionPopulationSaveData
     public List<EvolutionGenome> Genomes = new List<EvolutionGenome>();
 }
 
-/// <summary>
-/// Save long-run evolved populations and reload them into a clean demo scene.
-/// Attach this next to EvolutionEcosystemManager or call the context menu commands.
-/// </summary>
+// Saves good evolved populations so they can be loaded again later.
 public class EvolutionPopulationSaveLoad : MonoBehaviour
 {
     public EvolutionEcosystemManager Manager;
@@ -31,11 +29,13 @@ public class EvolutionPopulationSaveLoad : MonoBehaviour
         }
     }
 
+    // Builds a full file path inside persistent data
     private string GetFullPath(string fileName)
     {
         return Path.Combine(Application.persistentDataPath, FolderName, string.IsNullOrEmpty(fileName) ? FileName : fileName);
     }
 
+    // Sets up cached references and safe starting values before the sim runs
     private void Awake()
     {
         if (Manager == null)
@@ -44,13 +44,17 @@ public class EvolutionPopulationSaveLoad : MonoBehaviour
         }
     }
 
+    // Saves current population.
     [ContextMenu("Save Current Evolved Population")]
+    // Saves the current evolved population to the default file
     public void SaveCurrentPopulation()
     {
         SaveCurrentPopulationToFile(FileName);
     }
 
+    // Saves timestamped population snapshot.
     [ContextMenu("Save Timestamped Population Snapshot")]
+    // Saves a separate snapshot so good generations are not overwritten
     public void SaveTimestampedPopulationSnapshot()
     {
         string stamp = System.DateTime.Now.ToString("yyyyMMdd_HHmmss");
@@ -59,11 +63,13 @@ public class EvolutionPopulationSaveLoad : MonoBehaviour
     }
 
     [ContextMenu("Save Current Population As Baseline")]
+    // Saves the current population as a reusable baseline start point
     public void SaveCurrentPopulationAsBaseline()
     {
         SaveCurrentPopulationToFile(BaselineFileName);
     }
 
+    // Writes genomes and brain data to a JSON save file
     public void SaveCurrentPopulationToFile(string fileName)
     {
         if (Manager == null)
@@ -100,18 +106,23 @@ public class EvolutionPopulationSaveLoad : MonoBehaviour
         Debug.Log("Saved evolved population with " + data.Genomes.Count + " genomes to: " + path, this);
     }
 
+    // Loads saved population.
     [ContextMenu("Load Saved Evolved Population")]
+    // Loads the normal saved evolved population
     public void LoadSavedPopulation()
     {
         LoadPopulationFromFile(FileName);
     }
 
+    // Loads baseline population.
     [ContextMenu("Load Baseline Population")]
+    // Loads the saved baseline population
     public void LoadBaselinePopulation()
     {
         LoadPopulationFromFile(BaselineFileName);
     }
 
+    // Reads a saved population file and pushes it into the manager
     public void LoadPopulationFromFile(string fileName)
     {
         if (Manager == null)
@@ -138,6 +149,7 @@ public class EvolutionPopulationSaveLoad : MonoBehaviour
         Debug.Log("Loaded evolved population with " + data.Genomes.Count + " genomes from: " + path, this);
     }
 
+    // Builds the full save path inside persistent data
     public string GetSavePath()
     {
         return FullPath;

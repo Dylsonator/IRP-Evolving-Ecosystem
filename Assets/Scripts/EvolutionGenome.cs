@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 
+// The genes for body stats, morphs, diet, behaviour and the neural brain.
 [Serializable]
 public class EvolutionGenome
 {
@@ -9,6 +10,7 @@ public class EvolutionGenome
     public const int BrainOutputCount = 10;
     public const int BrainMaxHiddenCount = 28;
 
+    // Physical traits that can evolve and trade off against each other.
     [Header("Core Body Traits")]
     public float Speed = 4f;
     public float Acceleration = 8f;
@@ -49,11 +51,13 @@ public class EvolutionGenome
     public string SpikeMorphId = "none";
     public string GillMorphId = "basic";
 
+    // Diet values decide what food this fish is actually good at using.
     [Header("Diet Traits")]
     [Range(0f, 1f)] public float PlantDiet = 0.85f;
     [Range(0f, 1f)] public float MeatDiet = 0.05f;
     [Range(0f, 1f)] public float CarrionDiet = 0.10f;
 
+    // Behaviour traits bias decisions without fully hardcoding them.
     [Header("Behaviour Traits")]
     [Range(0f, 1f)] public float HungerDrive = 0.7f;
     [Range(0f, 1f)] public float AttractionRange = 0.3f;
@@ -101,6 +105,7 @@ public class EvolutionGenome
     public float MutationStrength = 1f;
     [Range(0f, 1f)] public float MorphPartMutationRate = 0.035f;
 
+    // Neural weights mutate so decision habits can change over generations.
     [Header("Evolvable Behaviour Controller")]
     [Tooltip("Chance for NEAT-lite structural growth. This can add hidden nodes over generations while keeping old weights.")]
     [Range(0f, 0.2f)] public float BrainStructuralMutationRate = 0.025f;
@@ -108,6 +113,7 @@ public class EvolutionGenome
     [Range(0f, 0.98f)] public float BrainMemoryDecay = 0.82f;
     public SimpleNeuralNetwork Brain;
 
+    // Creates the baseline object or data needed here
     public static EvolutionGenome CreateBaseline()
     {
         EvolutionGenome genome = new EvolutionGenome();
@@ -192,6 +198,7 @@ public class EvolutionGenome
         return genome;
     }
 
+    // Creates the random object or data needed here
     public static EvolutionGenome CreateRandom(int inputCount = BrainInputCount, int hiddenCount = BrainHiddenCount, int outputCount = BrainOutputCount)
     {
         EvolutionGenome genome = CreateBaseline();
@@ -274,6 +281,7 @@ public class EvolutionGenome
         return genome;
     }
 
+    // Handles clone
     public EvolutionGenome Clone()
     {
         EvolutionGenome copy = (EvolutionGenome)MemberwiseClone();
@@ -282,6 +290,7 @@ public class EvolutionGenome
         return copy;
     }
 
+    // Creates the initial variant object or data needed here
     public EvolutionGenome CreateInitialVariant(float variationStrength)
     {
         if (variationStrength <= 0f)
@@ -301,6 +310,7 @@ public class EvolutionGenome
         return child;
     }
 
+    // Creates the mutated copy object or data needed here
     public EvolutionGenome CreateMutatedCopy(float environmentMutationMultiplier)
     {
         EvolutionGenome child = new EvolutionGenome();
@@ -397,6 +407,7 @@ public class EvolutionGenome
         return child;
     }
 
+    // Handles mutate float
     private float MutateFloat(float value, float amount, float mutationRate, float mutationStrength)
     {
         if (UnityEngine.Random.value > mutationRate)
@@ -407,6 +418,7 @@ public class EvolutionGenome
         return value + UnityEngine.Random.Range(-amount, amount) * mutationStrength;
     }
 
+    // Handles mutate morph part id
     private string MutateMorphPartId(string currentId, CreatureMorphSlot slot, float chance)
     {
         if (UnityEngine.Random.value > chance)
@@ -417,6 +429,7 @@ public class EvolutionGenome
         return CreatureMorphLibrary.GetRandomPartIdFromActive(slot, currentId);
     }
 
+    // Handles clamp values
     public void ClampValues()
     {
         Speed = Mathf.Clamp(Speed, 0.75f, 14f);
@@ -499,6 +512,7 @@ public class EvolutionGenome
         }
     }
 
+    // Handles ensure morph ids
     private void EnsureMorphIds()
     {
         BodyMorphId = NormaliseMorphIdForSlot(BodyMorphId, CreatureMorphSlot.Body, "basic");
@@ -512,6 +526,7 @@ public class EvolutionGenome
         GillMorphId = NormaliseMorphIdForSlot(GillMorphId, CreatureMorphSlot.Gills, "basic");
     }
 
+    // Handles normalise morph id for slot
     private string NormaliseMorphIdForSlot(string id, CreatureMorphSlot slot, string fallback)
     {
         if (string.IsNullOrEmpty(id))
@@ -522,6 +537,7 @@ public class EvolutionGenome
         return CreatureMorphLibrary.NormalisePartIdForSlot(slot, id);
     }
 
+    // Handles normalise diet traits
     public void NormaliseDietTraits()
     {
         PlantDiet = Mathf.Clamp01(PlantDiet);
@@ -543,6 +559,7 @@ public class EvolutionGenome
         CarrionDiet /= total;
     }
 
+    // Handles reinforce diet usage
     public void ReinforceDietUsage(float plantAmount, float meatAmount, float carrionAmount, float learningRate)
     {
         float total = Mathf.Max(0.0001f, Mathf.Abs(plantAmount) + Mathf.Abs(meatAmount) + Mathf.Abs(carrionAmount));
@@ -560,6 +577,7 @@ public class EvolutionGenome
         ApplyDietLocks();
     }
 
+    // Tries to lock diet and returns whether it worked
     private void TryLockDiet(float lifetimeConsumed)
     {
         if (PlantDietLocked || MeatDietLocked || CarrionDietLocked)
@@ -586,6 +604,7 @@ public class EvolutionGenome
         CarrionDietLocked = CarrionDiet >= strongest && !PlantDietLocked && !MeatDietLocked;
     }
 
+    // Applies diet locks to the current object
     public void ApplyDietLocks()
     {
         if (PlantDietLocked)
@@ -611,6 +630,7 @@ public class EvolutionGenome
         }
     }
 
+    // Handles decay unused behaviour traits
     public void DecayUnusedBehaviourTraits(float rate)
     {
         float r = Mathf.Clamp01(rate);
@@ -621,11 +641,13 @@ public class EvolutionGenome
         ClampValues();
     }
 
+    // Gets the morph signature used by the sim
     public string GetMorphSignature()
     {
         return BodyMorphId + "|" + TailMorphId + "|" + FinMorphId + "|" + JawMorphId + "|" + SensorMorphId + "|" + ArmourMorphId + "|" + DorsalFinMorphId + "|" + SpikeMorphId + "|" + GillMorphId;
     }
 
+    // Gets the morph similarity used by the sim
     public float GetMorphSimilarity(EvolutionGenome other)
     {
         if (other == null)
@@ -659,6 +681,7 @@ public class EvolutionGenome
         return Mathf.Clamp01(partSimilarity * 0.72f + shapeSimilarity * 0.28f);
     }
 
+    // Gets the energy drain multiplier used by the sim
     public float GetEnergyDrainMultiplier()
     {
         float speedCost = Mathf.Lerp(0.75f, 1.25f, Mathf.InverseLerp(0.75f, 14f, Speed));

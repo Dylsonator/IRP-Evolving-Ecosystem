@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+// Puts active fish under readable scene folders by role/species.
 public class CreatureSpeciesParentOrganizer : MonoBehaviour
 {
     [Header("Organisation")]
@@ -17,11 +18,13 @@ public class CreatureSpeciesParentOrganizer : MonoBehaviour
     private Transform rootParent;
     private float refreshTimer;
 
+    // Sets up cached references and safe starting values before the sim runs
     private void Awake()
     {
         EnsureRootParent();
     }
 
+    // Runs the normal frame checks and timers
     private void Update()
     {
         if (!AutoOrganiseCreatures)
@@ -41,6 +44,7 @@ public class CreatureSpeciesParentOrganizer : MonoBehaviour
     }
 
     [ContextMenu("Organise Now")]
+    // Handles organise now
     public void OrganiseNow()
     {
         EnsureRootParent();
@@ -76,6 +80,7 @@ public class CreatureSpeciesParentOrganizer : MonoBehaviour
         }
     }
 
+    // Gets the creatures used by the sim
     private List<MarineCreatureAgent> GetCreatures()
     {
         if (UseManagerCreatureList && EvolutionEcosystemManager.Instance != null)
@@ -87,6 +92,7 @@ public class CreatureSpeciesParentOrganizer : MonoBehaviour
         return new List<MarineCreatureAgent>(found);
     }
 
+    // Handles ensure root parent
     private void EnsureRootParent()
     {
         if (rootParent != null)
@@ -107,6 +113,7 @@ public class CreatureSpeciesParentOrganizer : MonoBehaviour
         rootParent = rootObject.transform;
     }
 
+    // Gets the or create group parent used by the sim
     private Transform GetOrCreateGroupParent(string groupName)
     {
         if (groupParents.TryGetValue(groupName, out Transform parent) && parent != null)

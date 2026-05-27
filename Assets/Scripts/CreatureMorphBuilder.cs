@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+// Builds the fish from the genome and morph
 public class CreatureMorphBuilder : MonoBehaviour
 {
     [Header("Library")]
@@ -44,6 +45,7 @@ public class CreatureMorphBuilder : MonoBehaviour
     private CreatureMorphPartData activeBodyPart;
     private GameObject activeBodyInstance;
 
+    // Rebuilds the visible fish by spawning each morph part from the genome
     public void Build(EvolutionGenome genome, CreatureEffectiveStats effectiveStats, Color typeColour)
     {
         if (genome == null)
@@ -82,6 +84,7 @@ public class CreatureMorphBuilder : MonoBehaviour
         BuildSlot(genome, CreatureMorphSlot.Gills, genome.GillMorphId, new Vector3(-0.48f * genome.BodyWidth, 0.05f, 0.30f * genome.BodyLength), Vector3.zero, new Vector3(0.12f * genome.GillSize, 0.22f * genome.GillSize, 0.08f * genome.GillSize), true, typeColour, PrimitiveType.Cube);
     }
 
+    // Builds one body slot by using prefab sockets first, then fallback placement if needed
     private GameObject BuildSlot(EvolutionGenome genome, CreatureMorphSlot slot, string partId, Vector3 fallbackPosition, Vector3 fallbackRotation, Vector3 fallbackScale, bool fallbackMirrorOnX, Color typeColour, PrimitiveType fallbackPrimitive)
     {
         if (ShouldSkipPart(partId))
@@ -127,9 +130,9 @@ public class CreatureMorphBuilder : MonoBehaviour
                 {
                     ResolvedMorphTransform resolved = ResolveTransformFromPrefabMarker(prefabMarkers[i]);
 
-                    // Prefab socket markers already place the part on the body.
-                    // For prefab-authored parts, only use PartData for tiny position/rotation correction.
-                    // Do not apply fallback/genome/socket scale here because it shrinks authored prefabs.
+                    // Socket markers decide where this part goes
+                    // PartData is small corrections
+                    // Dont rescale parts here or meshes shrink weirdly
                     ApplyPrefabSocketPartOffsetsNoScale(part, ref resolved);
 
                     GameObject spawned = SpawnResolvedPart(slot, partId, part, resolved, typeColour, fallbackPrimitive);
@@ -147,6 +150,7 @@ public class CreatureMorphBuilder : MonoBehaviour
         return SpawnResolvedPart(slot, partId, part, singleResolved, typeColour, fallbackPrimitive);
     }
 
+    // Checks if this slot should spawn no part, such as no armour or no spikes
     private bool ShouldSkipPart(string partId)
     {
         if (string.IsNullOrEmpty(partId))
@@ -157,6 +161,7 @@ public class CreatureMorphBuilder : MonoBehaviour
         return partId.Contains("none") || partId.Contains("reduced") && partId.Contains("spikes");
     }
 
+    // Finds socket markers inside the spawned body so other parts attach correctly
     private void CollectPrefabSocketsFromBody()
     {
         activePrefabSockets.Clear();
@@ -176,6 +181,7 @@ public class CreatureMorphBuilder : MonoBehaviour
         }
     }
 
+    // Gets the body socket markers that match the slot and preferred socket name
     private List<CreatureMorphSocketMarker> GetPrefabMarkersForSlot(CreatureMorphSlot slot, CreatureMorphPartData part)
     {
         List<CreatureMorphSocketMarker> result = new List<CreatureMorphSocketMarker>();
@@ -212,6 +218,7 @@ public class CreatureMorphBuilder : MonoBehaviour
         return result;
     }
 
+    // Turns a prefab socket position into a local position under the morph root
     private ResolvedMorphTransform ResolveTransformFromPrefabMarker(CreatureMorphSocketMarker marker)
     {
         ResolvedMorphTransform resolved = new ResolvedMorphTransform();
@@ -237,7 +244,7 @@ public class CreatureMorphBuilder : MonoBehaviour
         }
         else
         {
-            // Normal path: socket markers position and rotate the part, but the prefab keeps its own authored scale.
+            // Normal prefab path
             resolved.LocalScale = Vector3.one;
         }
 
@@ -246,6 +253,7 @@ public class CreatureMorphBuilder : MonoBehaviour
         return resolved;
     }
 
+    // Uses asset sockets first, then fallback offsets if there is no socket marker
     private ResolvedMorphTransform ResolveTransformFromFallbackOrAssetSocket(EvolutionGenome genome, CreatureMorphSlot slot, CreatureMorphPartData part, Vector3 fallbackPosition, Vector3 fallbackRotation, Vector3 fallbackScale, bool fallbackMirrorOnX)
     {
         ResolvedMorphTransform resolved = new ResolvedMorphTransform();
@@ -294,6 +302,7 @@ public class CreatureMorphBuilder : MonoBehaviour
         return resolved;
     }
 
+    // Looks through the body morph asset for a matching socket definition
     private bool TryGetAssetSocketForSlot(CreatureMorphSlot slot, CreatureMorphPartData part, out CreatureMorphSocketDefinition socket)
     {
         socket = new CreatureMorphSocketDefinition();
@@ -336,6 +345,7 @@ public class CreatureMorphBuilder : MonoBehaviour
         return false;
     }
 
+    // Applies socket offsets but keeps authored prefab scale safe
     private void ApplyPrefabSocketPartOffsetsNoScale(CreatureMorphPartData part, ref ResolvedMorphTransform resolved)
     {
         if (part == null)
@@ -361,12 +371,13 @@ public class CreatureMorphBuilder : MonoBehaviour
             resolved.LocalRotationEuler = part.LocalRotationEuler;
         }
 
-        // Critical fix: keep scale as Vector3.one for prefab socket parts.
-        // SpawnSinglePart will keep the prefab root scale when PreserveAuthoredPrefabScale is enabled.
+        // Important: socket prefab parts keep scale here
+        // The spawned prefab keeps its root scale later
         resolved.LocalScale = Vector3.one;
         resolved.MirrorOnX = resolved.MirrorOnX || part.MirrorOnX;
     }
 
+    // Applies local offsets, rotation and scale rules for socket or fallback placement
     private void ApplyPartAdjustments(CreatureMorphPartData part, Vector3 fallbackScale, bool hasSocket, ref ResolvedMorphTransform resolved)
     {
         if (part == null)
@@ -420,6 +431,7 @@ public class CreatureMorphBuilder : MonoBehaviour
         resolved.MirrorOnX = resolved.MirrorOnX || part.MirrorOnX;
     }
 
+    // Spawns the part once its final local transform has been worked out
     private GameObject SpawnResolvedPart(CreatureMorphSlot slot, string partId, CreatureMorphPartData part, ResolvedMorphTransform resolved, Color typeColour, PrimitiveType fallbackPrimitive)
     {
         if (part == null)
@@ -436,6 +448,7 @@ public class CreatureMorphBuilder : MonoBehaviour
         return first;
     }
 
+    // Spawns the selected prefab and mirrors it when the part needs left and right sides
     private GameObject SpawnPartFromData(CreatureMorphPartData part, ResolvedMorphTransform resolved, Color typeColour)
     {
         if (part == null)
@@ -460,11 +473,13 @@ public class CreatureMorphBuilder : MonoBehaviour
         return first;
     }
 
+    // Returns null because this project uses library prefabs instead of generated fallback meshes
     private GameObject SpawnFallbackPart(CreatureMorphSlot slot, string partId, ResolvedMorphTransform resolved, Color typeColour, PrimitiveType primitive)
     {
         return null;
     }
 
+    // Instantiates one prefab, parents it to the model root, colours it and disables colliders
     private GameObject SpawnSinglePart(GameObject prefab, string name, Vector3 localPosition, Vector3 localRotationEuler, Vector3 localScale, Color colour, PrimitiveType fallbackPrimitive = PrimitiveType.Cube)
     {
         EnsureRoot();
@@ -476,8 +491,8 @@ public class CreatureMorphBuilder : MonoBehaviour
 
         if (usedPrefab)
         {
-            // Instantiate without a parent first, so Unity gives us the prefab's authored root scale.
-            // Then parent with worldPositionStays=false so the scale stays local to MorphModel.
+            // Spawn without parent first so Unity keeps the prefab scale properly
+            // parent it under the model without changing local scale
             instance = Instantiate(prefab);
             authoredPrefabScale = instance.transform.localScale == Vector3.zero ? Vector3.one : instance.transform.localScale;
             instance.transform.SetParent(modelRoot, false);
@@ -495,7 +510,7 @@ public class CreatureMorphBuilder : MonoBehaviour
         {
             if (PreserveAuthoredPrefabScale)
             {
-                // Genome/socket/fallback scale only affects generated fallback primitives.
+                // Genome scale only affects generated fallback shapes not authored prefabs
                 instance.transform.localScale = authoredPrefabScale;
             }
             else
@@ -518,6 +533,7 @@ public class CreatureMorphBuilder : MonoBehaviour
         return instance;
     }
 
+    // Creates or finds the MorphModel parent used to hold spawned body parts
     private void EnsureRoot()
     {
         if (modelRoot != null)
@@ -540,6 +556,7 @@ public class CreatureMorphBuilder : MonoBehaviour
         modelRoot = rootObject.transform;
     }
 
+    // Deletes old spawned parts before rebuilding the fish model
     private void ClearSpawnedParts()
     {
         for (int i = spawnedParts.Count - 1; i >= 0; i--)
@@ -565,6 +582,7 @@ public class CreatureMorphBuilder : MonoBehaviour
         }
     }
 
+    // Turns off generated part colliders so they do not fight the logic collider
     private void DisableColliders(GameObject instance)
     {
         Collider[] colliders = instance.GetComponentsInChildren<Collider>();
@@ -574,6 +592,7 @@ public class CreatureMorphBuilder : MonoBehaviour
         }
     }
 
+    // Applies the role colour to each renderer using a material property block
     private void ApplyColour(GameObject instance, Color colour)
     {
         if (!UseTypeColour)
@@ -597,6 +616,7 @@ public class CreatureMorphBuilder : MonoBehaviour
         }
     }
 
+    // Returns a debug colour tint for older Fallback mesh spawning is disabled because this project uses library prefabs types
     private Color GetFallbackPartColour(CreatureMorphSlot slot, string partId, Color typeColour)
     {
         if (slot == CreatureMorphSlot.Armour)
@@ -627,21 +647,26 @@ public class CreatureMorphBuilder : MonoBehaviour
         return typeColour;
     }
 
+    // Scales a socket position by body width and body length
     private Vector3 ApplyBodyShapeToPosition(Vector3 value, EvolutionGenome genome)
     {
         return new Vector3(value.x * genome.BodyWidth, value.y * genome.BodyWidth, value.z * genome.BodyLength);
     }
 
+    // Scales a socket size by body width and body length
     private Vector3 ApplyBodyShapeToScale(Vector3 value, EvolutionGenome genome)
     {
         return new Vector3(value.x * genome.BodyWidth, value.y * genome.BodyWidth, value.z * genome.BodyLength);
     }
 
+    // Multiplies two vectors axis by axis for local scale maths
     private Vector3 MultiplyVector(Vector3 a, Vector3 b)
     {
         return new Vector3(a.x * b.x, a.y * b.y, a.z * b.z);
     }
 
+
+    // Divides two vectors axis by axis while avoiding divide-by-zero errors
     private Vector3 DivideVector(Vector3 a, Vector3 b)
     {
         return new Vector3(
@@ -651,6 +676,7 @@ public class CreatureMorphBuilder : MonoBehaviour
         );
     }
 
+    // Draws socket positions on selected fish so morph setup can be checked
     private void OnDrawGizmosSelected()
     {
         if (!DrawSocketGizmos)

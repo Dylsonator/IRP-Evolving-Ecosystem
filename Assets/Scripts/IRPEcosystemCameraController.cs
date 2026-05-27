@@ -3,12 +3,8 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 #endif
 
-/// <summary>
-/// Simple free camera for observing the ecosystem and selecting fish.
-/// Controls:
-/// RMB + mouse = look, WASD = move, Q/E = down/up, Shift = fast, Ctrl = slow,
-/// left click = select fish, F = focus selected fish, Esc = unlock cursor.
-/// </summary>
+// Simple free camera for watching the sim and selecting/following fish.
+// Free camera for moving around the ecosystem and following selected fish.
 public class IRPEcosystemCameraController : MonoBehaviour
 {
     [Header("Movement")]
@@ -41,6 +37,7 @@ public class IRPEcosystemCameraController : MonoBehaviour
     private bool isFollowingSelected;
     private Vector3 focusTargetPosition;
 
+    // Sets up cached references and safe starting values before the sim runs
     private void Awake()
     {
         if (ControlledCamera == null)
@@ -63,6 +60,7 @@ public class IRPEcosystemCameraController : MonoBehaviour
         pitch = NormalisePitch(euler.x);
     }
 
+    // Runs the normal frame checks and timers
     private void Update()
     {
         HandleLook();
@@ -72,6 +70,7 @@ public class IRPEcosystemCameraController : MonoBehaviour
         HandleCursorRelease();
     }
 
+    // Rotates the camera when the right mouse button is held
     private void HandleLook()
     {
         bool shouldLook = !RequireRightMouseForLook || IsRightMouseHeld();
@@ -98,6 +97,7 @@ public class IRPEcosystemCameraController : MonoBehaviour
         transform.rotation = Quaternion.Euler(pitch, yaw, 0f);
     }
 
+    // Moves the camera with keyboard input and speed modifiers
     private void HandleMovement()
     {
         Vector3 input = Vector3.zero;
@@ -122,6 +122,7 @@ public class IRPEcosystemCameraController : MonoBehaviour
         transform.position += worldMove;
     }
 
+    // Lets the camera click-select fish through the debug panel
     private void HandleSelection()
     {
         if (!WasLeftMousePressedThisFrame())
@@ -173,6 +174,7 @@ public class IRPEcosystemCameraController : MonoBehaviour
         }
     }
 
+    // Toggles follow mode or jumps the camera to the selected fish
     private void HandleFocus()
     {
         if (GetKeyDown(KeyCode.F) && selectedFish != null)
@@ -223,6 +225,7 @@ public class IRPEcosystemCameraController : MonoBehaviour
         }
     }
 
+    // Unlocks the cursor when escape is pressed
     private void HandleCursorRelease()
     {
         if (!GetKeyDown(KeyCode.Escape))
@@ -234,6 +237,7 @@ public class IRPEcosystemCameraController : MonoBehaviour
         Cursor.visible = true;
     }
 
+    // Gets the key used by the sim
     private bool GetKey(KeyCode key)
     {
 #if ENABLE_INPUT_SYSTEM
@@ -262,6 +266,7 @@ public class IRPEcosystemCameraController : MonoBehaviour
 #endif
     }
 
+    // Gets the key down used by the sim
     private bool GetKeyDown(KeyCode key)
     {
 #if ENABLE_INPUT_SYSTEM
@@ -280,6 +285,7 @@ public class IRPEcosystemCameraController : MonoBehaviour
 #endif
     }
 
+    // Checks if it is right mouse held
     private bool IsRightMouseHeld()
     {
 #if ENABLE_INPUT_SYSTEM
@@ -291,6 +297,7 @@ public class IRPEcosystemCameraController : MonoBehaviour
 #endif
     }
 
+    // Handles was left mouse pressed this frame
     private bool WasLeftMousePressedThisFrame()
     {
 #if ENABLE_INPUT_SYSTEM
@@ -302,6 +309,7 @@ public class IRPEcosystemCameraController : MonoBehaviour
 #endif
     }
 
+    // Gets the mouse delta used by the sim
     private Vector2 GetMouseDelta()
     {
 #if ENABLE_INPUT_SYSTEM
@@ -313,6 +321,7 @@ public class IRPEcosystemCameraController : MonoBehaviour
 #endif
     }
 
+    // Gets the mouse position used by the sim
     private Vector2 GetMousePosition()
     {
 #if ENABLE_INPUT_SYSTEM
@@ -324,6 +333,7 @@ public class IRPEcosystemCameraController : MonoBehaviour
 #endif
     }
 
+    // Keeps camera pitch in a readable range
     private float NormalisePitch(float x)
     {
         return x > 180f ? x - 360f : x;

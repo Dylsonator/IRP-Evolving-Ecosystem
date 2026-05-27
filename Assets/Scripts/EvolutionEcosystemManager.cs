@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+// Main simulation controller for spawning, generations, selection, resources, terrain and spatial queries.
 public enum SelectionMode
 {
     Tournament,
@@ -51,6 +52,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
     public Vector3 SimulationAreaSize = new Vector3(100f, 35f, 100f);
     public float SpawnPaddingFromBounds = 4f;
 
+    // Generation settings control how long each evaluation window lasts.
     [Header("Generation Settings")]
     public int StartingPopulation = 35;
     public int FixedPopulationSize = 35;
@@ -58,6 +60,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
     public SelectionMode Selection = SelectionMode.QualityDiversityLite;
     public int TournamentSize = 4;
 
+    // Diversity settings stop selection from only keeping the safest single strategy.
     [Header("Quality Diversity / Brain Selection")]
     [Tooltip("Uses diet, movement and feeding feature bins instead of only readable species names. This better matches MAP-Elites style diversity preservation.")]
     public bool UseBehaviourFeatureBuckets = true;
@@ -67,6 +70,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
     [Tooltip("Small pressure against uncontrolled neural bloat. Keeps NEAT-lite complexification useful instead of endlessly growing.")]
     public float BrainComplexityPenalty = 0.08f;
 
+    // Natural anti-convergence uses novelty and sharing instead of forced role spawning.
     [Header("Natural Anti-Convergence")]
     [Tooltip("Uses novelty search and fitness sharing in continuous behaviour space. This is the IRP-facing anti-convergence method, not role injection.")]
     public bool UseNaturalDiversitySelection = true;
@@ -160,6 +164,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
     public bool ExtinctionChangesEnvironment = true;
     public bool ExtinctionCreatesCarrion = true;
 
+    // Spawn throttling keeps the first frame from freezing when populations are large.
     [Header("Performance / Startup")]
     [Tooltip("Spreads initial spawning across several frames to avoid a large first-frame spike.")]
     public bool StaggerInitialSpawn = true;
@@ -210,6 +215,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
     private EvolutionDiversityArchive diversityArchive;
     private List<EvolutionCandidate> selectionEvaluationContext;
 
+    // Sets the singleton, applies balance safeguards and makes sure helper systems exist
     private void Awake()
     {
         Instance = this;
@@ -231,6 +237,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
     }
 
 
+    // Applies safe default balance values without forcing the population too high
     private void ApplyEcologyBalanceSafeguards()
     {
         if (!UseEcologyBalanceSafeguards)
@@ -293,11 +300,13 @@ public class EvolutionEcosystemManager : MonoBehaviour
         }
     }
 
+    // Starts the bootstrap routine when the scene begins
     private void Start()
     {
         StartBootstrap();
     }
 
+    // Starts the staggered spawn setup so the first frame does not freeze
     private void StartBootstrap()
     {
         if (bootstrapRoutine != null)
@@ -308,6 +317,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         bootstrapRoutine = StartCoroutine(BootstrapSimulationRoutine());
     }
 
+    // Spawns the starting population and food across several frames
     private IEnumerator BootstrapSimulationRoutine()
     {
         ClearSimulation();
@@ -349,6 +359,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         bootstrapRoutine = null;
     }
 
+    // Runs generation timers, food spawning, grid refresh and extinction checks
     private void Update()
     {
         if (bootstrapRoutine != null)
@@ -386,6 +397,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         }
     }
 
+    // Creates the first generation from fresh or saved candidates
     private void SpawnInitialGeneration()
     {
         ClearSimulation();
@@ -406,6 +418,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         }
     }
 
+    // Spawns enough starting food for the first generation
     private void SpawnStartingFood()
     {
         for (int i = 0; i < StartingFood; i++)
@@ -414,6 +427,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         }
     }
 
+    // Adds replacement food over time based on current season and pressure
     private void HandleFoodSpawning()
     {
         if (UsePlacedPlantsForFood && !EnableRandomFoodFallback)
@@ -436,6 +450,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         }
     }
 
+    // Triggers disaster events when their timer reaches the threshold
     private void HandleExtinctionEvents()
     {
         if (!UseExtinctionEvents)
@@ -452,6 +467,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         TriggerExtinctionEvent();
     }
 
+    // Starts the generation swap if one is not already running
     private void EndGenerationAndSpawnNext()
     {
         List<EvolutionCandidate> evaluated = GatherEvaluationCandidates();
@@ -488,6 +504,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         bootstrapRoutine = StartCoroutine(SpawnNextGenerationRoutine(nextGeneration));
     }
 
+    // Evaluates the old generation, clears/reset objects, then spawns the selected next one
     private IEnumerator SpawnNextGenerationRoutine(List<EvolutionCandidate> nextGeneration)
     {
         ClearCreaturesOnly();
@@ -512,6 +529,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         Debug.Log("Started generation " + CurrentGeneration + " with " + nextGeneration.Count + " creatures.");
     }
 
+    // Collects living, dead and offspring candidates so selection has the full run data
     private List<EvolutionCandidate> GatherEvaluationCandidates()
     {
         List<EvolutionCandidate> evaluated = new List<EvolutionCandidate>();
@@ -547,6 +565,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         return evaluated;
     }
 
+    // Chooses the next population using the selected evolution method
     private List<EvolutionCandidate> SelectNextGeneration(List<EvolutionCandidate> evaluated)
     {
         List<EvolutionCandidate> selected = new List<EvolutionCandidate>();
@@ -579,6 +598,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         return FinaliseSelectedGeneration(selected, target, evaluated);
     }
 
+    // Selects candidates using fitness, niche spread and novelty instead of one global winner
     private List<EvolutionCandidate> SelectQualityDiversityLite(List<EvolutionCandidate> evaluated, int target)
     {
         List<EvolutionCandidate> selected = new List<EvolutionCandidate>();
@@ -689,6 +709,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
     }
 
 
+    // Applies mutation and final checks to the selected candidates
     private List<EvolutionCandidate> FinaliseSelectedGeneration(List<EvolutionCandidate> selected, int target, List<EvolutionCandidate> evaluated)
     {
         if (selected == null)
@@ -756,6 +777,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         return completedReplacementSelected;
     }
 
+    // Softly keeps niche reproduction possible when a group has both sexes available
     private void EnsureSexBalanceWithinCoreNiches(List<EvolutionCandidate> selected)
     {
         if (!BalanceSexWithinCoreNiches || selected == null)
@@ -806,6 +828,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         }
     }
 
+    // Adds diversity only when enabled, but usually natural QD handles this instead
     private List<EvolutionCandidate> RescueCollapsedDiversity(List<EvolutionCandidate> selected, int target, List<EvolutionCandidate> evaluated)
     {
         if (!UseAntiConvergence || !InjectMissingNichesWhenCollapsed || selected == null || selected.Count == 0)
@@ -879,6 +902,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         return selected;
     }
 
+    // Finds a candidate from an over-dominant niche that can be swapped out
     private int FindReplaceableDominantIndex(List<EvolutionCandidate> selected, Dictionary<string, int> selectedCounts)
     {
         if (selected == null || selectedCounts == null || selected.Count == 0)
@@ -919,6 +943,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         return -1;
     }
 
+    // Creates a mutated candidate for missing niches when rescue mode is enabled
     private EvolutionCandidate CreateDiversityRescueCandidate(string desiredNiche, List<EvolutionCandidate> evaluated)
     {
         EvolutionGenome genome = null;
@@ -941,6 +966,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         return new EvolutionCandidate(genome);
     }
 
+    // Pushes a genome toward a broad niche for diversity rescue setup
     private void ForceGenomeTowardCoreNiche(EvolutionGenome genome, string desiredNiche)
     {
         if (genome == null)
@@ -1007,6 +1033,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         genome.ClampValues();
     }
 
+    // Adjusts a genome toward a safer plant-focused build
     private void ForceGrazerGenome(EvolutionGenome genome)
     {
         if (genome == null)
@@ -1025,6 +1052,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         genome.ClampValues();
     }
 
+    // Adds a light starting diet bias so generation one has variety
     private void ApplyStartingDietNicheSeed(EvolutionGenome genome, int index, int total)
     {
         if (!SeedStartingDietNiches || genome == null || total <= 0)
@@ -1053,16 +1081,19 @@ public class EvolutionEcosystemManager : MonoBehaviour
         }
     }
 
+    // Checks if a genome is strongly meat-focused and aggressive enough to be a predator
     private bool IsPredatorGenome(EvolutionGenome genome)
     {
         return genome != null && genome.MeatDiet >= MinimumMeatDietToHunt && genome.Aggression >= MinimumAggressionToHunt;
     }
 
+    // Checks if a genome is mostly carrion-focused
     private bool IsScavengerGenome(EvolutionGenome genome)
     {
         return genome != null && genome.CarrionDiet >= 0.38f;
     }
 
+    // Adjusts a genome toward a meat-focused predator setup
     private void ForcePredatorGenome(EvolutionGenome genome)
     {
         if (genome == null)
@@ -1084,6 +1115,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         genome.ClampValues();
     }
 
+    // Adjusts a genome toward carrion feeding
     private void ForceScavengerGenome(EvolutionGenome genome)
     {
         if (genome == null)
@@ -1104,6 +1136,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         genome.ClampValues();
     }
 
+    // Adjusts a genome toward mixed feeding
     private void ForceOmnivoreGenome(EvolutionGenome genome)
     {
         if (genome == null)
@@ -1122,6 +1155,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
     }
 
 
+    // Builds the detailed niche key used for diversity selection
     private string BuildQualityDiversityKey(EvolutionCandidate candidate)
     {
         if (candidate == null || candidate.Genome == null)
@@ -1138,11 +1172,13 @@ public class EvolutionEcosystemManager : MonoBehaviour
         return EvolutionNicheUtility.BuildSelectionKey(candidate, bins);
     }
 
+    // Builds the broad niche key used for anti-convergence checks
     private string BuildCoreNicheKey(EvolutionCandidate candidate)
     {
         return EvolutionNicheUtility.BuildCoreNicheKey(candidate);
     }
 
+    // Counts how many selected candidates are in each broad niche
     private Dictionary<string, int> BuildCoreNicheCounts(List<EvolutionCandidate> candidates)
     {
         Dictionary<string, int> counts = new Dictionary<string, int>();
@@ -1165,6 +1201,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         return counts;
     }
 
+    // Safely reads a count from a dictionary
     private int GetDictionaryCount(Dictionary<string, int> counts, string key)
     {
         if (counts == null || string.IsNullOrEmpty(key) || !counts.ContainsKey(key))
@@ -1175,6 +1212,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         return counts[key];
     }
 
+    // Adds one to a dictionary count, creating the entry if needed
     private void IncrementDictionaryCount(Dictionary<string, int> counts, string key)
     {
         if (counts == null || string.IsNullOrEmpty(key))
@@ -1190,6 +1228,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         counts[key]++;
     }
 
+    // Scores a candidate using fitness, niche success, novelty and ecology balance
     private float GetSelectionScore(EvolutionCandidate candidate, Dictionary<string, int> coreCounts = null)
     {
         if (candidate == null)
@@ -1315,6 +1354,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         return Mathf.Max(0f, score);
     }
 
+    // Returns how different a candidate is from the current archive
     private float GetBehaviourNoveltyScore(EvolutionCandidate candidate)
     {
         if (candidate == null || candidate.Genome == null)
@@ -1343,6 +1383,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         return Mathf.Clamp01(modeDiversity * 0.42f + dietNovelty * 0.28f + reproductionNovelty + predatorNovelty + mobilityNovelty);
     }
 
+    // Picks the best candidate from a small random group
     private EvolutionCandidate RunTournament(List<EvolutionCandidate> evaluated, Dictionary<string, int> coreCounts = null)
     {
         if (evaluated == null || evaluated.Count == 0)
@@ -1366,6 +1407,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         return best;
     }
 
+    // Raises mutation pressure when diversity drops too low
     private float GetAdaptiveMutationMultiplier(Dictionary<string, int> coreCounts)
     {
         float multiplier = GetEnvironmentMutationMultiplier();
@@ -1383,6 +1425,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         return Mathf.Clamp(multiplier, 0.5f, 3.0f);
     }
 
+    // Returns the global mutation pressure from seasons and events
     private float GetEnvironmentMutationMultiplier()
     {
         float baseMultiplier = Environment != null ? Environment.MutationMultiplier : 1f;
@@ -1411,6 +1454,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         return count > 0 ? baseMultiplier * Mathf.Clamp(total / count, 0.75f, 1.8f) : baseMultiplier;
     }
 
+    // Returns local mutation pressure at a position
     public float GetEnvironmentMutationMultiplierAt(Vector3 position)
     {
         float multiplier = Environment != null ? Environment.MutationMultiplier : 1f;
@@ -1435,6 +1479,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
     }
 
 
+    // Adds research logging and archive helpers if they are missing
     private void EnsureResearchTools()
     {
         if (!AutoAttachResearchTools)
@@ -1499,6 +1544,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         experiment.BehaviourArchive = archive;
     }
 
+    // Creates the spatial grid used for cheaper nearby searches
     private void EnsureSpatialGrid()
     {
         if (!UseSpatialGrid)
@@ -1520,6 +1566,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         SpatialGrid.Rebuild(activeCreatures, activeFood, activeCarrion, activeEggClusters);
     }
 
+    // Rebuilds the grid on a timer instead of every query
     private void UpdateSpatialGridIfNeeded()
     {
         if (!UseSpatialGrid)
@@ -1535,11 +1582,13 @@ public class EvolutionEcosystemManager : MonoBehaviour
         }
     }
 
+    // Checks if the grid can be used for nearby searches
     private bool HasUsableSpatialGrid()
     {
         return UseSpatialGrid && SpatialGrid != null;
     }
 
+    // Gets creatures close to a point using the spatial grid when possible
     public List<MarineCreatureAgent> GetNearbyCreatures(Vector3 position, float radius)
     {
         if (HasUsableSpatialGrid())
@@ -1550,6 +1599,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         return activeCreatures;
     }
 
+    // Gets nearby food using the spatial grid when possible
     public List<FoodSource> GetNearbyFood(Vector3 position, float radius)
     {
         if (HasUsableSpatialGrid())
@@ -1560,6 +1610,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         return activeFood;
     }
 
+    // Gets nearby carrion using the spatial grid when possible
     public List<CarrionSource> GetNearbyCarrion(Vector3 position, float radius)
     {
         if (HasUsableSpatialGrid())
@@ -1570,6 +1621,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         return activeCarrion;
     }
 
+    // Gets nearby egg clusters using the spatial grid when possible
     public List<FishEggCluster> GetNearbyEggClusters(Vector3 position, float radius)
     {
         if (HasUsableSpatialGrid())
@@ -1580,6 +1632,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         return activeEggClusters;
     }
 
+    // Creates one creature, initialises it, then registers it with the ecosystem
     public MarineCreatureAgent SpawnCreature(EvolutionCandidate candidate, Vector3 position)
     {
         if (CreaturePrefab == null)
@@ -1605,6 +1658,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         return creature;
     }
 
+    // Spawns a food object and places it safely in the simulation area
     private void SpawnFood()
     {
         if (FoodPrefab == null)
@@ -1625,6 +1679,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         RegisterFood(food);
     }
 
+    // Turns a dead fish into carrion so predators and scavengers can eat it
     public void SpawnCarrionFromDeath(MarineCreatureAgent creature, bool causedByExtinctionEvent)
     {
         if (creature == null || creature.Candidate == null || creature.Candidate.Genome == null)
@@ -1674,6 +1729,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         RegisterCarrion(carrion);
     }
 
+    // Deletes old carrion when the scene has too much meat lying around
     private void RemoveOldestCarrion()
     {
         CleanLists();
@@ -1702,6 +1758,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         }
     }
 
+    // Adds a child candidate to the offspring pool for later selection
     public void RegisterOffspring(EvolutionCandidate offspring)
     {
         if (offspring == null)
@@ -1712,16 +1769,19 @@ public class EvolutionEcosystemManager : MonoBehaviour
         offspringPool.Add(offspring);
     }
 
+    // Removes a creature from active tracking
     public void UnregisterCreature(MarineCreatureAgent creature)
     {
         activeCreatures.Remove(creature);
     }
 
+    // Removes food from manager lists when it is eaten or destroyed
     public void UnregisterFood(FoodSource food)
     {
         activeFood.Remove(food);
     }
 
+    // Adds carrion to manager lists so meat-eaters can find it
     public void RegisterCarrion(CarrionSource carrion)
     {
         if (carrion != null && !activeCarrion.Contains(carrion))
@@ -1730,11 +1790,13 @@ public class EvolutionEcosystemManager : MonoBehaviour
         }
     }
 
+    // Removes carrion from manager lists when it is gone
     public void UnregisterCarrion(CarrionSource carrion)
     {
         activeCarrion.Remove(carrion);
     }
 
+    // Adds food to manager lists so fish can find it
     public void RegisterFood(FoodSource food)
     {
         if (food != null && !activeFood.Contains(food))
@@ -1743,6 +1805,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         }
     }
 
+    // Adds a plant to manager lists for food reset and regrowth logic
     public void RegisterPlant(PlantResource plant)
     {
         if (plant != null && !activePlants.Contains(plant))
@@ -1751,11 +1814,13 @@ public class EvolutionEcosystemManager : MonoBehaviour
         }
     }
 
+    // Removes a plant from manager lists
     public void UnregisterPlant(PlantResource plant)
     {
         activePlants.Remove(plant);
     }
 
+    // Adds an egg cluster so parents and predators can find it
     public void RegisterEggCluster(FishEggCluster eggCluster)
     {
         if (eggCluster != null && !activeEggClusters.Contains(eggCluster))
@@ -1764,11 +1829,13 @@ public class EvolutionEcosystemManager : MonoBehaviour
         }
     }
 
+    // Removes an egg cluster when it hatches or is destroyed
     public void UnregisterEggCluster(FishEggCluster eggCluster)
     {
         activeEggClusters.Remove(eggCluster);
     }
 
+    // Adds a current zone so movement and pressure checks can use it
     public void RegisterCurrentZone(EcosystemWaterCurrentZone zone)
     {
         if (zone != null && !activeCurrentZones.Contains(zone))
@@ -1777,11 +1844,13 @@ public class EvolutionEcosystemManager : MonoBehaviour
         }
     }
 
+    // Removes a current zone from the manager
     public void UnregisterCurrentZone(EcosystemWaterCurrentZone zone)
     {
         activeCurrentZones.Remove(zone);
     }
 
+    // Adds an environmental pressure zone
     public void RegisterPressureZone(EcosystemPressureZone zone)
     {
         if (zone != null && !activePressureZones.Contains(zone))
@@ -1790,12 +1859,14 @@ public class EvolutionEcosystemManager : MonoBehaviour
         }
     }
 
+    // Removes an environmental pressure zone
     public void UnregisterPressureZone(EcosystemPressureZone zone)
     {
         activePressureZones.Remove(zone);
     }
 
 
+    // Finds the closest useful plant food without doing expensive crowd checks
     public FoodSource GetBestFoodForCreature(MarineCreatureAgent requester, Vector3 position, float searchRadius, float crowdRadius, int comfortableCrowdLimit, float crowdPenalty)
     {
         // Emergency optimisation:
@@ -1848,6 +1919,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         return best;
     }
 
+    // Finds the closest useful carrion target
     public CarrionSource GetBestCarrionForCreature(MarineCreatureAgent requester, Vector3 position, float searchRadius, float crowdRadius, int comfortableCrowdLimit, float crowdPenalty)
     {
         // Emergency optimisation: closest valid carrion wins.
@@ -1874,6 +1946,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         return best;
     }
 
+    // Counts nearby creatures for crowding, danger and resource pressure
     public int CountCreaturesNearPoint(Vector3 point, float radius, MarineCreatureAgent ignoredCreature = null)
     {
         float radiusSqr = radius * radius;
@@ -1897,6 +1970,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         return count;
     }
 
+    // Returns the nearest food object inside a range
     public FoodSource GetNearestFood(Vector3 position, float searchRadius)
     {
         FoodSource nearest = null;
@@ -1924,6 +1998,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         return nearest;
     }
 
+    // Returns the nearest carrion object inside a range
     public CarrionSource GetNearestCarrion(Vector3 position, float searchRadius)
     {
         CarrionSource nearest = null;
@@ -1951,6 +2026,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         return nearest;
     }
 
+    // Returns the nearest other creature inside a range
     public MarineCreatureAgent GetNearestCreature(MarineCreatureAgent requester, Vector3 position, float searchRadius)
     {
         MarineCreatureAgent nearest = null;
@@ -1978,6 +2054,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         return nearest;
     }
 
+    // Scores nearby fish and returns the best prey target for a hunter
     public MarineCreatureAgent GetNearestPrey(MarineCreatureAgent requester, Vector3 position, float searchRadius)
     {
         if (!EnablePredation || requester == null || requester.Candidate == null || requester.Candidate.Genome == null)
@@ -2057,12 +2134,14 @@ public class EvolutionEcosystemManager : MonoBehaviour
         return best;
     }
 
+    // Checks if the active population is below the limit
     public bool CanSpawnMoreActiveCreatures()
     {
         CleanLists();
         return activeCreatures.Count < Mathf.Max(1, MaxActiveCreatures);
     }
 
+    // Finds a nearby compatible mate using sex, safety and similarity checks
     public MarineCreatureAgent GetBestMateFor(MarineCreatureAgent seeker, float searchRadius, float requiredMorphSimilarity)
     {
         if (seeker == null || seeker.Candidate == null || seeker.Candidate.Genome == null)
@@ -2124,6 +2203,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         return best;
     }
 
+    // Finds a wider fallback mate if a niche has no local opposite-sex option
     private MarineCreatureAgent GetBestCrossNicheMateFor(MarineCreatureAgent seeker, float searchRadius, float minimumSimilarity)
     {
         if (seeker == null || seeker.Candidate == null || seeker.Candidate.Genome == null)
@@ -2182,6 +2262,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         return best;
     }
 
+    // Samples nearby points and picks a safer egg-laying position
     public Vector3 FindSafeEggPositionNear(Vector3 origin, EvolutionGenome genome, float radius, int samples)
     {
         Vector3 best = ClampToSimulationArea(origin);
@@ -2212,6 +2293,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         return best;
     }
 
+    // Spawns an egg cluster and gives it the child candidates to hatch later
     public FishEggCluster SpawnEggCluster(MarineCreatureAgent mother, MarineCreatureAgent father, Vector3 position, List<EvolutionCandidate> children, float hatchTime, float health, float mass)
     {
         FishEggCluster cluster;
@@ -2235,6 +2317,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         return cluster;
     }
 
+    // Runs a disaster event that kills some fish and changes the environment
     public void TriggerExtinctionEvent()
     {
         CleanLists();
@@ -2270,6 +2353,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         Debug.Log("Extinction event killed " + killCount + " creatures and shifted the ecosystem pressure.");
     }
 
+    // Adds a temporary local pressure zone for the extinction event
     private void SpawnExtinctionPressureZone()
     {
         if (!SpawnPressureZoneOnExtinction)
@@ -2303,6 +2387,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         RegisterPressureZone(zone);
     }
 
+    // Changes food, mutation and drain pressure after a disaster
     private void ApplyExtinctionEnvironmentShock()
     {
         if (!ExtinctionChangesEnvironment)
@@ -2320,6 +2405,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         SpawnCarrionFromExtinctionEvents = ExtinctionCreatesCarrion;
     }
 
+    // Chooses a spawn point based on ancestor memory and same-niche spacing
     public Vector3 GetSpawnPointForCandidate(EvolutionCandidate candidate)
     {
         if (AvoidAggressiveSameNicheSpawnClusters && IsAggressiveSameNicheSpawnRisk(candidate))
@@ -2338,6 +2424,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         return GetSpawnPointForCreature();
     }
 
+    // Checks if a candidate should spawn away from similar aggressive fish
     private bool IsAggressiveSameNicheSpawnRisk(EvolutionCandidate candidate)
     {
         if (candidate == null || candidate.Genome == null)
@@ -2352,6 +2439,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         return predatorCore && highAggression;
     }
 
+    // Tries several points and keeps distance from risky same-niche predators
     private Vector3 GetSeparatedSpawnPointForCandidate(EvolutionCandidate candidate)
     {
         string core = EvolutionNicheUtility.BuildCoreNicheKey(candidate);
@@ -2398,18 +2486,21 @@ public class EvolutionEcosystemManager : MonoBehaviour
         return best;
     }
 
+    // Returns a random safe creature spawn point in the simulation area
     public Vector3 GetSpawnPointForCreature()
     {
         Vector3 point = GetRandomPointInSimulationArea();
         return KeepSpawnsAboveTerrain ? ProjectPointAboveTerrain(point, FishTerrainClearance) : point;
     }
 
+    // Returns a random safe food spawn point in the simulation area
     public Vector3 GetSpawnPointForFood()
     {
         Vector3 point = GetRandomPointInSimulationArea();
         return KeepSpawnsAboveTerrain ? ProjectPointAboveTerrain(point, FoodTerrainClearance) : point;
     }
 
+    // Moves a point onto the terrain surface with a small offset
     public Vector3 ProjectPointToTerrain(Vector3 point, float offset)
     {
         if (TryGetTerrainHeight(point, out float y))
@@ -2419,6 +2510,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         return point;
     }
 
+    // Keeps a point above the terrain floor
     public Vector3 ProjectPointAboveTerrain(Vector3 point, float clearance)
     {
         if (TryGetTerrainHeight(point, out float y))
@@ -2428,6 +2520,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         return point;
     }
 
+    // Raycasts down to find terrain height under a position
     public bool TryGetTerrainHeight(Vector3 point, out float terrainY)
     {
         if (TerrainSource != null)
@@ -2456,6 +2549,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         return false;
     }
 
+    // Combines all current zones affecting a world position
     public Vector3 GetCurrentVelocityAt(Vector3 position)
     {
         Vector3 total = Vector3.zero;
@@ -2473,6 +2567,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         return total;
     }
 
+    // Returns how harsh the current pressure is at a position
     public float GetCurrentStressAt(Vector3 position)
     {
         float stress = 0f;
@@ -2502,6 +2597,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         return stress;
     }
 
+    // Gets local energy drain from seasons and pressure zones
     public float GetLocalEnergyDrainMultiplier(Vector3 position)
     {
         float multiplier = Environment != null ? Environment.EnergyDrainMultiplier : 1f;
@@ -2525,6 +2621,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         return Mathf.Clamp(multiplier, 0.35f, 2.5f);
     }
 
+    // Gets local health damage pressure from pressure zones
     public float GetLocalHealthPressure(Vector3 position)
     {
         float damage = 0f;
@@ -2544,6 +2641,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         return Mathf.Max(0f, damage);
     }
 
+    // Gets local food opportunity from pressure zones
     public float GetLocalFoodOpportunityMultiplier(Vector3 position)
     {
         float multiplier = 1f;
@@ -2567,6 +2665,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         return Mathf.Clamp(multiplier, 0.25f, 2.5f);
     }
 
+    // Gets the random point in simulation area used by the sim
     public Vector3 GetRandomPointInSimulationArea()
     {
         Vector3 half = SimulationAreaSize * 0.5f;
@@ -2583,6 +2682,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         );
     }
 
+    // Keeps a point inside the sim bounds and above terrain
     public Vector3 ClampToSimulationArea(Vector3 position)
     {
         Vector3 half = SimulationAreaSize * 0.5f;
@@ -2605,6 +2705,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         return position;
     }
 
+    // Clears loose food and resets plant buds so each generation starts cleanly
     private void ResetFoodForNewGeneration()
     {
         if (ResetLooseFoodAndCarrionEachGeneration)
@@ -2665,6 +2766,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         }
     }
 
+    // Clears simulation ready for fresh data
     private void ClearSimulation()
     {
         ClearCreaturesOnly();
@@ -2708,6 +2810,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         offspringPool.Clear();
     }
 
+    // Clears creatures only ready for fresh data
     private void ClearCreaturesOnly()
     {
         for (int i = activeCreatures.Count - 1; i >= 0; i--)
@@ -2721,7 +2824,9 @@ public class EvolutionEcosystemManager : MonoBehaviour
         activeCreatures.Clear();
     }
 
+    // Resets simulation.
     [ContextMenu("Reset Simulation")]
+    // Resets simulation back to a clean state
     public void ResetSimulation()
     {
         CurrentGeneration = 1;
@@ -2732,11 +2837,13 @@ public class EvolutionEcosystemManager : MonoBehaviour
         StartBootstrap();
     }
 
+    // Handles force end generation
     public void ForceEndGeneration()
     {
         EndGenerationAndSpawnNext();
     }
 
+    // Handles clean lists
     private void CleanLists()
     {
         RemoveNullCreatures();
@@ -2748,6 +2855,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         RemoveNullPressureZones();
     }
 
+    // Removes null creatures safely from the sim
     private void RemoveNullCreatures()
     {
         for (int i = activeCreatures.Count - 1; i >= 0; i--)
@@ -2756,6 +2864,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         }
     }
 
+    // Removes null food safely from the sim
     private void RemoveNullFood()
     {
         for (int i = activeFood.Count - 1; i >= 0; i--)
@@ -2764,6 +2873,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         }
     }
 
+    // Removes null carrion safely from the sim
     private void RemoveNullCarrion()
     {
         for (int i = activeCarrion.Count - 1; i >= 0; i--)
@@ -2772,6 +2882,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         }
     }
 
+    // Removes null plants safely from the sim
     private void RemoveNullPlants()
     {
         for (int i = activePlants.Count - 1; i >= 0; i--)
@@ -2780,6 +2891,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         }
     }
 
+    // Removes null egg clusters safely from the sim
     private void RemoveNullEggClusters()
     {
         for (int i = activeEggClusters.Count - 1; i >= 0; i--)
@@ -2788,6 +2900,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         }
     }
 
+    // Removes null current zones safely from the sim
     private void RemoveNullCurrentZones()
     {
         for (int i = activeCurrentZones.Count - 1; i >= 0; i--)
@@ -2796,6 +2909,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         }
     }
 
+    // Removes null pressure zones safely from the sim
     private void RemoveNullPressureZones()
     {
         for (int i = activePressureZones.Count - 1; i >= 0; i--)
@@ -2804,46 +2918,55 @@ public class EvolutionEcosystemManager : MonoBehaviour
         }
     }
 
+    // Returns the active creature list
     public List<MarineCreatureAgent> GetActiveCreatures()
     {
         return activeCreatures;
     }
 
+    // Gets the offspring pool used by the sim
     public List<EvolutionCandidate> GetOffspringPool()
     {
         return offspringPool;
     }
 
+    // Gets the active food used by the sim
     public List<FoodSource> GetActiveFood()
     {
         return activeFood;
     }
 
+    // Gets the active carrion used by the sim
     public List<CarrionSource> GetActiveCarrion()
     {
         return activeCarrion;
     }
 
+    // Gets the active plants used by the sim
     public List<PlantResource> GetActivePlants()
     {
         return activePlants;
     }
 
+    // Gets the active egg clusters used by the sim
     public List<FishEggCluster> GetActiveEggClusters()
     {
         return activeEggClusters;
     }
 
+    // Gets the active current zones used by the sim
     public List<EcosystemWaterCurrentZone> GetActiveCurrentZones()
     {
         return activeCurrentZones;
     }
 
+    // Gets the active pressure zones used by the sim
     public List<EcosystemPressureZone> GetActivePressureZones()
     {
         return activePressureZones;
     }
 
+    // Handles replace population with genomes
     public void ReplacePopulationWithGenomes(List<EvolutionGenome> genomes, int generation, float generationTimerValue)
     {
         if (genomes == null || genomes.Count == 0)
@@ -2874,6 +2997,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         EnsureSpatialGrid();
     }
 
+    // Draws the simulation bounds and helpful manager debug gizmos
     private void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.cyan;

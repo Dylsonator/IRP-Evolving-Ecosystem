@@ -1,11 +1,13 @@
 using UnityEngine;
 
+// Simple graph window for quick diet/diversity checks.
 public class EvolutionGraphPanel : MonoBehaviour
 {
     public bool ShowGraph = true;
     public Rect WindowRect = new Rect(20f, 600f, 520f, 230f);
     public EvolutionStatsTracker StatsTracker;
 
+    // Draws the old debug UI when it is enabled
     private void OnGUI()
     {
         if (!ShowGraph)
@@ -21,6 +23,7 @@ public class EvolutionGraphPanel : MonoBehaviour
         WindowRect = GUI.Window(811022, WindowRect, DrawWindow, "Evolution Graphs");
     }
 
+    // Draws window for debugging
     private void DrawWindow(int id)
     {
         if (StatsTracker == null || StatsTracker.GenerationHistory.Count < 2)
@@ -42,6 +45,7 @@ public class EvolutionGraphPanel : MonoBehaviour
         GUI.DragWindow();
     }
 
+    // Draws line graph for debugging
     private void DrawLineGraph(Rect rect, System.Collections.Generic.List<float> values, Color colour, float maxValue)
     {
         if (values == null || values.Count < 2)
@@ -77,6 +81,7 @@ public class EvolutionGraphPanel : MonoBehaviour
         GUI.color = old;
     }
 
+    // Handles graph point
     private Vector2 GraphPoint(Rect rect, int index, int count, float value01)
     {
         float x = Mathf.Lerp(rect.x + 6f, rect.xMax - 6f, index / Mathf.Max(1f, count - 1f));
@@ -84,6 +89,7 @@ public class EvolutionGraphPanel : MonoBehaviour
         return new Vector2(x, y);
     }
 
+    // Draws line for debugging
     private void DrawLine(Vector2 a, Vector2 b, Texture2D tex, float width)
     {
         Matrix4x4 matrix = GUI.matrix;

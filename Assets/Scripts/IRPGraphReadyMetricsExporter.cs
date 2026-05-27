@@ -3,11 +3,8 @@ using System.IO;
 using System.Text;
 using UnityEngine;
 
-/// <summary>
-/// Small graph-focused CSV exporter.
-/// This intentionally writes a narrow, tidy row once per completed generation so it is easy
-/// to import into Excel/Sheets for dissertation graphs.
-/// </summary>
+// Small graph CSV exporter. Kept narrow so Excel graphs are easier.
+// Exports a smaller CSV aimed at graphs for the poster, report and final evidence.
 public class IRPGraphReadyMetricsExporter : MonoBehaviour
 {
     public EvolutionEcosystemManager Manager;
@@ -18,6 +15,7 @@ public class IRPGraphReadyMetricsExporter : MonoBehaviour
 
     private string csvPath;
 
+    // Sets up cached references and safe starting values before the sim runs
     private void Awake()
     {
         ResolveReferences();
@@ -25,6 +23,7 @@ public class IRPGraphReadyMetricsExporter : MonoBehaviour
         EnsureHeader();
     }
 
+    // Finds manager and helper references if they were not assigned
     private void ResolveReferences()
     {
         if (Manager == null)
@@ -40,6 +39,7 @@ public class IRPGraphReadyMetricsExporter : MonoBehaviour
         }
     }
 
+    // Writes metrics using completed generation data before respawn clears it
     public void RecordCompletedGenerationSnapshot(string reason, int generation, List<EvolutionCandidate> evaluatedCandidates, int populationAtEnd, int offspringAtEnd)
     {
         if (!WriteCsv || evaluatedCandidates == null || evaluatedCandidates.Count == 0)
@@ -197,6 +197,7 @@ public class IRPGraphReadyMetricsExporter : MonoBehaviour
         File.AppendAllText(csvPath, line.ToString() + "\n");
     }
 
+    // Calculates Shannon diversity from niche counts
     private float CalculateShannon(Dictionary<string, int> counts, int population)
     {
         if (counts == null || counts.Count == 0 || population <= 0)
@@ -216,6 +217,7 @@ public class IRPGraphReadyMetricsExporter : MonoBehaviour
         return shannon;
     }
 
+    // Creates the CSV header if the file is new
     private void EnsureHeader()
     {
         if (!WriteCsv)
@@ -235,6 +237,7 @@ public class IRPGraphReadyMetricsExporter : MonoBehaviour
         }
     }
 
+    // Cleans text so commas and nulls do not break CSV output
     private string Safe(string value)
     {
         if (string.IsNullOrEmpty(value))

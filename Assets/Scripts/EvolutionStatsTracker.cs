@@ -3,6 +3,7 @@ using System.IO;
 using System.Text;
 using UnityEngine;
 
+// Records generation averages for UI, graphs and evidence.
 public class EvolutionStatsTracker : MonoBehaviour
 {
     [Header("Current Generation Stats")]
@@ -73,6 +74,7 @@ public class EvolutionStatsTracker : MonoBehaviour
 
     private string csvPath;
 
+    // Starts the setup that needs other scene objects to already exist
     private void Start()
     {
         csvPath = Path.Combine(Application.persistentDataPath, CsvFileName);
@@ -84,6 +86,7 @@ public class EvolutionStatsTracker : MonoBehaviour
         }
     }
 
+    // Logs generation results so they can be checked later
     public void RecordGeneration(int generation, List<EvolutionCandidate> evaluatedCandidates, int population, int offspringCount)
     {
         CurrentGeneration = generation;
@@ -220,6 +223,7 @@ public class EvolutionStatsTracker : MonoBehaviour
         }
     }
 
+    // Resets grouped counts back to a clean state
     private void ResetGroupedCounts()
     {
         BalancedCount = 0;
@@ -239,6 +243,7 @@ public class EvolutionStatsTracker : MonoBehaviour
         BehaviourGroupSummary = "None";
     }
 
+    // Clears averages ready for fresh data
     private void ClearAverages()
     {
         AverageFitness = 0f;
@@ -270,6 +275,7 @@ public class EvolutionStatsTracker : MonoBehaviour
         ActiveNicheCount = 0;
     }
 
+    // Handles add grouped count
     private void AddGroupedCount(CreatureBehaviourType type)
     {
         switch (type)
@@ -314,6 +320,7 @@ public class EvolutionStatsTracker : MonoBehaviour
         }
     }
 
+    // Gets the dominant group name used by the sim
     private string GetDominantGroupName()
     {
         int highest = BalancedCount;
@@ -333,6 +340,7 @@ public class EvolutionStatsTracker : MonoBehaviour
         return name;
     }
 
+    // Gets the dominant diet mode used by the sim
     private string GetDominantDietMode()
     {
         if (AverageMeatDiet > AveragePlantDiet && AverageMeatDiet > AverageCarrionDiet)
@@ -348,6 +356,7 @@ public class EvolutionStatsTracker : MonoBehaviour
         return "Plant";
     }
 
+    // Counts active niches from nearby/current data
     private int CountActiveNiches()
     {
         int activeGroups = 0;
@@ -365,6 +374,7 @@ public class EvolutionStatsTracker : MonoBehaviour
         return activeGroups;
     }
 
+    // Handles check dominant
     private void CheckDominant(int count, string name, ref int highest, ref string currentName)
     {
         if (count > highest)
@@ -374,6 +384,7 @@ public class EvolutionStatsTracker : MonoBehaviour
         }
     }
 
+    // Builds the group summary data from the current values
     private string BuildGroupSummary()
     {
         return "Bal " + BalancedCount +
@@ -389,6 +400,7 @@ public class EvolutionStatsTracker : MonoBehaviour
                " | Heavy " + HeavyCount;
     }
 
+    // Calculates descriptor spread from the current data
     private float CalculateDescriptorSpread(List<Vector2> descriptors)
     {
         if (descriptors == null || descriptors.Count <= 1)
@@ -415,6 +427,7 @@ public class EvolutionStatsTracker : MonoBehaviour
         return spread / descriptors.Count;
     }
 
+    // Calculates single axis spread from the current data
     private float CalculateSingleAxisSpread(List<Vector2> descriptors, bool useX)
     {
         if (descriptors == null || descriptors.Count <= 1)
@@ -442,6 +455,7 @@ public class EvolutionStatsTracker : MonoBehaviour
         return spread / descriptors.Count;
     }
 
+    // Calculates trait diversity from the current data
     private float CalculateTraitDiversity(List<EvolutionGenome> genomes)
     {
         if (genomes == null || genomes.Count <= 1)
@@ -464,6 +478,7 @@ public class EvolutionStatsTracker : MonoBehaviour
         return (speed + vision + size + hunger + aggression + risk + grouping + plantDiet + meatDiet + carrionDiet + mutation) / 11f;
     }
 
+    // Handles average absolute deviation
     private float AverageAbsoluteDeviation(List<EvolutionGenome> genomes, System.Func<EvolutionGenome, float> getter)
     {
         float average = 0f;
@@ -485,6 +500,7 @@ public class EvolutionStatsTracker : MonoBehaviour
         return spread / genomes.Count;
     }
 
+    // Calculates behaviour type diversity from the current data
     private float CalculateBehaviourTypeDiversity(int totalCount)
     {
         if (totalCount <= 0)
@@ -495,6 +511,7 @@ public class EvolutionStatsTracker : MonoBehaviour
         return CountActiveNiches() / 11f;
     }
 
+    // Handles append csv line
     private void AppendCsvLine()
     {
         StringBuilder line = new StringBuilder();
@@ -546,6 +563,7 @@ public class EvolutionStatsTracker : MonoBehaviour
         File.AppendAllText(csvPath, line.ToString());
     }
 
+    // Gets the csv path used by the sim
     public string GetCsvPath()
     {
         return csvPath;

@@ -1,5 +1,6 @@
 using UnityEngine;
 
+// role names
 public enum CreatureBehaviourType
 {
     Balanced,
@@ -21,6 +22,7 @@ public enum CreatureBehaviourType
 
 public static class CreatureDebugTypeUtility
 {
+    // Builds a readable role by checking diet focus, morphs and final stats
     public static CreatureBehaviourType GetBehaviourType(EvolutionGenome genome)
     {
         if (genome == null)
@@ -110,6 +112,7 @@ public static class CreatureDebugTypeUtility
         return CreatureBehaviourType.Balanced;
     }
 
+    // Turns the enum role into text for labels and logs
     public static string GetTypeName(CreatureBehaviourType type)
     {
         switch (type)
@@ -147,6 +150,7 @@ public static class CreatureDebugTypeUtility
         }
     }
 
+    // Builds a simple body-shape label from morph IDs and final stats
     public static string GetMorphologyName(EvolutionGenome genome)
     {
         if (genome == null)
@@ -189,12 +193,14 @@ public static class CreatureDebugTypeUtility
         return "Basic";
     }
 
+    // Combines role and body shape so similar fish are easier to track
     public static string GetSpeciesGroupName(EvolutionGenome genome)
     {
         CreatureBehaviourType type = GetBehaviourType(genome);
         return GetTypeName(type) + " - " + GetMorphologyName(genome);
     }
 
+    // Returns the debug colour used to show each role in the scene
     public static Color GetTypeColour(CreatureBehaviourType type)
     {
         switch (type)
@@ -232,6 +238,7 @@ public static class CreatureDebugTypeUtility
         }
     }
 
+    // Builds a short display name from the role and runtime ID
     public static string BuildReadableName(EvolutionGenome genome, int id)
     {
         CreatureBehaviourType type = GetBehaviourType(genome);

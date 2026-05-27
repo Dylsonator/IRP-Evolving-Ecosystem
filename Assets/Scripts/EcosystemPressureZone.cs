@@ -1,5 +1,6 @@
 using UnityEngine;
 
+// Local pressure zone for things like cold current, scarcity or mutation pressure.
 public enum EcosystemPressureZoneType
 {
     ColdCurrent,
@@ -9,11 +10,7 @@ public enum EcosystemPressureZoneType
     PredatorWake
 }
 
-/// <summary>
-/// Local environmental pressure used for in-generation adaptation.
-/// These zones are cheap: creatures query them through the manager when draining energy,
-/// choosing nest positions and calculating mutation pressure.
-/// </summary>
+// Local pressure zone used by fish/manager for energy, nesting and mutation pressure.
 public class EcosystemPressureZone : MonoBehaviour
 {
     [Header("Identity")]
@@ -39,6 +36,7 @@ public class EcosystemPressureZone : MonoBehaviour
 
     private float age;
 
+    // Registers this object with the ecosystem when Unity enables it
     private void OnEnable()
     {
         if (EvolutionEcosystemManager.Instance != null)
@@ -47,6 +45,7 @@ public class EcosystemPressureZone : MonoBehaviour
         }
     }
 
+    // Unregisters this object so the manager does not keep old references
     private void OnDisable()
     {
         if (EvolutionEcosystemManager.Instance != null)
@@ -55,6 +54,7 @@ public class EcosystemPressureZone : MonoBehaviour
         }
     }
 
+    // Runs the normal frame checks and timers
     private void Update()
     {
         if (Drift && DriftDirection.sqrMagnitude > 0.001f)
@@ -78,6 +78,7 @@ public class EcosystemPressureZone : MonoBehaviour
         }
     }
 
+    // Gets the influence01 used by the sim
     public float GetInfluence01(Vector3 position)
     {
         float radius = Mathf.Max(0.1f, Radius);
@@ -96,6 +97,7 @@ public class EcosystemPressureZone : MonoBehaviour
         return 1f - Mathf.Clamp01((distance - fadeStart) / Mathf.Max(0.01f, radius - fadeStart));
     }
 
+    // Handles configure for type
     public void ConfigureForType(EcosystemPressureZoneType type)
     {
         ZoneType = type;
@@ -149,6 +151,7 @@ public class EcosystemPressureZone : MonoBehaviour
         }
     }
 
+    // Draws selected-only gizmos so setup can be checked without clutter
     private void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.magenta;

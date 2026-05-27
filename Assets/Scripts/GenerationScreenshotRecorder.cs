@@ -1,12 +1,14 @@
 using System.IO;
 using UnityEngine;
 
+// Optional screenshot helper for generation evidence.
 public class GenerationScreenshotRecorder : MonoBehaviour
 {
     public bool CaptureOnGenerationChange = false;
     public string FolderName = "IRP_GenerationScreenshots";
     private int lastGeneration = -1;
 
+    // Runs the normal frame checks and timers
     private void Update()
     {
         if (EvolutionEcosystemManager.Instance == null)
@@ -31,6 +33,7 @@ public class GenerationScreenshotRecorder : MonoBehaviour
         CaptureGeneration(generation);
     }
 
+    // Captures a screenshot for the current generation
     public void CaptureGeneration(int generation)
     {
         string folder = Path.Combine(Application.persistentDataPath, FolderName);

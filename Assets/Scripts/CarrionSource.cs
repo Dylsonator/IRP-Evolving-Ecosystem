@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+// Dead fish become meat for predators or scavengers.
 public class CarrionSource : MonoBehaviour
 {
     [Header("Carrion Mass")]
@@ -33,6 +34,7 @@ public class CarrionSource : MonoBehaviour
     private Vector3 initialScale;
     private float updateTimer;
 
+    // Registers this object with the ecosystem when Unity enables it
     private void OnEnable()
     {
         if (EvolutionEcosystemManager.Instance != null)
@@ -41,6 +43,7 @@ public class CarrionSource : MonoBehaviour
         }
     }
 
+    // Unregisters this object so the manager does not keep old references
     private void OnDisable()
     {
         if (EvolutionEcosystemManager.Instance != null)
@@ -49,6 +52,7 @@ public class CarrionSource : MonoBehaviour
         }
     }
 
+    // Sets up cached references and safe starting values before the sim runs
     private void Awake()
     {
         initialScale = transform.localScale;
@@ -70,6 +74,7 @@ public class CarrionSource : MonoBehaviour
         UpdateVisualScale();
     }
 
+    // Ages the carrion and only runs drift/decay work on a timer
     private void Update()
     {
         float dt = Time.deltaTime;
@@ -91,6 +96,7 @@ public class CarrionSource : MonoBehaviour
     }
 
 
+    // Moves carrion with the current, then settles it down onto the terrain floor
     private void ApplySettlingAndCurrentDrift()
     {
         EvolutionEcosystemManager manager = EvolutionEcosystemManager.Instance;
@@ -121,6 +127,7 @@ public class CarrionSource : MonoBehaviour
         transform.position = manager.ClampToSimulationArea(transform.position);
     }
 
+    // Disables colliders and physics so dead meat does not block fish movement
     private void DisableBlockingPhysics()
     {
         Collider[] colliders = GetComponentsInChildren<Collider>();
@@ -137,11 +144,13 @@ public class CarrionSource : MonoBehaviour
         }
     }
 
+    // Uses the bite system with no specific feeder ID
     public float ConsumeBite(float requestedMass)
     {
         return ConsumeBiteBy(requestedMass, 0);
     }
 
+    // Removes a small amount of meat, tracks the feeder, then shrinks or destroys the carrion
     public float ConsumeBiteBy(float requestedMass, int feederId)
     {
         if (IsConsumed || requestedMass <= 0f)
@@ -167,17 +176,20 @@ public class CarrionSource : MonoBehaviour
         return eaten;
     }
 
+    // Cleans old feeder entries, then returns how many fish recently ate here
     public int GetRecentFeederCount()
     {
         CleanRecentFeeders();
         return recentFeederIds.Count;
     }
 
+    // Returns how much meat is left as a 0 to 1 value
     public float GetMassRatio()
     {
         return MaxMass > 0f ? Mathf.Clamp01(RemainingMass / MaxMass) : 0f;
     }
 
+    // Stores the fish ID so crowded feeding can be detected for a short time
     private void RegisterRecentFeeder(int feederId)
     {
         if (feederId == 0)
@@ -197,6 +209,8 @@ public class CarrionSource : MonoBehaviour
         recentFeederTimes.Add(Time.time);
     }
 
+
+    // Removes feeder IDs after their short memory timer runs out
     private void CleanRecentFeeders()
     {
         float cutoff = Time.time - Mathf.Max(0.1f, RecentFeederMemoryTime);
@@ -210,11 +224,14 @@ public class CarrionSource : MonoBehaviour
         }
     }
 
+    // Consumes all remaining meat through the normal bite path
     public float Consume()
     {
         return ConsumeBite(RemainingMass > 0f ? RemainingMass : EnergyValue);
     }
 
+
+    // Marks the carrion as used, unregisters it, then destroys the object
     private void ConsumeFully()
     {
         if (IsConsumed)
@@ -232,6 +249,7 @@ public class CarrionSource : MonoBehaviour
         Destroy(gameObject);
     }
 
+    // Removes old carrion without giving any fish extra energy
     private void RemoveWithoutEnergy()
     {
         if (EvolutionEcosystemManager.Instance != null)
@@ -242,6 +260,7 @@ public class CarrionSource : MonoBehaviour
         Destroy(gameObject);
     }
 
+    // Shrinks the carrion based on how much meat is left
     private void UpdateVisualScale()
     {
         float ratio = MaxMass > 0f ? Mathf.Clamp01(RemainingMass / MaxMass) : 0f;

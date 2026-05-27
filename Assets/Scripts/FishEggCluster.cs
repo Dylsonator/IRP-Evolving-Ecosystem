@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+// Egg clutch that can hatch into fish or get eaten.
 public class FishEggCluster : MonoBehaviour
 {
     [Header("Egg State")]
@@ -31,11 +32,13 @@ public class FishEggCluster : MonoBehaviour
     private float predatorScanTimer;
     private float scaleRefreshTimer;
 
+    // Sets up cached references and safe starting values before the sim runs
     private void Awake()
     {
         initialScale = transform.localScale;
     }
 
+    // Registers this object with the ecosystem when Unity enables it
     private void OnEnable()
     {
         if (EvolutionEcosystemManager.Instance != null)
@@ -44,6 +47,7 @@ public class FishEggCluster : MonoBehaviour
         }
     }
 
+    // Unregisters this object so the manager does not keep old references
     private void OnDisable()
     {
         if (EvolutionEcosystemManager.Instance != null)
@@ -52,6 +56,7 @@ public class FishEggCluster : MonoBehaviour
         }
     }
 
+    // Runs the normal frame checks and timers
     private void Update()
     {
         Age += Time.deltaTime;
@@ -82,6 +87,7 @@ public class FishEggCluster : MonoBehaviour
         }
     }
 
+    // Handles initialise
     public void Initialise(List<EvolutionCandidate> children, float hatchTime, float health, float mass, MarineCreatureAgent mother = null, MarineCreatureAgent father = null)
     {
         Children = children ?? new List<EvolutionCandidate>();
@@ -95,6 +101,7 @@ public class FishEggCluster : MonoBehaviour
         UpdateScale();
     }
 
+    // Handles predation pressure using the current input or sim state
     private void HandlePredationPressure()
     {
         EvolutionEcosystemManager manager = EvolutionEcosystemManager.Instance;
@@ -136,6 +143,7 @@ public class FishEggCluster : MonoBehaviour
         }
     }
 
+    // Handles hatch
     private void Hatch()
     {
         EvolutionEcosystemManager manager = EvolutionEcosystemManager.Instance;
@@ -167,6 +175,7 @@ public class FishEggCluster : MonoBehaviour
     }
 
 
+    // Checks if it is parent or guardian
     public bool IsParentOrGuardian(MarineCreatureAgent fish)
     {
         if (fish == null || fish.Candidate == null)
@@ -183,6 +192,7 @@ public class FishEggCluster : MonoBehaviour
         return id != 0 && (id == MotherId || id == FatherId);
     }
 
+    // Updates scale using the current sim state
     private void UpdateScale()
     {
         float amount = Mathf.Max(0.1f, Children != null ? Children.Count : 1);

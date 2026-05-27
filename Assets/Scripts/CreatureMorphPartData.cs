@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+// One body part asset and the stat changes it gives to a fish.
 [CreateAssetMenu(menuName = "IRP Evolution/Creature Morph Part", fileName = "MorphPart_New")]
 public class CreatureMorphPartData : ScriptableObject
 {
@@ -76,7 +77,9 @@ public class CreatureMorphPartData : ScriptableObject
     [Header("Mutation")]
     [Range(0.01f, 10f)] public float MutationWeight = 1f;
 
+    // Handles the fill basic body socket nodes step.
     [ContextMenu("IRP/Fill Basic Body Socket Nodes")]
+    // Handles fill basic body socket nodes
     public void FillBasicBodySocketNodes()
     {
         Slot = CreatureMorphSlot.Body;
@@ -95,7 +98,9 @@ public class CreatureMorphPartData : ScriptableObject
 #endif
     }
 
+    // Clears socket nodes.
     [ContextMenu("IRP/Clear Socket Nodes")]
+    // Clears socket nodes ready for fresh data
     public void ClearSocketNodes()
     {
         SocketNodes.Clear();

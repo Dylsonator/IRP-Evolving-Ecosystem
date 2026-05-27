@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+// Edible resource script for plant buds and loose food.
 public class FoodSource : MonoBehaviour
 {
     [Header("Food Mass")]
@@ -24,6 +25,7 @@ public class FoodSource : MonoBehaviour
     private Vector3 initialScale;
     private PlantBudResource cachedPlantBud;
 
+    // Registers this object with the ecosystem when Unity enables it
     private void OnEnable()
     {
         if (EvolutionEcosystemManager.Instance != null)
@@ -32,6 +34,7 @@ public class FoodSource : MonoBehaviour
         }
     }
 
+    // Unregisters this object so the manager does not keep old references
     private void OnDisable()
     {
         if (EvolutionEcosystemManager.Instance != null)
@@ -40,6 +43,7 @@ public class FoodSource : MonoBehaviour
         }
     }
 
+    // Sets up cached references and safe starting values before the sim runs
     private void Awake()
     {
         cachedPlantBud = GetComponent<PlantBudResource>();
@@ -62,6 +66,7 @@ public class FoodSource : MonoBehaviour
         UpdateVisualScale();
     }
 
+    // Handles Disables blocking physics
     private void DisableBlockingPhysics()
     {
         Collider[] colliders = GetComponentsInChildren<Collider>();
@@ -78,11 +83,13 @@ public class FoodSource : MonoBehaviour
         }
     }
 
+    // Handles consume bite
     public float ConsumeBite(float requestedMass)
     {
         return ConsumeBiteBy(requestedMass, 0);
     }
 
+    // Handles consume bite by
     public float ConsumeBiteBy(float requestedMass, int feederId)
     {
         if (IsConsumed || requestedMass <= 0f)
@@ -118,6 +125,7 @@ public class FoodSource : MonoBehaviour
         return eaten;
     }
 
+    // Handles was recently fed by
     public bool WasRecentlyFedBy(int feederId)
     {
         if (feederId == 0)
@@ -129,6 +137,7 @@ public class FoodSource : MonoBehaviour
         return recentFeederIds.Contains(feederId);
     }
 
+    // Checks if it is detached plant bud
     public bool IsDetachedPlantBud()
     {
         if (cachedPlantBud == null)
@@ -139,17 +148,20 @@ public class FoodSource : MonoBehaviour
         return cachedPlantBud != null && !cachedPlantBud.AttachedToPlant;
     }
 
+    // Gets the recent feeder count used by the sim
     public int GetRecentFeederCount()
     {
         CleanRecentFeeders();
         return recentFeederIds.Count;
     }
 
+    // Gets the mass ratio used by the sim
     public float GetMassRatio()
     {
         return MaxMass > 0f ? Mathf.Clamp01(RemainingMass / MaxMass) : 0f;
     }
 
+    // Registers recent feeder with the manager list
     private void RegisterRecentFeeder(int feederId)
     {
         if (feederId == 0)
@@ -169,6 +181,7 @@ public class FoodSource : MonoBehaviour
         recentFeederTimes.Add(Time.time);
     }
 
+    // Handles clean recent feeders
     private void CleanRecentFeeders()
     {
         float cutoff = Time.time - Mathf.Max(0.1f, RecentFeederMemoryTime);
@@ -182,11 +195,13 @@ public class FoodSource : MonoBehaviour
         }
     }
 
+    // Handles consume
     public float Consume()
     {
         return ConsumeBite(RemainingMass > 0f ? RemainingMass : EnergyValue);
     }
 
+    // Handles consume fully
     private void ConsumeFully()
     {
         if (IsConsumed)
@@ -204,6 +219,7 @@ public class FoodSource : MonoBehaviour
         Destroy(gameObject);
     }
 
+    // Updates visual scale using the current sim state
     private void UpdateVisualScale()
     {
         float ratio = MaxMass > 0f ? Mathf.Clamp01(RemainingMass / MaxMass) : 0f;

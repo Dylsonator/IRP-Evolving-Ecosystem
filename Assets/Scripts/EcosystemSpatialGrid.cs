@@ -1,11 +1,8 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-/// <summary>
-/// Lightweight broad-phase lookup for the ecosystem.
-/// It stops every fish from scanning every fish/food/carrion object each time it thinks.
-/// Rebuilt by EvolutionEcosystemManager at a fixed interval.
-/// </summary>
+// Cheap lookup grid so fish only check nearby stuff instead of everything.
+// Spatial grid so fish do not scan every object every time.
 public class EcosystemSpatialGrid : MonoBehaviour
 {
     public float CellSize = 12f;
@@ -21,6 +18,7 @@ public class EcosystemSpatialGrid : MonoBehaviour
     private int lastCarrionCount;
     private int lastEggCount;
 
+    // Rebuilds nearby lookup cells for fish/resources.
     public void Rebuild(
         List<MarineCreatureAgent> creatures,
         List<FoodSource> food,
@@ -115,6 +113,7 @@ public class EcosystemSpatialGrid : MonoBehaviour
         }
     }
 
+    // Returns creatures near a point by checking only nearby grid cells
     public List<MarineCreatureAgent> QueryCreatures(Vector3 position, float radius)
     {
         List<MarineCreatureAgent> results = new List<MarineCreatureAgent>(24);
@@ -122,6 +121,7 @@ public class EcosystemSpatialGrid : MonoBehaviour
         return results;
     }
 
+    // Returns food near a point by checking only nearby grid cells
     public List<FoodSource> QueryFood(Vector3 position, float radius)
     {
         List<FoodSource> results = new List<FoodSource>(24);
@@ -129,6 +129,7 @@ public class EcosystemSpatialGrid : MonoBehaviour
         return results;
     }
 
+    // Returns carrion near a point by checking only nearby grid cells
     public List<CarrionSource> QueryCarrion(Vector3 position, float radius)
     {
         List<CarrionSource> results = new List<CarrionSource>(12);
@@ -136,6 +137,7 @@ public class EcosystemSpatialGrid : MonoBehaviour
         return results;
     }
 
+    // Returns egg clusters near a point by checking only nearby grid cells
     public List<FishEggCluster> QueryEggClusters(Vector3 position, float radius)
     {
         List<FishEggCluster> results = new List<FishEggCluster>(8);
@@ -143,11 +145,13 @@ public class EcosystemSpatialGrid : MonoBehaviour
         return results;
     }
 
+    // Builds a short debug string for the current state
     public string GetDebugSummary()
     {
         return "Grid C:" + lastCreatureCount + " F:" + lastFoodCount + " K:" + lastCarrionCount + " E:" + lastEggCount + " Cell:" + CellSize.ToString("F1");
     }
 
+    // Handles the add to cell step.
     private static void AddToCell<T>(Dictionary<Vector3Int, List<T>> dictionary, Vector3Int cell, T value)
     {
         if (!dictionary.TryGetValue(cell, out List<T> list))
@@ -159,6 +163,7 @@ public class EcosystemSpatialGrid : MonoBehaviour
         list.Add(value);
     }
 
+    // Handles the query cells step.
     private void QueryCells<T>(Dictionary<Vector3Int, List<T>> dictionary, Vector3 position, float radius, List<T> results) where T : Component
     {
         float safeCellSize = Mathf.Max(1f, CellSize);
@@ -196,6 +201,7 @@ public class EcosystemSpatialGrid : MonoBehaviour
         }
     }
 
+    // Converts a world position into a spatial grid cell
     private static Vector3Int GetCell(Vector3 position, float cellSize)
     {
         return new Vector3Int(
@@ -204,6 +210,7 @@ public class EcosystemSpatialGrid : MonoBehaviour
             Mathf.FloorToInt(position.z / cellSize));
     }
 
+    // Draws selected-only gizmos so setup can be checked without clutter
     private void OnDrawGizmosSelected()
     {
         if (!DrawDebugGrid)

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+// Procedural plant/resource spawner that grows edible buds and handles regrowth between generations.
 public class PlantResource : MonoBehaviour
 {
     [Header("Procedural Shape")]
@@ -62,6 +63,7 @@ public class PlantResource : MonoBehaviour
     private float detachTimer;
     private float plantTickTimer;
 
+    // Registers this object with the ecosystem when Unity enables it
     private void OnEnable()
     {
         if (EvolutionEcosystemManager.Instance != null)
@@ -70,6 +72,7 @@ public class PlantResource : MonoBehaviour
         }
     }
 
+    // Unregisters this object so the manager does not keep old references
     private void OnDisable()
     {
         if (EvolutionEcosystemManager.Instance != null)
@@ -78,6 +81,7 @@ public class PlantResource : MonoBehaviour
         }
     }
 
+    // Starts the setup that needs other scene objects to already exist
     private void Start()
     {
         ApplyFoodSupplySafeguards();
@@ -98,6 +102,7 @@ public class PlantResource : MonoBehaviour
     }
 
 
+    // Applies food supply safeguards to the current object
     private void ApplyFoodSupplySafeguards()
     {
         if (!UseFoodSupplySafeguards)
@@ -116,6 +121,7 @@ public class PlantResource : MonoBehaviour
         DetachedBudLifeTime = Mathf.Max(DetachedBudLifeTime, 75f);
     }
 
+    // Runs the normal frame checks and timers
     private void Update()
     {
         plantTickTimer -= Time.deltaTime;
@@ -130,7 +136,9 @@ public class PlantResource : MonoBehaviour
         HandleBudDetachment();
     }
 
+    // Handles the generate plant step.
     [ContextMenu("Generate Procedural Plant")]
+    // Builds the procedural plant body and then fills it with buds
     public void GeneratePlant()
     {
         if (ClearPreviousProceduralParts)
@@ -163,7 +171,9 @@ public class PlantResource : MonoBehaviour
         }
     }
 
+    // Clears procedural parts.
     [ContextMenu("Clear Procedural Plant")]
+    // Deletes old generated plant parts before rebuilding
     public void ClearProceduralParts()
     {
         for (int i = transform.childCount - 1; i >= 0; i--)
@@ -185,6 +195,7 @@ public class PlantResource : MonoBehaviour
         }
     }
 
+    // Creates one procedural stalk using a cylinder and optional leaves
     private void CreateStalk(int index, int stalkCount)
     {
         float angle = stalkCount > 0 ? (360f / stalkCount) * index + Random.Range(-18f, 18f) : Random.Range(0f, 360f);
@@ -235,6 +246,7 @@ public class PlantResource : MonoBehaviour
         budPoint.localScale = Vector3.one;
     }
 
+    // Creates one flat leaf object and places it on a stalk
     private void CreateLeaf(Transform stalkRoot, Vector3 baseLocal, Vector3 tipLocal, Vector3 radial, int leafIndex)
     {
         float t = Random.Range(0.28f, 0.78f);
@@ -255,6 +267,7 @@ public class PlantResource : MonoBehaviour
         RemoveSolidCollider(leaf);
     }
 
+    // Applies the chosen material to a generated plant part
     private void ApplyMaterial(GameObject target, Material material)
     {
         if (material == null)
@@ -269,6 +282,7 @@ public class PlantResource : MonoBehaviour
         }
     }
 
+    // Removes primitive colliders so generated plant parts do not block fish
     private void RemoveSolidCollider(GameObject target)
     {
         Collider collider = target.GetComponent<Collider>();
@@ -287,7 +301,9 @@ public class PlantResource : MonoBehaviour
         }
     }
 
+    // Handles the cache sockets step.
     [ContextMenu("Cache Bud Sockets")]
+    // Finds bud sockets on the plant for bud spawning
     public void CacheSockets()
     {
         sockets.Clear();
@@ -307,7 +323,9 @@ public class PlantResource : MonoBehaviour
         }
     }
 
+    // Handles the fill buds step.
     [ContextMenu("Fill Buds")]
+    // Spawns buds until the plant reaches its active bud limit
     public void FillBuds()
     {
         CleanBuds();
@@ -319,7 +337,9 @@ public class PlantResource : MonoBehaviour
         }
     }
 
+    // Resets buds for new generation.
     [ContextMenu("Reset Buds For New Generation")]
+    // Clears old buds and refills the plant for a clean generation start
     public void ResetBudsForNewGeneration()
     {
         for (int i = activeBuds.Count - 1; i >= 0; i--)
@@ -338,6 +358,7 @@ public class PlantResource : MonoBehaviour
         FillBuds();
     }
 
+    // Removes a consumed bud from the active list
     public void NotifyBudRemoved(PlantBudResource bud)
     {
         activeBuds.Remove(bud);
@@ -347,6 +368,7 @@ public class PlantResource : MonoBehaviour
         }
     }
 
+    // Removes a detached bud from the plant list but leaves it in the world
     public void NotifyBudDetached(PlantBudResource bud)
     {
         activeBuds.Remove(bud);
@@ -356,6 +378,7 @@ public class PlantResource : MonoBehaviour
         }
     }
 
+    // Regrows new buds over time if the plant is below its limit
     private void HandleRegrowth()
     {
         if (!Regrows || activeBuds.Count >= MaxActiveBuds)
@@ -374,6 +397,7 @@ public class PlantResource : MonoBehaviour
         regrowTimer = RegrowInterval / Mathf.Max(0.25f, foodOpportunity);
     }
 
+    // Randomly detaches mature buds so some food floats around
     private void HandleBudDetachment()
     {
         if (DetachChancePerMinute <= 0f || activeBuds.Count == 0)
@@ -401,6 +425,7 @@ public class PlantResource : MonoBehaviour
         }
     }
 
+    // Builds a small current-influenced impulse for detached buds
     private Vector3 GetRandomDetachImpulse(Vector3 worldPosition)
     {
         Vector3 impulse = Random.insideUnitSphere;
@@ -416,6 +441,7 @@ public class PlantResource : MonoBehaviour
         return impulse.normalized * Random.Range(DetachImpulseMin, DetachImpulseMax);
     }
 
+    // Spawns one food bud either on a socket or near the plant
     private void SpawnBud(int index)
     {
         Transform socket = UseBudSockets && sockets.Count > 0 ? sockets[Mathf.Clamp(index % sockets.Count, 0, sockets.Count - 1)] : null;
@@ -464,6 +490,7 @@ public class PlantResource : MonoBehaviour
         }
     }
 
+    // Handles clean buds
     private void CleanBuds()
     {
         for (int i = activeBuds.Count - 1; i >= 0; i--)
@@ -483,6 +510,7 @@ public class PlantResource : MonoBehaviour
         }
     }
 
+    // Draws selected-only gizmos so setup can be checked without clutter
     private void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.green;

@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 
+// Small evolvable neural network used by fish to bias decisions without hand-authoring every action.
 [Serializable]
 public class SimpleNeuralNetwork
 {
@@ -13,6 +14,7 @@ public class SimpleNeuralNetwork
     public float[] HiddenBiases;
     public float[] OutputBiases;
 
+    // Creates a new random network with the requested input, hidden and output counts
     public static SimpleNeuralNetwork CreateRandom(int inputCount, int hiddenCount, int outputCount)
     {
         SimpleNeuralNetwork network = new SimpleNeuralNetwork();
@@ -33,6 +35,7 @@ public class SimpleNeuralNetwork
         return network;
     }
 
+    // Runs the network and returns a new output array
     public float[] Evaluate(float[] inputs)
     {
         float[] outputs = new float[Mathf.Max(1, OutputCount)];
@@ -41,6 +44,7 @@ public class SimpleNeuralNetwork
         return outputs;
     }
 
+    // Runs the network into supplied buffers so the sim avoids garbage allocations
     public bool EvaluateNonAlloc(float[] inputs, float[] outputs, float[] hiddenScratch)
     {
         if (!ValidateNetwork())
@@ -85,11 +89,13 @@ public class SimpleNeuralNetwork
         return true;
     }
 
+    // Copies the network and mutates weights, biases and sometimes structure
     public SimpleNeuralNetwork CreateMutatedCopy(float mutationRate, float mutationStrength)
     {
         return CreateMutatedCopy(mutationRate, mutationStrength, 0f, HiddenCount);
     }
 
+    // Copies the network and mutates weights, biases and sometimes structure
     public SimpleNeuralNetwork CreateMutatedCopy(float mutationRate, float mutationStrength, float structuralMutationRate, int maxHiddenCount)
     {
         if (!ValidateNetwork())
@@ -113,6 +119,7 @@ public class SimpleNeuralNetwork
         return copy;
     }
 
+    // Resizes a network while keeping as many old weights as possible
     public SimpleNeuralNetwork ResizeTo(int inputCount, int hiddenCount, int outputCount)
     {
         inputCount = Mathf.Max(1, inputCount);
@@ -150,11 +157,13 @@ public class SimpleNeuralNetwork
         return resized;
     }
 
+    // Counts active weights so brain complexity can be logged
     public int GetConnectionCount()
     {
         return Mathf.Max(0, InputCount * HiddenCount + HiddenCount * OutputCount);
     }
 
+    // Copies network arrays without changing their values
     private SimpleNeuralNetwork CopyStructure()
     {
         SimpleNeuralNetwork copy = new SimpleNeuralNetwork();
@@ -164,6 +173,7 @@ public class SimpleNeuralNetwork
         return copy;
     }
 
+    // Adds one hidden node while keeping old connections where possible
     private SimpleNeuralNetwork CreateWithAdditionalHiddenNode()
     {
         int newHiddenCount = HiddenCount + 1;
@@ -198,6 +208,7 @@ public class SimpleNeuralNetwork
         return expanded;
     }
 
+    // Copies an array and randomly nudges values within a safe range
     private float[] CopyAndMutate(float[] source, float mutationRate, float mutationStrength)
     {
         if (source == null)
@@ -221,6 +232,7 @@ public class SimpleNeuralNetwork
         return result;
     }
 
+    // Fills a weight array with random starting values
     private void Randomise(float[] values)
     {
         for (int i = 0; i < values.Length; i++)
@@ -229,6 +241,7 @@ public class SimpleNeuralNetwork
         }
     }
 
+    // Makes sure arrays exist and match the expected network size
     private bool ValidateNetwork()
     {
         return InputCount > 0
@@ -244,6 +257,7 @@ public class SimpleNeuralNetwork
             && OutputBiases.Length == OutputCount;
     }
 
+    // Uses a cheap tanh-style clamp for brain output
     private float FastTanh(float value)
     {
         return (float)Math.Tanh(value);

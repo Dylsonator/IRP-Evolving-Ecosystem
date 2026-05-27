@@ -3,12 +3,8 @@ using System.IO;
 using System.Text;
 using UnityEngine;
 
-/// <summary>
-/// Lightweight novelty/behaviour archive used as the natural anti-convergence mechanism.
-/// Instead of injecting hard-coded missing roles, candidates receive selection pressure from:
-/// 1) novelty compared with previous successful behaviours,
-/// 2) fitness sharing against behaviourally similar candidates.
-/// </summary>
+// Natural anti-convergence archive. It keeps behaviour variety through novelty and fitness sharing.
+// Keeps behaviour descriptors from previous generations for novelty and anti-convergence scoring.
 public class EvolutionDiversityArchive : MonoBehaviour
 {
     public EvolutionEcosystemManager Manager;
@@ -32,6 +28,7 @@ public class EvolutionDiversityArchive : MonoBehaviour
         get { return entries.Count; }
     }
 
+    // Sets up cached references and safe starting values before the sim runs
     private void Awake()
     {
         if (Manager == null)
@@ -43,6 +40,7 @@ public class EvolutionDiversityArchive : MonoBehaviour
         EnsureHeader();
     }
 
+    // Logs generation results so they can be checked later
     public void RecordGeneration(int generation, List<EvolutionCandidate> evaluated)
     {
         if (!Enabled || evaluated == null || evaluated.Count == 0)
@@ -90,6 +88,7 @@ public class EvolutionDiversityArchive : MonoBehaviour
         }
     }
 
+    // Gets the novelty score used by the sim
     public float GetNoveltyScore(EvolutionCandidate candidate, List<EvolutionCandidate> currentCandidates)
     {
         if (!Enabled || candidate == null || candidate.Genome == null)
@@ -134,6 +133,7 @@ public class EvolutionDiversityArchive : MonoBehaviour
         return Mathf.Clamp01(total / k * 2.5f);
     }
 
+    // Gets the sharing density used by the sim
     public float GetSharingDensity(EvolutionCandidate candidate, List<EvolutionCandidate> currentCandidates, float sigma)
     {
         if (!Enabled || candidate == null || candidate.Genome == null || currentCandidates == null || currentCandidates.Count <= 1)
@@ -163,6 +163,7 @@ public class EvolutionDiversityArchive : MonoBehaviour
         return density;
     }
 
+    // Gets the archive spread used by the sim
     public float GetArchiveSpread()
     {
         if (entries.Count <= 1)
@@ -185,6 +186,7 @@ public class EvolutionDiversityArchive : MonoBehaviour
         return comparisons > 0 ? total / comparisons : 0f;
     }
 
+    // Builds the archive score data from the current values
     private float BuildArchiveScore(EvolutionCandidate candidate, List<EvolutionCandidate> evaluated)
     {
         if (candidate == null)
@@ -199,6 +201,7 @@ public class EvolutionDiversityArchive : MonoBehaviour
         return fitness + novelty * 120f + reproduction + predator;
     }
 
+    // Gets the nearest archive distance used by the sim
     private float GetNearestArchiveDistance(float[] descriptor)
     {
         if (entries.Count == 0)
@@ -214,6 +217,7 @@ public class EvolutionDiversityArchive : MonoBehaviour
         return best;
     }
 
+    // Handles trim archive
     private void TrimArchive()
     {
         int max = Mathf.Max(20, MaxArchiveEntries);
@@ -234,6 +238,7 @@ public class EvolutionDiversityArchive : MonoBehaviour
         }
     }
 
+    // Gets the entry isolation used by the sim
     private float GetEntryIsolation(int index)
     {
         if (index < 0 || index >= entries.Count || entries.Count <= 1)
@@ -253,6 +258,7 @@ public class EvolutionDiversityArchive : MonoBehaviour
         return best == float.MaxValue ? 0f : best;
     }
 
+    // Creates the CSV header if the file is new
     private void EnsureHeader()
     {
         if (!WriteCsv || string.IsNullOrEmpty(csvPath) || File.Exists(csvPath))
@@ -263,6 +269,7 @@ public class EvolutionDiversityArchive : MonoBehaviour
         File.WriteAllText(csvPath, "Generation,Added,ArchiveSize,ArchiveSpread,PopulationFeatureSpread\n");
     }
 
+    // Adds one line of data to the CSV file
     private void AppendCsv(int generation, int added, List<EvolutionCandidate> evaluated)
     {
         if (!WriteCsv)

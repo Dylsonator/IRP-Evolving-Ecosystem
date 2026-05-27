@@ -1,15 +1,13 @@
 using UnityEngine;
 
-/// <summary>
-/// Optional trigger component for child body-part hit detection.
-/// Add this to one or two simple trigger colliders on the visible body/jaw area if predators still look like they touch prey without biting.
-/// MarineCreatureAgent will not disable colliders with this component during visual-collider cleanup.
-/// </summary>
+// Optional trigger for body parts so predator bites can hit visible fish parts
+// Optional child trigger so bites can hit spawned body parts and still find the fish root
 [RequireComponent(typeof(Collider))]
 public class CreatureHurtbox : MonoBehaviour
 {
     public MarineCreatureAgent Owner;
 
+    // Finds the fish root and makes this child collider act as a bite trigger
     private void Awake()
     {
         if (Owner == null)
@@ -25,6 +23,7 @@ public class CreatureHurtbox : MonoBehaviour
         }
     }
 
+    // Keeps the hurtbox collider as a trigger while editing in Unity
     private void OnValidate()
     {
         Collider c = GetComponent<Collider>();

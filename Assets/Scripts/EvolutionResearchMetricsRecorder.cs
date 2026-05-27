@@ -3,11 +3,8 @@ using System.IO;
 using System.Text;
 using UnityEngine;
 
-/// <summary>
-/// Extra lightweight research logger for IRP evidence.
-/// Records niche counts, brain complexity, diversity, environment state and population stability.
-/// This does not replace EvolutionStatsTracker. It creates a cleaner second CSV for dissertation evidence.
-/// </summary>
+// Extra IRP logger for niche count, diversity, brain complexity and environment response.
+// Writes the IRP CSV with diversity, niches, brain complexity and environment response.
 public class EvolutionResearchMetricsRecorder : MonoBehaviour
 {
     public EvolutionEcosystemManager Manager;
@@ -25,6 +22,7 @@ public class EvolutionResearchMetricsRecorder : MonoBehaviour
     private int lastRecordedGeneration = -1;
     private string csvPath;
 
+    // Sets up cached references and safe starting values before the sim runs
     private void Awake()
     {
         if (Manager == null)
@@ -36,6 +34,7 @@ public class EvolutionResearchMetricsRecorder : MonoBehaviour
         EnsureHeader();
     }
 
+    // Runs the normal frame checks and timers
     private void Update()
     {
         if (!WriteCsv || !LogWhenGenerationChanges || Manager == null || PreferCompletedGenerationSnapshots)
@@ -49,12 +48,15 @@ public class EvolutionResearchMetricsRecorder : MonoBehaviour
         }
     }
 
+    // Records snapshot now.
     [ContextMenu("Record Research Snapshot")]
+    // Records a manual metrics snapshot from the current population
     public void RecordSnapshotNow()
     {
         RecordSnapshot("Manual");
     }
 
+    // Writes one research snapshot from the current manager state
     public void RecordSnapshot(string reason)
     {
         if (!WriteCsv || Manager == null)
@@ -265,6 +267,7 @@ public class EvolutionResearchMetricsRecorder : MonoBehaviour
     }
 
 
+    // Writes metrics using completed generation data before respawn clears it
     public void RecordCompletedGenerationSnapshot(string reason, int generation, List<EvolutionCandidate> evaluatedCandidates, int populationAtEnd, int offspringAtEnd)
     {
         if (!WriteCsv || Manager == null || evaluatedCandidates == null || evaluatedCandidates.Count == 0)
@@ -481,6 +484,7 @@ public class EvolutionResearchMetricsRecorder : MonoBehaviour
         File.AppendAllText(csvPath, line.ToString() + "\n");
     }
 
+    // Calculates Shannon diversity from niche counts
     private float CalculateShannon(Dictionary<string, int> counts, int population)
     {
         if (counts == null || counts.Count == 0 || population <= 0)
@@ -500,6 +504,7 @@ public class EvolutionResearchMetricsRecorder : MonoBehaviour
         return shannon;
     }
 
+    // Builds a simple score for how well the population is handling pressure
     private float CalculateAdaptationScore(float populationStability, float evenness, float dominantFraction, float reproductionRate, float healthRatio, float stomachRatio)
     {
         float diversityTerm = evenness * 0.30f + (1f - Mathf.Clamp01(dominantFraction)) * 0.20f;
@@ -509,6 +514,7 @@ public class EvolutionResearchMetricsRecorder : MonoBehaviour
         return Mathf.Clamp01(diversityTerm + stabilityTerm + reproductionTerm + conditionTerm);
     }
 
+    // Creates the CSV header if the file is new
     private void EnsureHeader()
     {
         if (!WriteCsv || string.IsNullOrEmpty(csvPath) || File.Exists(csvPath))
@@ -520,6 +526,7 @@ public class EvolutionResearchMetricsRecorder : MonoBehaviour
             "RunId,ExperimentPhase,Generation,GenerationTimer,Population,OffspringPool,ActiveFood,ActiveCarrion,EggClusters,PressureZones,Season,FoodMultiplier,EnergyDrainMultiplier,MutationMultiplier,NicheCount,CoreNicheCount,DominantCoreNiche,DominantCoreFraction,CoreNicheShannon,CoreNicheEvenness,PopulationStability,ReproductionRate,AdaptationScore,AverageFitness,AverageSurvival,AverageBrainHidden,AverageBrainConnections,NaturalFeatureSpread,NoveltyArchiveSize,NoveltyArchiveSpread,AveragePlantDiet,AverageMeatDiet,AverageCarrionDiet,AverageEnergyRatio,AverageHealthRatio,AverageStomachRatio,AveragePreyBites,AveragePreyKills,AverageFoodEvents,Grazers,Predators,Scavengers,Ambushers,Schoolers,EggGuardians,Defensive,MatureCount,LowHealthCount,HungryCount,PredatorFraction,AverageBrainFoodBias,AverageBrainHuntBias,AverageBrainFleeBias,AverageBrainMateSocialBias,AverageBrainRestBias,AverageBrainSprintBias,AverageSurvivalEmergencyTime,AverageSurvivalEmergencyActivations,Reason\n");
     }
 
+    // Cleans text so commas and nulls do not break CSV output
     private string Safe(string value)
     {
         if (string.IsNullOrEmpty(value))

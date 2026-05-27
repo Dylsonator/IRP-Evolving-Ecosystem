@@ -1,5 +1,6 @@
 using UnityEngine;
 
+// Builds final stats the fish  uses
 [System.Serializable]
 public class CreatureEffectiveStats
 {
@@ -26,6 +27,7 @@ public class CreatureEffectiveStats
 
     public string MorphSummary;
 
+    // Combines the genome and morph library into the final stats the fish actually uses
     public static CreatureEffectiveStats Build(EvolutionGenome genome, CreatureMorphLibrary library)
     {
         CreatureEffectiveStats stats = new CreatureEffectiveStats();
@@ -65,7 +67,7 @@ public class CreatureEffectiveStats
         stats.ApplyMorphSlot(library, CreatureMorphSlot.Spikes, genome.SpikeMorphId, genome.SpikeSize, genome.SpikeLength, genome.SpikeSize);
         stats.ApplyMorphSlot(library, CreatureMorphSlot.Gills, genome.GillMorphId, genome.GillSize, genome.GillSize, genome.GillSize);
 
-        // Continuous body modifiers. These create small/large/long/wide variation on top of the part type.
+        // Shape values add extra variation on top of the part ID
         stats.Speed += (genome.TailLength - 1f) * 1.35f;
         stats.Speed += (genome.BodyLength - 1f) * 0.85f;
         stats.Speed -= (genome.BodyWidth - 1f) * 0.8f;
@@ -90,7 +92,6 @@ public class CreatureEffectiveStats
         stats.Defence += genome.Armour * 1.18f;
         stats.Defence += Mathf.Max(0f, genome.SpikeSize - 1f) * 0.25f;
         stats.DangerFactor += genome.SpikeSize * 0.35f;
-        // Armour should deter other species, but it must be costly so it cannot dominate for free.
         stats.DangerFactor += genome.Armour * 0.42f;
         stats.DangerFactor += genome.JawSize * genome.MeatDiet * 0.2f;
         stats.DangerFactor += genome.BodySize * 0.1f;
@@ -105,6 +106,7 @@ public class CreatureEffectiveStats
         return stats;
     }
 
+    // Finds the chosen morph part for one slot, then applies its stat changes
     private void ApplyMorphSlot(CreatureMorphLibrary library, CreatureMorphSlot slot, string partId, float scale, float length, float width)
     {
         CreatureMorphPartData part = library != null ? library.FindPart(slot, partId) : null;
@@ -122,6 +124,7 @@ public class CreatureEffectiveStats
         ApplyPartData(part, scale, length, width);
     }
 
+    // Adds the selected part stats, diet bias and behaviour bias into the final values
     private void ApplyPartData(CreatureMorphPartData part, float scale, float length, float width)
     {
         float shapeStrength = Mathf.Clamp((scale + length + width) / 3f, 0.35f, 2.5f);
@@ -153,6 +156,7 @@ public class CreatureEffectiveStats
         ThreatRange += part.ThreatModifier;
     }
 
+    // Keeps older text-based morph IDs working if asset data is missing
     private void ApplyFallbackPart(CreatureMorphSlot slot, string partId, float scale, float length, float width)
     {
         string id = string.IsNullOrEmpty(partId) ? "" : partId;
@@ -217,6 +221,7 @@ public class CreatureEffectiveStats
         }
     }
 
+    // Builds a short text summary of the main visible morph parts
     private static string BuildMorphSummary(EvolutionGenome genome, CreatureMorphLibrary library)
     {
         string body = GetPartName(library, CreatureMorphSlot.Body, genome.BodyMorphId);
@@ -237,6 +242,7 @@ public class CreatureEffectiveStats
         return body + " / " + tail + " / " + jaw + extra;
     }
 
+    // Gets a friendly part name, or falls back to the normalised ID text
     private static string GetPartName(CreatureMorphLibrary library, CreatureMorphSlot slot, string id)
     {
         CreatureMorphPartData part = library != null ? library.FindPart(slot, id) : null;
@@ -248,6 +254,7 @@ public class CreatureEffectiveStats
         return string.IsNullOrEmpty(id) ? "None" : CreatureMorphLibrary.NormalisePartIdForSlot(slot, id).Replace('_', ' ');
     }
 
+    // Clamps final stats so mutation and morphs cannot break the sim
     public void Clamp()
     {
         Speed = Mathf.Clamp(Speed, 0.5f, 18f);

@@ -3,11 +3,8 @@ using System.IO;
 using System.Text;
 using UnityEngine;
 
-/// <summary>
-/// Simple MAP-Elites style behaviour archive for evidence.
-/// It records the best observed creature per behaviour cell, without controlling selection directly.
-/// This gives a clear CSV showing which niches were discovered across the run.
-/// </summary>
+// MAP-Elites style archive for showing which behaviour niches were found.
+// MAP-Elites style archive storing good fish from different behaviour cells.
 public class IRPBehaviourArchive : MonoBehaviour
 {
     private class ArchiveEntry
@@ -53,6 +50,7 @@ public class IRPBehaviourArchive : MonoBehaviour
     private string csvPath;
     private int lastExportedGeneration = -1;
 
+    // Sets up cached references and safe starting values before the sim runs
     private void Awake()
     {
         if (Manager == null)
@@ -64,6 +62,7 @@ public class IRPBehaviourArchive : MonoBehaviour
         EnsureHeader();
     }
 
+    // Runs the normal frame checks and timers
     private void Update()
     {
         if (!RecordArchive || Manager == null || !ExportEveryGeneration)
@@ -79,13 +78,16 @@ public class IRPBehaviourArchive : MonoBehaviour
         }
     }
 
+    // Records current population context.
     [ContextMenu("IRP/Record Current Population Into Archive")]
+    // Records current population context so it can be checked later
     public void RecordCurrentPopulationContext()
     {
         RecordCurrentPopulation("Manual");
         ExportArchiveSnapshot("Manual");
     }
 
+    // Records current population so it can be checked later
     public void RecordCurrentPopulation(string reason)
     {
         if (!RecordArchive || Manager == null)
@@ -106,6 +108,7 @@ public class IRPBehaviourArchive : MonoBehaviour
         }
     }
 
+    // Records candidate so it can be checked later
     public void RecordCandidate(EvolutionCandidate candidate)
     {
         if (candidate == null || candidate.Genome == null)
@@ -151,11 +154,13 @@ public class IRPBehaviourArchive : MonoBehaviour
     }
 
     [ContextMenu("IRP/Export Archive Snapshot")]
+    // Handles export archive snapshot context
     public void ExportArchiveSnapshotContext()
     {
         ExportArchiveSnapshot("Manual");
     }
 
+    // Handles export archive snapshot
     public void ExportArchiveSnapshot(string reason)
     {
         if (!WriteCsv)
@@ -196,12 +201,15 @@ public class IRPBehaviourArchive : MonoBehaviour
         }
     }
 
+    // Clears archive.
     [ContextMenu("IRP/Clear Archive")]
+    // Clears archive ready for fresh data
     public void ClearArchive()
     {
         archive.Clear();
     }
 
+    // Builds the primary behaviour summary data from the current values
     private string BuildPrimaryBehaviourSummary(EvolutionCandidate candidate)
     {
         if (candidate == null)
@@ -222,6 +230,7 @@ public class IRPBehaviourArchive : MonoBehaviour
         return best;
     }
 
+    // Handles check behaviour
     private void CheckBehaviour(float candidateTime, string label, ref string bestLabel, ref float bestTime)
     {
         if (candidateTime > bestTime)
@@ -231,6 +240,7 @@ public class IRPBehaviourArchive : MonoBehaviour
         }
     }
 
+    // Creates the CSV header if the file is new
     private void EnsureHeader()
     {
         if (!WriteCsv)
@@ -249,6 +259,7 @@ public class IRPBehaviourArchive : MonoBehaviour
         }
     }
 
+    // Cleans text so commas and nulls do not break CSV output
     private string Safe(string value)
     {
         if (string.IsNullOrEmpty(value))

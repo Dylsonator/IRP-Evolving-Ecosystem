@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+// Current zone that pushes fish and adds pressure for adaptation tests.
 public enum EcosystemCurrentType
 {
     GentleCurrent,
@@ -41,6 +42,7 @@ public class EcosystemWaterCurrentZone : MonoBehaviour
     private Vector3 driftTarget;
     private float driftTimer;
 
+    // Registers this object with the ecosystem when Unity enables it
     private void OnEnable()
     {
         RefreshVolumes();
@@ -51,6 +53,7 @@ public class EcosystemWaterCurrentZone : MonoBehaviour
         PickNewDriftTarget();
     }
 
+    // Unregisters this object so the manager does not keep old references
     private void OnDisable()
     {
         if (EvolutionEcosystemManager.Instance != null)
@@ -59,6 +62,7 @@ public class EcosystemWaterCurrentZone : MonoBehaviour
         }
     }
 
+    // Runs the normal frame checks and timers
     private void Update()
     {
         if (!Drifts)
@@ -75,7 +79,9 @@ public class EcosystemWaterCurrentZone : MonoBehaviour
         transform.position = Vector3.MoveTowards(transform.position, driftTarget, Mathf.Max(0f, DriftSpeed) * Time.deltaTime);
     }
 
+    // Refreshes volumes.
     [ContextMenu("Refresh Current Volumes")]
+    // Handles refresh volumes
     public void RefreshVolumes()
     {
         triggerVolumes.Clear();
@@ -93,6 +99,7 @@ public class EcosystemWaterCurrentZone : MonoBehaviour
         }
     }
 
+    // Gets the influence01 used by the sim
     public float GetInfluence01(Vector3 worldPosition)
     {
         if (UseChildTriggerVolumes && triggerVolumes.Count > 0)
@@ -125,6 +132,7 @@ public class EcosystemWaterCurrentZone : MonoBehaviour
         return Mathf.Clamp01(1f - d / radius);
     }
 
+    // Gets the current velocity used by the sim
     public Vector3 GetCurrentVelocity(Vector3 worldPosition)
     {
         float influence = GetInfluence01(worldPosition);
@@ -142,6 +150,7 @@ public class EcosystemWaterCurrentZone : MonoBehaviour
         return direction.normalized * FlowStrength * influence;
     }
 
+    // Gets the resistance against used by the sim
     public float GetResistanceAgainst(Vector3 movementDirection, Vector3 worldPosition)
     {
         float influence = GetInfluence01(worldPosition);
@@ -160,6 +169,7 @@ public class EcosystemWaterCurrentZone : MonoBehaviour
         return against * AgainstCurrentDifficulty * influence;
     }
 
+    // Handles pick new drift target
     private void PickNewDriftTarget()
     {
         driftTimer = Mathf.Max(3f, NewDriftTargetInterval) * Random.Range(0.75f, 1.25f);
@@ -178,6 +188,7 @@ public class EcosystemWaterCurrentZone : MonoBehaviour
         driftTarget = manager.ClampToSimulationArea(driftTarget);
     }
 
+    // Draws selected-only gizmos so setup can be checked without clutter
     private void OnDrawGizmosSelected()
     {
         Gizmos.color = CurrentType == EcosystemCurrentType.HarshCurrent ? Color.red : Color.cyan;

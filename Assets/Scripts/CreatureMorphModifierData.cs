@@ -1,5 +1,6 @@
 using UnityEngine;
 
+// Reusable stat modifier asset, like agile, armoured, swift or hunter.
 [CreateAssetMenu(menuName = "IRP Evolution/Creature Morph Modifier", fileName = "MorphModifier_New")]
 public class CreatureMorphModifierData : ScriptableObject
 {

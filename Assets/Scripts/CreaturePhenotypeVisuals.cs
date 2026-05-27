@@ -1,9 +1,7 @@
 using UnityEngine;
 
-/// <summary>
-/// Builds a simple readable fish-like body from genome values.
-/// This is not meant to be final art. It is a debug/assessment visualisation so the evolved traits are visible.
-/// </summary>
+// Simple fallback fish visual, mainly for debug/assessment visibility.
+// Old simple fish visual builder, kept as a fallback/debug option.
 public class CreaturePhenotypeVisuals : MonoBehaviour
 {
     [Header("Generated Parts")]
@@ -24,11 +22,13 @@ public class CreaturePhenotypeVisuals : MonoBehaviour
     private MaterialPropertyBlock propertyBlock;
     private Renderer[] partRenderers;
 
+    // Sets up cached references and safe starting values before the sim runs
     private void Awake()
     {
         EnsureParts();
     }
 
+    // Starts the setup that needs other scene objects to already exist
     private void Start()
     {
         if (!ApplyGenomeShapeOnStart)
@@ -44,6 +44,7 @@ public class CreaturePhenotypeVisuals : MonoBehaviour
         }
     }
 
+    // Applies genome to the current object
     public void ApplyGenome(EvolutionGenome genome, Color typeColour, bool applyColour)
     {
         if (genome == null)
@@ -54,8 +55,8 @@ public class CreaturePhenotypeVisuals : MonoBehaviour
         genome.ClampValues();
         EnsureParts();
 
-        // Root scale remains BodySize on MarineCreatureAgent.
-        // These child scales show which body traits caused that creature type.
+        // Root scale is handled by MarineCreatureAgent.
+        // These child scales just make trait differences visible.
         float armour = Mathf.Clamp(genome.Armour, 0f, 2f);
         float muscle = Mathf.Clamp(genome.Muscle, 0.25f, 2.5f);
         float fin = Mathf.Clamp(genome.FinSize, 0.35f, 2.5f);
@@ -126,6 +127,7 @@ public class CreaturePhenotypeVisuals : MonoBehaviour
         }
     }
 
+    // Applies colour to the current object
     public void ApplyColour(Color colour)
     {
         EnsureRenderers();
@@ -150,6 +152,7 @@ public class CreaturePhenotypeVisuals : MonoBehaviour
         }
     }
 
+    // Handles ensure parts
     private void EnsureParts()
     {
         if (!AutoCreateParts)
@@ -166,6 +169,7 @@ public class CreaturePhenotypeVisuals : MonoBehaviour
         RightSensor = EnsurePart(RightSensor, "Phenotype_RightSensor", PrimitiveType.Sphere);
     }
 
+    // Handles ensure part
     private Transform EnsurePart(Transform existing, string partName, PrimitiveType primitiveType)
     {
         if (existing != null)
@@ -202,6 +206,7 @@ public class CreaturePhenotypeVisuals : MonoBehaviour
         return part.transform;
     }
 
+    // Handles ensure renderers
     private void EnsureRenderers()
     {
         EnsureParts();

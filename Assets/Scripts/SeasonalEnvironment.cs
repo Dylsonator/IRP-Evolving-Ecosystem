@@ -1,5 +1,6 @@
 using UnityEngine;
 
+// Applies global seasonal pressure such as food availability, energy drain and mutation pressure.
 public enum EcosystemSeason
 {
     Spring,
@@ -22,11 +23,13 @@ public class SeasonalEnvironment : MonoBehaviour
 
     private float seasonTimer;
 
+    // Starts the setup that needs other scene objects to already exist
     private void Start()
     {
         ApplySeasonSettings();
     }
 
+    // Runs the normal frame checks and timers
     private void Update()
     {
         if (!AutoCycleSeasons)
@@ -43,6 +46,7 @@ public class SeasonalEnvironment : MonoBehaviour
         }
     }
 
+    // Moves to the next season and reapplies its pressure values
     public void MoveToNextSeason()
     {
         int nextSeason = (int)CurrentSeason + 1;
@@ -58,6 +62,7 @@ public class SeasonalEnvironment : MonoBehaviour
         Debug.Log("Season changed to " + CurrentSeason);
     }
 
+    // Sets food, drain and mutation multipliers for the current season
     public void ApplySeasonSettings()
     {
         switch (CurrentSeason)

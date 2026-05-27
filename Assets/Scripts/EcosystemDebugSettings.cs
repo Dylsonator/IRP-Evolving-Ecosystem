@@ -1,5 +1,6 @@
 using UnityEngine;
 
+// Main debug toggle object for rays, labels, screenshots and selected fish UI.
 public class EcosystemDebugSettings : MonoBehaviour
 {
     public static EcosystemDebugSettings Instance { get; private set; }
@@ -39,6 +40,7 @@ public class EcosystemDebugSettings : MonoBehaviour
     public float VelocityRayScale = 0.4f;
     public float FoodRayDuration = 0f;
 
+    // Sets up cached references and safe starting values before the sim runs
     private void Awake()
     {
         if (Instance != null && Instance != this)

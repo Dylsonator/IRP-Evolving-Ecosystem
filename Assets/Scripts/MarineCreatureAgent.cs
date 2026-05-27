@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+// Main fish script. Most of the creature behaviour runs through here.
 public enum FishAutonomousBehaviourMode
 {
     Resting,
@@ -42,12 +43,14 @@ public class MarineCreatureAgent : MonoBehaviour
     public string DebugName;
     public CreatureBehaviourType DebugBehaviourType;
 
+    // Extra vision values so fish notice danger before it is too late.
     [Header("Awareness / Runtime Vision")]
     [Tooltip("Runtime multiplier applied to evolved vision. This helps fish see threats, food and terrain earlier without changing saved genomes.")]
     public float RuntimeVisionRangeMultiplier = 1.45f;
     public float MinimumRuntimeVisionRange = 24f;
     public float FleeThreatSenseMultiplier = 1.35f;
 
+    // Base survival values before genes/morph parts change them.
     [Header("Energy / Survival")]
     public float BaseEnergyDrainPerSecond = 0.45f;
     public float ReproductionCooldown = 9f;
@@ -68,6 +71,7 @@ public class MarineCreatureAgent : MonoBehaviour
     public float CarrionEnergyGainMultiplier = 1.95f;
     public float EnergyRecoveredPerStoredStomachMass = 0.28f;
 
+    // Healing only happens when the fish actually gets a safe rest.
     [Header("Rest / Healing")]
     [Tooltip("When true, fish only heal while resting or sleeping. They no longer regenerate while being chased or bitten.")]
     public bool HealOnlyWhileRestingOrSleeping = true;
@@ -80,6 +84,7 @@ public class MarineCreatureAgent : MonoBehaviour
     public float SleepMinimumEnergyRatio = 0.32f;
     public float SleepMinimumStomachRatio = 0.18f;
 
+    // Short burst speed for chasing and fleeing, but it costs extra energy.
     [Header("Sprint / Burst Swimming")]
     public bool UseSprintBursts = true;
     [Tooltip("Sprint multiplies speed, but energy drain is also multiplied. This creates proper chase/flee bursts instead of free speed.")]
@@ -91,6 +96,7 @@ public class MarineCreatureAgent : MonoBehaviour
     public float SprintFleeHealthRatio = 0.72f;
     public float SprintCooldownAfterExhaustion = 1.4f;
 
+    // If the fish is close to dying, survival takes over normal behaviour.
     [Header("Survival Priority")]
     [Tooltip("When health is critical, survival overrides mating, feeding, hunting and social behaviour.")]
     public bool UseSurvivalPriority = true;
@@ -536,6 +542,7 @@ public class MarineCreatureAgent : MonoBehaviour
     public float FeedingOverlapResolveStrength = 1.05f;
     public float OverlapSearchRadius = 3.5f;
 
+    // Terrain checks keep fleeing and chasing fish from swimming into floors or walls.
     [Header("Terrain Navigation")]
     public bool UseTerrainAvoidance = true;
     public float TerrainLookAhead = 4.5f;
@@ -739,6 +746,7 @@ public class MarineCreatureAgent : MonoBehaviour
     private string rememberedPredatorSignature = "";
     private float rememberedPredatorTypeTimer;
 
+    // Sets up this fish from its candidate, stats, body, timers and starting needs
     public void Initialise(EvolutionCandidate candidate)
     {
         Candidate = candidate ?? new EvolutionCandidate(EvolutionGenome.CreateBaseline());
@@ -889,6 +897,7 @@ public class MarineCreatureAgent : MonoBehaviour
     }
 
 
+    // Applies safe runtime values so old prefab settings do not break balance
     private void ApplyRuntimeEcologyBalanceSafeguards()
     {
         if (!UseEcologyBalanceSafeguards)
@@ -1005,12 +1014,14 @@ public class MarineCreatureAgent : MonoBehaviour
         DangerMemoryDuration = Mathf.Max(DangerMemoryDuration, 80f);
     }
 
+    // Sets up cached references and safe starting values before the sim runs
     private void Awake()
     {
         rb = GetComponent<Rigidbody>();
         CacheRenderers();
     }
 
+    // Starts the setup that needs other scene objects to already exist
     private void Start()
     {
         if (Candidate == null)
@@ -1019,6 +1030,7 @@ public class MarineCreatureAgent : MonoBehaviour
         }
     }
 
+    // Runs the fish brain, movement, feeding, hunting, mating and survival checks each physics step
     private void FixedUpdate()
     {
         if (Candidate == null || Candidate.Genome == null)
@@ -1208,6 +1220,7 @@ public class MarineCreatureAgent : MonoBehaviour
         }
     }
 
+    // Skips or slows heavy checks when emergency performance mode is enabled
     private void ApplyEmergencyPerformanceSafeguards()
     {
         if (!EmergencyPerformanceMode)
@@ -1229,6 +1242,7 @@ public class MarineCreatureAgent : MonoBehaviour
         LocalDebugLabels = false;
     }
 
+    // Boosts awareness at runtime so fish can react before hitting terrain or predators
     private void ApplyRuntimeAwarenessBoost()
     {
         if (EffectiveStats == null)
@@ -1241,6 +1255,7 @@ public class MarineCreatureAgent : MonoBehaviour
         EffectiveStats.VisionRange = Mathf.Max(minimum, EffectiveStats.VisionRange * multiplier);
     }
 
+    // Builds the visible morph model from the current genome
     private void ApplyMorphVisuals()
     {
         if (Candidate == null || Candidate.Genome == null)
@@ -1264,6 +1279,7 @@ public class MarineCreatureAgent : MonoBehaviour
         builder.Build(Candidate.Genome, EffectiveStats, CreatureDebugTypeUtility.GetTypeColour(Candidate.BehaviourType));
     }
 
+    // Caches renderers once so colour changes do not search children every frame
     private void CacheRenderers(bool forceRefresh = false)
     {
         if (forceRefresh || cachedRenderers == null || cachedRenderers.Length == 0)
@@ -1277,6 +1293,7 @@ public class MarineCreatureAgent : MonoBehaviour
         }
     }
 
+    // Applies the behaviour colour to the fish renderers
     private void ApplyDebugColour()
     {
         if (!ApplyTypeColour || cachedRenderers == null || Candidate == null)
@@ -1300,6 +1317,7 @@ public class MarineCreatureAgent : MonoBehaviour
         }
     }
 
+    // Turns off visual part colliders so only the logic collider drives behaviour
     private void DisableBlockingCollidersOnVisuals()
     {
         Collider[] colliders = GetComponentsInChildren<Collider>(true);
@@ -1322,6 +1340,7 @@ public class MarineCreatureAgent : MonoBehaviour
         }
     }
 
+    // Creates the small root trigger used for spacing and selection
     private void EnsureRootLogicCollider()
     {
         SphereCollider rootCollider = GetComponent<SphereCollider>();
@@ -1357,6 +1376,7 @@ public class MarineCreatureAgent : MonoBehaviour
         }
     }
 
+    // Disables old generated visuals so the morph builder controls the model
     private void RemoveLegacyPhenotypeVisuals()
     {
         CreaturePhenotypeVisuals legacyVisuals = GetComponent<CreaturePhenotypeVisuals>();
@@ -1396,6 +1416,7 @@ public class MarineCreatureAgent : MonoBehaviour
         }
     }
 
+    // Refreshes food, carrion, prey, mate and nearby creature targets on a timer
     private void SenseEnvironment()
     {
         EvolutionEcosystemManager manager = EvolutionEcosystemManager.Instance;
@@ -1478,11 +1499,13 @@ public class MarineCreatureAgent : MonoBehaviour
         }
     }
 
+    // Checks if energy and stomach are low enough to risk desperate choices
     private bool IsCriticallyStarving()
     {
         return GetEffectiveEnergyRatio() <= CriticalStarvationEnergyRatio && GetStomachFullness01() <= CriticalStarvationStomachRatio;
     }
 
+    // Checks for direct danger like recent attacks, close predators or harsh current
     private bool HasImmediateSurvivalThreat()
     {
         return lastThreatCount > 0
@@ -1492,6 +1515,7 @@ public class MarineCreatureAgent : MonoBehaviour
             || lastCurrentStress >= CurrentEscapeStressThreshold;
     }
 
+    // Blocks normal food eating while chased, unless the fish is starving
     private bool ShouldIgnoreStaticFoodBecauseThreatened()
     {
         if (!IgnoreStaticFoodWhileThreatened)
@@ -1515,6 +1539,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return !IsCriticallyStarving();
     }
 
+    // Chooses fleeing, feeding or resting when the fish is in danger of dying
     private bool TryPickUrgentSurvivalMode(out FishAutonomousBehaviourMode mode)
     {
         mode = currentBrainMode;
@@ -1566,6 +1591,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return false;
     }
 
+    // Forces survival priorities into the brain scores during emergency states
     private void ApplyUrgentSurvivalDesires(ref float foodDesire, ref float huntDesire, ref float mateDesire, ref float schoolDesire, ref float exploreDesire, ref float homeDesire, ref float fleeDesire, ref float restDesire)
     {
         if (!UseUrgentSurvivalPriority)
@@ -1602,6 +1628,7 @@ public class MarineCreatureAgent : MonoBehaviour
         }
     }
 
+    // Looks for a safer nearby rest point when injured fish need to recover
     private void RefreshSafeRestArea()
     {
         if (safeRestAreaTimer > 0f && hasSafeRestArea)
@@ -1645,6 +1672,7 @@ public class MarineCreatureAgent : MonoBehaviour
         safeRestAreaTimer = SafeRestMemoryTime;
     }
 
+    // Scores feeding, hunting, fleeing, mating, resting and exploring needs
     private void UpdateAutonomousBrain()
     {
         if (Candidate == null || Candidate.Genome == null)
@@ -1770,6 +1798,7 @@ public class MarineCreatureAgent : MonoBehaviour
         SetBrainMode(chosen);
     }
 
+    // Chooses the current high-level behaviour from the scored needs
     private FishAutonomousBehaviourMode PickBrainMode()
     {
         if (stuckEscapeTimer > 0f || lastEmergencyUnstick.sqrMagnitude > 0.35f)
@@ -1908,6 +1937,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return FishAutonomousBehaviourMode.Resting;
     }
 
+    // Switches mode and sets the short hold timer so behaviour is not too twitchy
     private void SetBrainMode(FishAutonomousBehaviourMode nextMode)
     {
         if (nextMode != currentBrainMode)
@@ -1963,6 +1993,7 @@ public class MarineCreatureAgent : MonoBehaviour
         brainWantsFlee = currentBrainMode == FishAutonomousBehaviourMode.Fleeing || survivalEmergencyTimer > 0f;
     }
 
+    // Updates survival priority state using the current sim state
     private void UpdateSurvivalPriorityState()
     {
         if (!UseSurvivalPriority || Candidate == null || Candidate.Genome == null)
@@ -2011,6 +2042,7 @@ public class MarineCreatureAgent : MonoBehaviour
         }
     }
 
+    // Finds immediate survival threat by checking the current options
     private MarineCreatureAgent FindImmediateSurvivalThreat()
     {
         if (survivalThreatTarget != null && survivalThreatTarget.CurrentHealth > 0f)
@@ -2063,6 +2095,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return best;
     }
 
+    // Builds the survival escape direction data from the current values
     private Vector3 BuildSurvivalEscapeDirection(MarineCreatureAgent threat, bool harshCurrent)
     {
         Vector3 escape = Vector3.zero;
@@ -2132,6 +2165,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return escape;
     }
 
+    // Checks if it should use survival flee priority right now
     private bool ShouldUseSurvivalFleePriority()
     {
         return UseSurvivalPriority && survivalEmergencyTimer > 0f && survivalEscapeDirection.sqrMagnitude > 0.001f;
@@ -2180,6 +2214,7 @@ public class MarineCreatureAgent : MonoBehaviour
     }
 
 
+    // Updates advanced behaviour targets using the current sim state
     private void UpdateAdvancedBehaviourTargets()
     {
         if (!EnableAdvancedFishBehaviours || Candidate == null || Candidate.Genome == null)
@@ -2206,6 +2241,7 @@ public class MarineCreatureAgent : MonoBehaviour
         }
     }
 
+    // Handles refresh egg guard target
     private void RefreshEggGuardTarget()
     {
         guardedEggCluster = null;
@@ -2258,6 +2294,7 @@ public class MarineCreatureAgent : MonoBehaviour
         }
     }
 
+    // Finds threat near egg by checking the current options
     private float FindThreatNearEgg(FishEggCluster egg, out MarineCreatureAgent threat)
     {
         threat = null;
@@ -2305,6 +2342,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return bestScore;
     }
 
+    // Handles refresh mobbing target
     private void RefreshMobbingTarget()
     {
         currentMobbingTarget = null;
@@ -2361,6 +2399,7 @@ public class MarineCreatureAgent : MonoBehaviour
         }
     }
 
+    // Handles refresh ambush anchor
     private void RefreshAmbushAnchor()
     {
         Vector3? anchor = null;
@@ -2394,6 +2433,7 @@ public class MarineCreatureAgent : MonoBehaviour
         }
     }
 
+    // Checks if it should guard eggs right now
     private bool ShouldGuardEggs()
     {
         if (!EnableAdvancedFishBehaviours || guardedEggCluster == null || Candidate == null || Candidate.Genome == null)
@@ -2415,6 +2455,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return score >= EggGuardBehaviourThreshold;
     }
 
+    // Checks if it should mob predator right now
     private bool ShouldMobPredator()
     {
         if (!EnableAdvancedFishBehaviours || currentMobbingTarget == null || Candidate == null || Candidate.Genome == null)
@@ -2440,6 +2481,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return currentMobbingTarget.GetPredatorDrive01() > 0.42f;
     }
 
+    // Counts nearby mobbing allies from nearby/current data
     private int CountNearbyMobbingAllies(MarineCreatureAgent predator)
     {
         if (predator == null || EvolutionEcosystemManager.Instance == null || Candidate == null || Candidate.Genome == null)
@@ -2478,6 +2520,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return count;
     }
 
+    // Checks if it should court mate right now
     private bool ShouldCourtMate()
     {
         if (!EnableAdvancedFishBehaviours || currentMateTarget == null || Candidate == null || Candidate.Genome == null)
@@ -2494,6 +2537,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return distance <= Mathf.Max(CourtshipStartDistance, MatePairDistance * 1.4f) && brainMateDesire > 0.35f && brainFoodDesire < 0.55f;
     }
 
+    // Checks if it should ambush hunt right now
     private bool ShouldAmbushHunt()
     {
         if (!EnableAdvancedFishBehaviours || Candidate == null || Candidate.Genome == null)
@@ -2521,6 +2565,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return score >= AmbushBehaviourThreshold && hasAmbushAnchor;
     }
 
+    // Checks if it can care for eggs with the current state
     private bool CanCareForEggs()
     {
         if (Candidate == null || Candidate.Genome == null)
@@ -2531,6 +2576,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return Candidate.Genome.EggProtection * 0.65f + Candidate.Genome.NestingDrive * 0.25f + Candidate.Genome.Territoriality * 0.25f >= EggGuardBehaviourThreshold;
     }
 
+    // Checks if it can mob predators with the current state
     private bool CanMobPredators()
     {
         if (Candidate == null || Candidate.Genome == null)
@@ -2548,6 +2594,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return socialCourage >= MobbingBehaviourThreshold;
     }
 
+    // Gets the predator drive01 used by the sim
     private float GetPredatorDrive01()
     {
         if (Candidate == null || Candidate.Genome == null)
@@ -2559,6 +2606,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return Mathf.Clamp01(Candidate.Genome.MeatDiet * 0.46f + Candidate.Genome.Aggression * 0.30f + Candidate.Genome.JawSize * 0.05f + Candidate.Genome.RiskTolerance * 0.03f + meatLead * 0.20f);
     }
 
+    // Gets the ambush score01 used by the sim
     private float GetAmbushScore01()
     {
         if (Candidate == null || Candidate.Genome == null)
@@ -2570,6 +2618,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return Mathf.Clamp01(Candidate.Genome.MeatDiet * 0.38f + Candidate.Genome.Aggression * 0.24f + Candidate.Genome.Stealth * 0.28f + Candidate.Genome.Territoriality * 0.18f + lowCruisePenalty);
     }
 
+    // Gets the advanced behaviour pull used by the sim
     private Vector3 GetAdvancedBehaviourPull(float hungerPressure)
     {
         if (!EnableAdvancedFishBehaviours)
@@ -2697,6 +2746,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return pull;
     }
 
+    // Handles start cstart escape burst
     private void StartCStartEscapeBurst()
     {
         Vector3 away = Vector3.zero;
@@ -2742,6 +2792,7 @@ public class MarineCreatureAgent : MonoBehaviour
         cStartBurstTimer = Mathf.Max(0.05f, CStartBurstDuration);
     }
 
+    // Applies mobbing pressure if close to the current object
     private void ApplyMobbingPressureIfClose()
     {
         if (!EnableAdvancedFishBehaviours || currentBrainMode != FishAutonomousBehaviourMode.MobbingPredator || currentMobbingTarget == null)
@@ -2756,6 +2807,7 @@ public class MarineCreatureAgent : MonoBehaviour
         }
     }
 
+    // Handles receive mobbing pressure
     public void ReceiveMobbingPressure(MarineCreatureAgent source, Vector3 sourcePosition)
     {
         if (source == null || source == this)
@@ -2775,6 +2827,7 @@ public class MarineCreatureAgent : MonoBehaviour
         RememberDangerArea(sourcePosition);
     }
 
+    // Counts real nearby threats without making every predator freeze the sim
     private int CountCurrentThreatsForBrain()
     {
         EvolutionEcosystemManager manager = EvolutionEcosystemManager.Instance;
@@ -2806,6 +2859,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return count;
     }
 
+    // Scales steering pulls depending on whether the fish is feeding, fleeing, hunting or resting.
     private void ApplyBrainModeToPulls(
         float hungerPressure,
         ref Vector3 targetPull,
@@ -2998,6 +3052,7 @@ public class MarineCreatureAgent : MonoBehaviour
         }
     }
 
+    // Combines target, school, terrain, current and brain pulls into final movement
     private void RunEvolvedMovement()
     {
         float energyRatio = GetEffectiveEnergyRatio();
@@ -3150,6 +3205,7 @@ public class MarineCreatureAgent : MonoBehaviour
         UpdateStuckDetection(combined);
     }
 
+    // Gets the feeding target pull used by the sim
     private Vector3 GetFeedingTargetPull(float hungerPressure)
     {
         Vector3 pull = Vector3.zero;
@@ -3245,6 +3301,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return pull;
     }
 
+    // Gets the raw static feeding pull used by the sim
     private Vector3 GetRawStaticFeedingPull(float hungerPressure)
     {
         Vector3? targetPosition = GetPrimaryStaticFoodTargetPosition();
@@ -3263,12 +3320,14 @@ public class MarineCreatureAgent : MonoBehaviour
         return toTarget.normalized * hunger * Mathf.Lerp(0.85f, 1.35f, Candidate.Genome.HungerDrive);
     }
 
+    // Gets the comfortable feeder limit used by the sim
     private int GetComfortableFeederLimit()
     {
         float sharing = Candidate != null && Candidate.Genome != null ? Candidate.Genome.FoodSharing : 0.5f;
         return Mathf.Clamp(Mathf.RoundToInt(Mathf.Lerp(MinComfortableFeeders, MaxComfortableFeeders, sharing)), 1, Mathf.Max(1, MaxComfortableFeeders));
     }
 
+    // Gets the resource crowd penalty used by the sim
     private float GetResourceCrowdPenalty()
     {
         float sharing = Candidate != null && Candidate.Genome != null ? Candidate.Genome.FoodSharing : 0.5f;
@@ -3277,6 +3336,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return basePenalty * Mathf.Lerp(0.85f, 1.35f, territorial);
     }
 
+    // Gets the preferred food kind used by the sim
     private string GetPreferredFoodKind()
     {
         if (ShouldContinueEatingFreshKillCarrion())
@@ -3316,6 +3376,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return "Plant";
     }
 
+    // Checks if it is locked meat specialist
     private bool IsLockedMeatSpecialist()
     {
         if (Candidate == null || Candidate.Genome == null)
@@ -3326,6 +3387,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return Candidate.Genome.MeatDiet >= 0.70f && Candidate.Genome.PlantDiet <= 0.18f;
     }
 
+    // Checks if it is peaceful grazer role
     private bool IsPeacefulGrazerRole()
     {
         if (Candidate == null || Candidate.Genome == null)
@@ -3340,6 +3402,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return clearlyPlantLed && notTrueHunter;
     }
 
+    // Checks if it is ecological predator role
     private bool IsEcologicalPredatorRole()
     {
         if (Candidate == null || Candidate.Genome == null)
@@ -3355,6 +3418,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return g.MeatDiet >= EcologicalPredatorMeatThreshold && meatDominant && hasPredatorMind && hasPredatorBody;
     }
 
+    // Checks if it has usable carrion target available
     private bool HasUsableCarrionTarget()
     {
         return (claimedFreshKillCarrion != null && !claimedFreshKillCarrion.IsConsumed)
@@ -3362,6 +3426,7 @@ public class MarineCreatureAgent : MonoBehaviour
             || (retainedCarrion != null && !retainedCarrion.IsConsumed);
     }
 
+    // Checks if it has visible meat target for diet priority available
     private bool HasVisibleMeatTargetForDietPriority()
     {
         return HasUsableCarrionTarget()
@@ -3370,6 +3435,7 @@ public class MarineCreatureAgent : MonoBehaviour
             || retainedPrey != null;
     }
 
+    // Checks if it is predator plant blocked role
     private bool IsPredatorPlantBlockedRole()
     {
         if (!StrictPredatorMeatPriority || Candidate == null || Candidate.Genome == null)
@@ -3390,6 +3456,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return meatBiased && (predatorShape || predatorMind || IsEcologicalPredatorRole() || IsLockedMeatSpecialist());
     }
 
+    // Checks if it can use plant as predator emergency fallback with the current state
     private bool CanUsePlantAsPredatorEmergencyFallback()
     {
         if (!IsPredatorPlantBlockedRole())
@@ -3409,12 +3476,14 @@ public class MarineCreatureAgent : MonoBehaviour
             && GetStomachFullness01() <= PredatorPlantEmergencyStomachRatio;
     }
 
+    // Clears plant target for predator ready for fresh data
     private void ClearPlantTargetForPredator()
     {
         nearestFood = null;
         retainedFood = null;
     }
 
+    // Checks if it should predator chill after feeding right now
     private bool ShouldPredatorChillAfterFeeding()
     {
         if (!IsEcologicalPredatorRole() && !IsLockedMeatSpecialist())
@@ -3444,6 +3513,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return comfortablyFed || veryHighReserve;
     }
 
+    // Checks if it is committed predator for targeting
     private bool IsCommittedPredatorForTargeting()
     {
         if (Candidate == null || Candidate.Genome == null)
@@ -3462,6 +3532,7 @@ public class MarineCreatureAgent : MonoBehaviour
             || (brainWantsHunt && Candidate.Genome.MeatDiet >= EcologicalPredatorMeatThreshold);
     }
 
+    // Checks if it should suppress plants for hunter right now
     private bool ShouldSuppressPlantsForHunter()
     {
         if (!IsCommittedPredatorForTargeting())
@@ -3482,6 +3553,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return (nearestPrey != null && CanAttackPrey(nearestPrey)) || (focusedPrey != null && hunterPreyFocusTimer > 0f && CanAttackPrey(focusedPrey));
     }
 
+    // Handles suppress plant targets while hunting
     private void SuppressPlantTargetsWhileHunting()
     {
         if (!ShouldSuppressPlantsForHunter())
@@ -3493,6 +3565,7 @@ public class MarineCreatureAgent : MonoBehaviour
         retainedFood = null;
     }
 
+    // Handles focus prey
     private void FocusPrey(MarineCreatureAgent prey, float duration)
     {
         if (prey == null || prey == this || !CanAttackPrey(prey))
@@ -3519,6 +3592,7 @@ public class MarineCreatureAgent : MonoBehaviour
         hunterPreyFocusTimer = Mathf.Max(hunterPreyFocusTimer, focusDuration);
     }
 
+    // Clears focused prey ready for fresh data
     private void ClearFocusedPrey(bool startExhaustion)
     {
         focusedPrey = null;
@@ -3532,6 +3606,7 @@ public class MarineCreatureAgent : MonoBehaviour
         }
     }
 
+    // Checks if it should abandon focused prey right now
     private bool ShouldAbandonFocusedPrey()
     {
         if (!UsePredatorHuntCommitment || focusedPrey == null || Candidate == null || Candidate.Genome == null)
@@ -3564,6 +3639,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return tooLongWithoutBite || energyRisk;
     }
 
+    // Gets the wounded scent01 used by the sim
     public float GetWoundedScent01()
     {
         if (!UseRealisticInjuryMovement)
@@ -3576,6 +3652,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return Mathf.Clamp01(Mathf.Max(healthWound, freshWound * 0.75f));
     }
 
+    // Gets the injury severity01 used by the sim
     private float GetInjurySeverity01()
     {
         if (!UseRealisticInjuryMovement)
@@ -3588,6 +3665,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return Mathf.Clamp01(Mathf.Max(healthSeverity, recentBiteSeverity));
     }
 
+    // Checks if it should continue eating fresh kill carrion right now
     private bool ShouldContinueEatingFreshKillCarrion()
     {
         if (!PrioritiseFreshKills || freshKillPriorityTimer <= 0f || claimedFreshKillCarrion == null || claimedFreshKillCarrion.IsConsumed)
@@ -3613,6 +3691,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return energyRatio < 0.995f || stomachRatio < FreshKillStopStomachRatio;
     }
 
+    // Registers fresh kill with the manager list
     private void RegisterFreshKill(Vector3 deathPosition)
     {
         if (!PrioritiseFreshKills || Candidate == null || Candidate.Genome == null)
@@ -3633,6 +3712,7 @@ public class MarineCreatureAgent : MonoBehaviour
         ResolveFreshKillCarrion();
     }
 
+    // Handles resolve fresh kill carrion
     private void ResolveFreshKillCarrion()
     {
         if (!PrioritiseFreshKills || !hasFreshKillSearchPosition || freshKillPriorityTimer <= 0f)
@@ -3687,6 +3767,7 @@ public class MarineCreatureAgent : MonoBehaviour
         RememberFoodArea(best.transform.position, false);
     }
 
+    // Applies fresh kill carrion priority to the current object
     private void ApplyFreshKillCarrionPriority()
     {
         if (!PrioritiseFreshKills)
@@ -3715,6 +3796,7 @@ public class MarineCreatureAgent : MonoBehaviour
         retainedFood = null;
     }
 
+    // Clears fresh kill claim ready for fresh data
     private void ClearFreshKillClaim()
     {
         claimedFreshKillCarrion = null;
@@ -3722,6 +3804,7 @@ public class MarineCreatureAgent : MonoBehaviour
         freshKillPriorityTimer = 0f;
     }
 
+    // Gets the current escape pull used by the sim
     private Vector3 GetCurrentEscapePull(Vector3 boundaryPull)
     {
         lastCurrentStress = 0f;
@@ -3829,6 +3912,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return currentEscapeDirection.normalized * CurrentEscapeWeight * stressBoost * boundaryBoost * stuckBoost;
     }
 
+    // Gets the cached schooling pull used by the sim
     private Vector3 GetCachedSchoolingPull(float hungerPressure)
     {
         if (socialScanTimer <= 0f)
@@ -3840,6 +3924,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return cachedSchoolPull;
     }
 
+    // Gets the evolved schooling pull used by the sim
     private Vector3 GetEvolvedSchoolingPull(float hungerPressure)
     {
         lastSchoolCohesion = Vector3.zero;
@@ -3995,6 +4080,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return social;
     }
 
+    // Gets the cached crowd stabilisation pull used by the sim
     private Vector3 GetCachedCrowdStabilisationPull(float hungerPressure)
     {
         if (crowdScanTimer <= 0f)
@@ -4006,6 +4092,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return cachedCrowdPull;
     }
 
+    // Gets the crowd stabilisation pull used by the sim
     private Vector3 GetCrowdStabilisationPull(float hungerPressure)
     {
         lastEmergencyUnstick = Vector3.zero;
@@ -4095,6 +4182,7 @@ public class MarineCreatureAgent : MonoBehaviour
     }
 
 
+    // Gets the hungry leader pull used by the sim
     private Vector3 GetHungryLeaderPull(List<MarineCreatureAgent> creatures, Vector3 ownPosition, float hungerPressure)
     {
         currentHungryLeader = null;
@@ -4171,12 +4259,14 @@ public class MarineCreatureAgent : MonoBehaviour
         return pull.normalized * HungryLeaderPullWeight * followDrive * bestScore;
     }
 
+    // Handles clamp social vertical
     private void ClampSocialVertical(ref Vector3 social)
     {
         float maxY = Mathf.Max(0f, MaxSocialVerticalComponent);
         social.y = Mathf.Clamp(social.y * 0.15f, -maxY, maxY);
     }
 
+    // Handles stabilise vertical steering
     private void StabiliseVerticalSteering(ref Vector3 combined, Vector3 targetPull, Vector3 dangerPull, Vector3 boundaryPull, float hungerPressure)
     {
         bool targetNeedsVertical = targetPull.sqrMagnitude > 0.01f && Mathf.Abs(targetPull.normalized.y) > 0.22f;
@@ -4194,6 +4284,7 @@ public class MarineCreatureAgent : MonoBehaviour
         }
     }
 
+    // Gets the cached danger avoidance pull used by the sim
     private Vector3 GetCachedDangerAvoidancePull(float hungerPressure)
     {
         if (dangerScanTimer <= 0f)
@@ -4205,6 +4296,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return cachedDangerPull;
     }
 
+    // Gets the danger avoidance pull used by the sim
     private Vector3 GetDangerAvoidancePull(float hungerPressure)
     {
         lastThreatAvoidance = Vector3.zero;
@@ -4274,6 +4366,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return lastThreatAvoidance;
     }
 
+    // Gets the depth preference pull used by the sim
     private Vector3 GetDepthPreferencePull(Vector3 targetPull, Vector3 dangerPull, float hungerPressure)
     {
         if (EvolutionEcosystemManager.Instance == null || Candidate == null || Candidate.Genome == null)
@@ -4317,6 +4410,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return depth;
     }
 
+    // Gets the close target pull used by the sim
     private Vector3 GetCloseTargetPull(float hungerPressure)
     {
         Vector3? target = GetPrimaryMovementTargetPosition();
@@ -4337,11 +4431,13 @@ public class MarineCreatureAgent : MonoBehaviour
         return toTarget.normalized * CloseTargetPull * closeness * Mathf.Lerp(0.65f, 1.35f, hungerPressure);
     }
 
+    // Gets the food queue pull used by the sim
     private Vector3 GetFoodQueuePull(float hungerPressure)
     {
         return Vector3.zero;
     }
 
+    // Gets the brain pull used by the sim
     private Vector3 GetBrainPull(float energyRatio)
     {
         if (!EvaluateEvolvedBrain(energyRatio, GetHealthRatio(), GetStomachFullness01(), GetHungerPressure()))
@@ -4363,6 +4459,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return brain.normalized * BrainInfluence * Mathf.Lerp(0.35f, 1f, energyRatio);
     }
 
+    // Handles evaluate evolved brain
     private bool EvaluateEvolvedBrain(float energyRatio, float healthRatio, float stomachRatio, float hungerPressure)
     {
         if (Candidate == null || Candidate.Genome == null || Candidate.Genome.Brain == null)
@@ -4473,6 +4570,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return true;
     }
 
+    // Sets the brain input value used later
     private void SetBrainInput(int index, float value)
     {
         if (brainInputs != null && index >= 0 && index < brainInputs.Length)
@@ -4481,6 +4579,7 @@ public class MarineCreatureAgent : MonoBehaviour
         }
     }
 
+    // Gets the brain output used by the sim
     private float GetBrainOutput(int index)
     {
         if (brainOutputs == null || index < 0 || index >= brainOutputs.Length)
@@ -4526,6 +4625,7 @@ public class MarineCreatureAgent : MonoBehaviour
         }
     }
 
+    // Gets the wander pull used by the sim
     private Vector3 GetWanderPull(float energyRatio)
     {
         wanderTimer -= Time.fixedDeltaTime;
@@ -4537,6 +4637,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return wanderDirection * WanderStrength * Mathf.Lerp(0.25f, 1f, energyRatio) * Mathf.Lerp(0.75f, 1.2f, Candidate.Genome.ActivityCycle);
     }
 
+    // Gets the home area pull used by the sim
     private Vector3 GetHomeAreaPull(float hungerPressure)
     {
         if (!hasHomeArea || Candidate == null || Candidate.Genome == null || hungerPressure > Candidate.Genome.HungerThreshold * 0.75f)
@@ -4564,6 +4665,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return toHome.normalized * pullStrength;
     }
 
+    // Gets the danger memory pull used by the sim
     private Vector3 GetDangerMemoryPull()
     {
         if (dangerMemoryTimer <= 0f)
@@ -4588,11 +4690,13 @@ public class MarineCreatureAgent : MonoBehaviour
         return away.normalized * DangerMemoryAvoidanceWeight * t * t;
     }
 
+    // Gets the emergency unstick pull used by the sim
     private Vector3 GetEmergencyUnstickPull()
     {
         return lastEmergencyUnstick;
     }
 
+    // Handles move fish
     private void MoveFish(float hungerPressure)
     {
         if (rb == null)
@@ -4787,6 +4891,7 @@ public class MarineCreatureAgent : MonoBehaviour
         }
     }
 
+    // Handles resolve kinematic overlaps
     private void ResolveKinematicOverlaps(bool feedingHold)
     {
         if (EvolutionEcosystemManager.Instance == null || rb == null || KinematicOverlapIterations <= 0)
@@ -4865,6 +4970,7 @@ public class MarineCreatureAgent : MonoBehaviour
         }
     }
 
+    // Handles clamp pitch for upright swimming
     private Vector3 ClampPitchForUprightSwimming(Vector3 direction, bool activelyTargeting)
     {
         if (direction.sqrMagnitude <= 0.0001f)
@@ -4891,6 +4997,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return (horizontal * horizontalMagnitude + Vector3.up * clampedY).normalized;
     }
 
+    // Builds the upright fish rotation data from the current values
     private Quaternion BuildUprightFishRotation(Vector3 forward)
     {
         if (forward.sqrMagnitude <= 0.0001f)
@@ -4914,6 +5021,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return Quaternion.LookRotation(forward, up);
     }
 
+    // Updates stuck detection using the current sim state
     private void UpdateStuckDetection(Vector3 combinedSteering)
     {
         Vector3 position = rb != null ? rb.position : transform.position;
@@ -4945,6 +5053,7 @@ public class MarineCreatureAgent : MonoBehaviour
         lastPosition = position;
     }
 
+    // Handles track static resource progress
     private void TrackStaticResourceProgress()
     {
         Vector3? target = GetPrimaryStaticFoodTargetPosition();
@@ -4975,6 +5084,7 @@ public class MarineCreatureAgent : MonoBehaviour
         }
     }
 
+    // Handles maybe abandon stuck static resource
     private void MaybeAbandonStuckStaticResource()
     {
         if (staticTargetNoProgressTimer < StuckResourceProgressTime)
@@ -4999,6 +5109,7 @@ public class MarineCreatureAgent : MonoBehaviour
         lastPrimaryStaticTargetDistance = float.MaxValue;
     }
 
+    // Builds the stuck escape direction data from the current values
     private Vector3 BuildStuckEscapeDirection()
     {
         Vector3 side = GetFallbackSideDirection();
@@ -5041,6 +5152,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return dir.normalized;
     }
 
+    // Handles pick new wander direction
     private void PickNewWanderDirection()
     {
         wanderTimer = Random.Range(WanderRefreshMin, WanderRefreshMax);
@@ -5053,6 +5165,7 @@ public class MarineCreatureAgent : MonoBehaviour
         wanderDirection.Normalize();
     }
 
+    // Gets the boundary avoidance direction used by the sim
     private Vector3 GetBoundaryAvoidanceDirection()
     {
         if (EvolutionEcosystemManager.Instance == null)
@@ -5082,6 +5195,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return push.normalized * BoundaryAvoidanceStrength;
     }
 
+    // Handles add boundary push
     private void AddBoundaryPush(float distanceToEdge, Vector3 inwardDirection, ref Vector3 push)
     {
         if (BoundaryAvoidanceDistance <= 0f || distanceToEdge > BoundaryAvoidanceDistance)
@@ -5093,6 +5207,7 @@ public class MarineCreatureAgent : MonoBehaviour
         push += inwardDirection * t * t;
     }
 
+    // Handles prevent outward direction at bounds
     private void PreventOutwardDirectionAtBounds(ref Vector3 direction)
     {
         if (EvolutionEcosystemManager.Instance == null)
@@ -5115,12 +5230,14 @@ public class MarineCreatureAgent : MonoBehaviour
         if (position.z >= max.z - margin && direction.z > 0f) direction.z = 0f;
     }
 
+    // Handles prevent outward velocity at bounds
     private Vector3 PreventOutwardVelocityAtBounds(Vector3 velocity)
     {
         PreventOutwardDirectionAtBounds(ref velocity);
         return velocity;
     }
 
+    // Handles direction to
     private Vector3 DirectionTo(Vector3? targetPosition)
     {
         if (!targetPosition.HasValue)
@@ -5137,6 +5254,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return direction.normalized;
     }
 
+    // Gets the direction to simulation centre used by the sim
     private Vector3 GetDirectionToSimulationCentre()
     {
         if (EvolutionEcosystemManager.Instance == null)
@@ -5148,6 +5266,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return direction.sqrMagnitude < 0.05f ? transform.forward : direction.normalized;
     }
 
+    // Gets the horizontal away from used by the sim
     private Vector3 GetHorizontalAwayFrom(Vector3 otherPosition)
     {
         Vector3 away = transform.position - otherPosition;
@@ -5164,6 +5283,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return away.normalized;
     }
 
+    // Gets the fallback side direction used by the sim
     private Vector3 GetFallbackSideDirection()
     {
         Vector3 side = transform.right;
@@ -5180,6 +5300,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return side.normalized;
     }
 
+    // Gets the current velocity or forward used by the sim
     private Vector3 GetCurrentVelocityOrForward()
     {
         Vector3 velocity = UseKinematicSwimming ? currentVelocity : (rb != null ? rb.linearVelocity : currentVelocity);
@@ -5190,6 +5311,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return velocity;
     }
 
+    // Checks if it has close food target available
     private bool HasCloseFoodTarget()
     {
         Vector3? target = GetPrimaryTargetPosition();
@@ -5201,6 +5323,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return Vector3.Distance(GetMouthWorldPosition(), target.Value) <= CloseTargetSlowdownDistance * 1.4f;
     }
 
+    // Checks if it should commit to static feeding target right now
     private bool ShouldCommitToStaticFeedingTarget(float hungerPressure)
     {
         if (hungerPressure < 0.08f)
@@ -5221,6 +5344,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return mouthDistance <= commitDistance || bodyDistance <= commitDistance;
     }
 
+    // Checks if it is close static feeding target
     private bool IsCloseStaticFeedingTarget()
     {
         Vector3? target = GetPrimaryStaticFoodTargetPosition();
@@ -5236,6 +5360,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return mouthDistance <= directDistance || bodyDistance <= directDistance;
     }
 
+    // Gets the primary movement target position used by the sim
     private Vector3? GetPrimaryMovementTargetPosition()
     {
         if (nearestPrey != null && CanAttackPrey(nearestPrey))
@@ -5257,6 +5382,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return null;
     }
 
+    // Gets the movement target for static resource used by the sim
     private Vector3 GetMovementTargetForStaticResource(Vector3 resourcePosition)
     {
         EvolutionEcosystemManager manager = EvolutionEcosystemManager.Instance;
@@ -5289,6 +5415,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return slot;
     }
 
+    // Handles wants static resource now
     private bool WantsStaticResourceNow()
     {
         if (feedingHoldTimer > 0f)
@@ -5341,6 +5468,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return GetStomachFullness01() < 0.18f && GetEffectiveEnergyRatio() < Mathf.Lerp(0.45f, 0.62f, opportunism);
     }
 
+    // Checks if it is satisfied enough to leave resource
     private bool IsSatisfiedEnoughToLeaveResource()
     {
         float energyRatio = Mathf.Clamp01(CurrentEnergy / Mathf.Max(0.01f, EffectiveStats != null ? EffectiveStats.EnergyCapacity : Candidate.Genome.EnergyCapacity));
@@ -5353,6 +5481,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return energyRatio >= energyTarget || stomachRatio >= stomachTarget;
     }
 
+    // Gets the primary static food target position used by the sim
     private Vector3? GetPrimaryStaticFoodTargetPosition()
     {
         if (!WantsStaticResourceNow())
@@ -5412,6 +5541,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return null;
     }
 
+    // Gets the primary target position used by the sim
     private Vector3? GetPrimaryTargetPosition()
     {
         if (focusedPrey != null && hunterPreyFocusTimer > 0f && CanAttackPrey(focusedPrey))
@@ -5470,6 +5600,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return null;
     }
 
+    // Checks if it is friendly by morph
     private bool IsFriendlyByMorph(MarineCreatureAgent other)
     {
         if (other == null || other == this || other.Candidate == null || other.Candidate.Genome == null || Candidate == null || Candidate.Genome == null)
@@ -5499,6 +5630,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return ownMorph == otherMorph;
     }
 
+    // Builds the predator signature data from the current values
     private string BuildPredatorSignature(MarineCreatureAgent predator)
     {
         if (predator == null || predator.Candidate == null || predator.Candidate.Genome == null)
@@ -5510,6 +5642,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return g.BodyMorphId + "|" + g.JawMorphId + "|" + g.TailMorphId;
     }
 
+    // Checks if it is remembered predator type
     private bool IsRememberedPredatorType(MarineCreatureAgent other)
     {
         if (rememberedPredatorTypeTimer <= 0f || string.IsNullOrEmpty(rememberedPredatorSignature) || other == null)
@@ -5526,6 +5659,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return other.Candidate != null && other.Candidate.Genome != null && other.GetPredatorDrive01() > 0.55f && Candidate != null && Candidate.Genome != null && Candidate.Genome.GetMorphSimilarity(other.Candidate.Genome) < MorphSimilarityForSchool;
     }
 
+    // Checks if it is actual threat
     private bool IsActualThreat(MarineCreatureAgent other)
     {
         if (other == null || other == this)
@@ -5536,6 +5670,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return IsPredatorThreateningThis(other, ClosePredatorThreatRange, ClosePredatorThreatHalfAngle, true, false);
     }
 
+    // Checks if it has close visible predator threat available
     private bool HasCloseVisiblePredatorThreat()
     {
         if (survivalThreatTarget != null && IsPredatorThreateningThis(survivalThreatTarget, ClosePredatorThreatRange * 1.25f, ClosePredatorThreatHalfAngle, true, false))
@@ -5556,6 +5691,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return false;
     }
 
+    // Checks if it is predator threatening this
     private bool IsPredatorThreateningThis(MarineCreatureAgent predator, float range, float halfAngle, bool requireCloseOrApproach, bool allowEarlyWarning)
     {
         if (predator == null || predator == this || predator.CurrentHealth <= 0f)
@@ -5612,6 +5748,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return veryClose || predatorIsTargetingThis || (activeHunter && predatorFacingThis);
     }
 
+    // Checks if it is in forward side vision cone
     private bool IsInForwardSideVisionCone(Vector3 worldPosition, float halfAngle)
     {
         Vector3 toTarget = worldPosition - transform.position;
@@ -5633,6 +5770,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return dot >= threshold;
     }
 
+    // Checks if it should react to group predator warnings right now
     private bool ShouldReactToGroupPredatorWarnings()
     {
         if (Candidate == null || Candidate.Genome == null || CurrentHealth <= 0f)
@@ -5658,6 +5796,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return true;
     }
 
+    // Checks if it should send group predator warnings right now
     private bool ShouldSendGroupPredatorWarnings()
     {
         if (!ShouldReactToGroupPredatorWarnings())
@@ -5670,6 +5809,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return Candidate.Genome.GroupingChance >= 0.18f || Candidate.Genome.FoodSharing >= 0.25f || Candidate.Genome.SchoolTightness >= 0.25f;
     }
 
+    // Handles process early group predator warning
     private void ProcessEarlyGroupPredatorWarning(EvolutionEcosystemManager manager, float senseRange)
     {
         if (!UseCloseLineOfSightThreats || manager == null || groupPredatorWarningCooldownTimer > 0f || !ShouldSendGroupPredatorWarnings())
@@ -5726,6 +5866,7 @@ public class MarineCreatureAgent : MonoBehaviour
         }
     }
 
+    // Handles receive group predator warning
     private void ReceiveGroupPredatorWarning(MarineCreatureAgent predator)
     {
         if (predator == null || predator == this || !ShouldReactToGroupPredatorWarnings())
@@ -5761,6 +5902,7 @@ public class MarineCreatureAgent : MonoBehaviour
         rememberedDangerArea = predator.transform.position;
     }
 
+    // Gets the leadership weight used by the sim
     private float GetLeadershipWeight()
     {
         if (Candidate == null || Candidate.Genome == null)
@@ -5772,6 +5914,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return Mathf.Clamp01(Candidate.Genome.Leadership * 0.55f + energyRatio * 0.25f + Candidate.Genome.RiskTolerance * 0.2f);
     }
 
+    // Handles clamp runtime collider settings
     private void ClampRuntimeColliderSettings()
     {
         RootColliderIsTrigger = true;
@@ -5780,12 +5923,14 @@ public class MarineCreatureAgent : MonoBehaviour
         HuntingContactSpaceMultiplier = Mathf.Clamp(HuntingContactSpaceMultiplier, 0.05f, 1f);
     }
 
+    // Gets the safe root collider radius used by the sim
     private float GetSafeRootColliderRadius()
     {
         float maxRadius = Mathf.Clamp(MaxRuntimeRootColliderRadius, 0.18f, 0.45f);
         return Mathf.Clamp(RootColliderRadius, 0.18f, maxRadius);
     }
 
+    // Gets the personal radius used by the sim
     private float GetPersonalRadius()
     {
         // Logic personal space is world-space. The root transform scale already represents body size,
@@ -5794,6 +5939,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return Mathf.Max(0.16f, GetSafeRootColliderRadius() * Mathf.Max(0.35f, size));
     }
 
+    // Checks if it is trying to reach current prey
     private bool IsTryingToReachCurrentPrey(MarineCreatureAgent other)
     {
         if (other == null || other != nearestPrey || Candidate == null || Candidate.Genome == null)
@@ -5809,6 +5955,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return Candidate.Genome.MeatDiet >= 0.35f && Candidate.Genome.Aggression >= 0.18f;
     }
 
+    // Gets the group danger support used by the sim
     private float GetGroupDangerSupport()
     {
         EvolutionEcosystemManager manager = EvolutionEcosystemManager.Instance;
@@ -5841,6 +5988,7 @@ public class MarineCreatureAgent : MonoBehaviour
     }
 
 
+    // Gets the max health used by the sim
     private float GetMaxHealth()
     {
         float body = EffectiveStats != null ? EffectiveStats.BodySize : Candidate != null && Candidate.Genome != null ? Candidate.Genome.BodySize : 1f;
@@ -5848,6 +5996,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return BaseHealth * Mathf.Lerp(0.75f, 1.65f, Mathf.InverseLerp(0.4f, 2.8f, body)) + armour * 8f;
     }
 
+    // Gets the stomach capacity used by the sim
     private float GetStomachCapacity()
     {
         if (Candidate == null || Candidate.Genome == null || EffectiveStats == null)
@@ -5858,21 +6007,25 @@ public class MarineCreatureAgent : MonoBehaviour
         return Mathf.Max(4f, BaseStomachCapacity * Candidate.Genome.StomachSize * Mathf.Lerp(0.65f, 1.8f, Mathf.InverseLerp(0.4f, 2.8f, EffectiveStats.BodySize)));
     }
 
+    // Gets the stomach total used by the sim
     private float GetStomachTotal()
     {
         return Mathf.Max(0f, StomachPlant + StomachMeat + StomachCarrion);
     }
 
+    // Gets the stomach fullness01 used by the sim
     public float GetStomachFullness01()
     {
         return Mathf.Clamp01(GetStomachTotal() / Mathf.Max(0.01f, GetStomachCapacity()));
     }
 
+    // Gets the health ratio used by the sim
     public float GetHealthRatio()
     {
         return Mathf.Clamp01(CurrentHealth / Mathf.Max(0.01f, GetMaxHealth()));
     }
 
+    // Gets the effective energy ratio used by the sim
     public float GetEffectiveEnergyRatio()
     {
         float energyRatio = Mathf.Clamp01(CurrentEnergy / Mathf.Max(0.01f, EffectiveStats != null ? EffectiveStats.EnergyCapacity : Candidate.Genome.EnergyCapacity));
@@ -5880,11 +6033,13 @@ public class MarineCreatureAgent : MonoBehaviour
         return Mathf.Clamp01(energyRatio * 0.55f + stomachRatio * 0.45f);
     }
 
+    // Gets the hunger pressure used by the sim
     public float GetHungerPressure()
     {
         return 1f - GetEffectiveEnergyRatio();
     }
 
+    // Checks if it is hungry enough to search
     public bool IsHungryEnoughToSearch()
     {
         if (Candidate == null || Candidate.Genome == null)
@@ -5901,6 +6056,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return GetHungerPressure() >= threshold;
     }
 
+    // Updates resource satisfaction state using the current sim state
     private void UpdateResourceSatisfactionState()
     {
         if (Candidate == null || Candidate.Genome == null || EffectiveStats == null)
@@ -5912,6 +6068,7 @@ public class MarineCreatureAgent : MonoBehaviour
         ShouldLeaveCurrentResource = IsSatisfiedEnoughToLeaveResource();
     }
 
+    // Turns stomach contents into energy based on diet and digestion stats
     private void DigestStomach()
     {
         if (Candidate == null || Candidate.Genome == null || EffectiveStats == null)
@@ -5948,6 +6105,7 @@ public class MarineCreatureAgent : MonoBehaviour
         Candidate.EnergyGained += gained;
     }
 
+    // Gets the bite mass used by the sim
     private float GetBiteMass(bool meatBite)
     {
         if (Candidate == null || Candidate.Genome == null)
@@ -5964,11 +6122,13 @@ public class MarineCreatureAgent : MonoBehaviour
         return Mathf.Max(0.25f, bite);
     }
 
+    // Gets the remaining stomach space used by the sim
     private float GetRemainingStomachSpace()
     {
         return Mathf.Max(0f, GetStomachCapacity() - GetStomachTotal());
     }
 
+    // Handles add to stomach
     private void AddToStomach(float plant, float meat, float carrion)
     {
         float space = GetRemainingStomachSpace();
@@ -5984,6 +6144,7 @@ public class MarineCreatureAgent : MonoBehaviour
         StomachCarrion += carrion * scale;
     }
 
+    // Handles remember food area
     private void RememberFoodArea(Vector3 foodPosition, bool badMemory)
     {
         if (Candidate == null || Candidate.Genome == null)
@@ -6004,6 +6165,7 @@ public class MarineCreatureAgent : MonoBehaviour
         hasFoodMemory = true;
     }
 
+    // Counts down good and bad food memories
     private void UpdateFoodMemoryTimers()
     {
         if (!hasFoodMemory)
@@ -6030,6 +6192,7 @@ public class MarineCreatureAgent : MonoBehaviour
         }
     }
 
+    // Spends energy based on movement, body traits and local environment pressure
     private void DrainEnergy()
     {
         float environmentDrain = 1f;
@@ -6085,6 +6248,7 @@ public class MarineCreatureAgent : MonoBehaviour
         }
     }
 
+    // Attempts to eat plant food if the fish is close enough and allowed to feed
     private void TryEatFood()
     {
         if (IsPredatorPlantBlockedRole() && !CanUsePlantAsPredatorEmergencyFallback())
@@ -6123,6 +6287,7 @@ public class MarineCreatureAgent : MonoBehaviour
         }
     }
 
+    // Attempts to eat carrion or claimed kills when the fish reaches them
     private void TryEatCarrion()
     {
         bool eatingOwnKill = ShouldContinueEatingFreshKillCarrion() && claimedFreshKillCarrion != null && nearestCarrion == claimedFreshKillCarrion;
@@ -6162,6 +6327,7 @@ public class MarineCreatureAgent : MonoBehaviour
         }
     }
 
+    // Handles on successful static bite
     private void OnSuccessfulStaticBite(Vector3 resourcePosition, bool plantFood)
     {
         feedingHoldTimer = FeedingHoldAfterBite;
@@ -6195,6 +6361,7 @@ public class MarineCreatureAgent : MonoBehaviour
     }
 
 
+    // Checks if it should sleep to heal right now
     private bool ShouldSleepToHeal()
     {
         if (!HealOnlyWhileRestingOrSleeping || CurrentHealth >= GetMaxHealth() * SleepHealthRatioThreshold)
@@ -6214,6 +6381,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return hasReserve && notUrgentlyHungry;
     }
 
+    // Gets the resting heal multiplier used by the sim
     private float GetRestingHealMultiplier(float energyRatio, float stomachRatio)
     {
         if (CurrentHealth >= GetMaxHealth())
@@ -6250,6 +6418,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return 0f;
     }
 
+    // Checks if it should sprint this tick right now
     private bool ShouldSprintThisTick(Vector3? currentTarget, float hungerPressure)
     {
         if (!UseSprintBursts || sprintCooldownTimer > 0f || rb == null || EffectiveStats == null)
@@ -6306,6 +6475,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return false;
     }
 
+    // Gets the best immediate bite target used by the sim
     private MarineCreatureAgent GetBestImmediateBiteTarget()
     {
         MarineCreatureAgent best = null;
@@ -6334,6 +6504,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return best;
     }
 
+    // Handles consider immediate bite candidate
     private void ConsiderImmediateBiteCandidate(MarineCreatureAgent candidate, ref MarineCreatureAgent best, ref float bestScore)
     {
         if (candidate == null || candidate == this || !CanAttackPrey(candidate))
@@ -6356,6 +6527,7 @@ public class MarineCreatureAgent : MonoBehaviour
         }
     }
 
+    // Finds bite candidate by overlap by checking the current options
     private MarineCreatureAgent FindBiteCandidateByOverlap()
     {
         Vector3 mouth = GetMouthWorldPosition();
@@ -6399,6 +6571,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return best;
     }
 
+    // Attempts a predator bite using distance, mouth checks and hurtboxes
     private void TryBitePrey()
     {
         if (biteTimer > 0f)
@@ -6482,6 +6655,7 @@ public class MarineCreatureAgent : MonoBehaviour
         biteTimer = BiteCooldown;
     }
 
+    // Checks if it is close enough for predator contact bite
     private bool IsCloseEnoughForPredatorContactBite(MarineCreatureAgent prey)
     {
         if (prey == null)
@@ -6502,6 +6676,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return mouthDistance <= mouthAllowance || bodyDistance <= bodyAllowance;
     }
 
+    // Checks if it can consume static target with the current state
     private bool CanConsumeStaticTarget(Vector3 targetPosition)
     {
         if (IsPositionInsideMouthArea(targetPosition))
@@ -6521,6 +6696,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return mouthDistance <= mouthContact;
     }
 
+    // Checks if it is position inside mouth area
     private bool IsPositionInsideMouthArea(Vector3 targetPosition)
     {
         Vector3 mouthPosition = GetMouthWorldPosition();
@@ -6544,6 +6720,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return Vector3.Distance(transform.position, targetPosition) <= forgivingDistance;
     }
 
+    // Gets the mouth world position used by the sim
     public Vector3 GetMouthWorldPosition()
     {
         float bodyScale = EffectiveStats != null ? EffectiveStats.BodySize : transform.localScale.x;
@@ -6551,6 +6728,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return transform.position + transform.forward * MouthForwardOffset * bodyScale * offsetMultiplier;
     }
 
+    // Gets the scaled mouth radius used by the sim
     public float GetScaledMouthRadius()
     {
         float bodyScale = EffectiveStats != null ? EffectiveStats.BodySize : transform.localScale.x;
@@ -6558,12 +6736,14 @@ public class MarineCreatureAgent : MonoBehaviour
         return Mathf.Max(0.05f, MouthRadius * bodyScale * mouthMultiplier);
     }
 
+    // Gets the bite target position used by the sim
     public Vector3 GetBiteTargetPosition()
     {
         float bodyScale = EffectiveStats != null ? EffectiveStats.BodySize : transform.localScale.x;
         return transform.position + transform.up * bodyScale * 0.12f;
     }
 
+    // Gets the threat range used by the sim
     public float GetThreatRange()
     {
         if (Candidate == null || Candidate.Genome == null || EffectiveStats == null)
@@ -6573,6 +6753,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return EffectiveStats.ThreatRange * EffectiveStats.VisionRange;
     }
 
+    // Gets the bite damage used by the sim
     public float GetBiteDamage()
     {
         if (Candidate == null || Candidate.Genome == null || EffectiveStats == null)
@@ -6588,6 +6769,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return Mathf.Max(2f, damage);
     }
 
+    // Gets the bite damage against used by the sim
     private float GetBiteDamageAgainst(MarineCreatureAgent prey)
     {
         float damage = GetBiteDamage();
@@ -6611,6 +6793,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return Mathf.Max(1.2f, damage);
     }
 
+    // Checks if it should treat as risky mate instead of prey right now
     private bool ShouldTreatAsRiskyMateInsteadOfPrey(MarineCreatureAgent other, float morphSimilarity)
     {
         if (!AllowPredatorMateRiskWindow || other == null || Candidate == null || Candidate.Genome == null || other.Candidate == null || other.Candidate.Genome == null)
@@ -6641,6 +6824,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return enoughReserve;
     }
 
+    // Checks if it should avoid similar predator combat right now
     private bool ShouldAvoidSimilarPredatorCombat(MarineCreatureAgent other, float morphSimilarity)
     {
         if (!ProtectSimilarPredatorsFromSpawnKilling || other == null || other == this)
@@ -6663,6 +6847,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return !(GetEffectiveEnergyRatio() <= SimilarPredatorAttackEnergyRatio && GetStomachFullness01() <= SimilarPredatorAttackStomachRatio);
     }
 
+    // Checks if this fish is allowed to attack the target based on diet, hunger and danger
     public bool CanAttackPrey(MarineCreatureAgent prey)
     {
         if (prey == null || prey == this || Candidate == null || Candidate.Genome == null || prey.Candidate == null || prey.Candidate.Genome == null || EffectiveStats == null)
@@ -6780,6 +6965,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return true;
     }
 
+    // Tries to group defensive counter attack and returns whether it worked
     private void TryGroupDefensiveCounterAttack(MarineCreatureAgent attacker, float receivedDamage)
     {
         if (!EnableGroupDefenceCounterAttacks || attacker == null || attacker == this || Candidate == null || Candidate.Genome == null)
@@ -6839,6 +7025,7 @@ public class MarineCreatureAgent : MonoBehaviour
         }
     }
 
+    // Handles receive counter damage
     private void ReceiveCounterDamage(MarineCreatureAgent defender, float damage)
     {
         if (damage <= 0f || CurrentHealth <= 0f)
@@ -6862,6 +7049,7 @@ public class MarineCreatureAgent : MonoBehaviour
         }
     }
 
+    // Handles receive bite
     public bool ReceiveBite(MarineCreatureAgent attacker, float incomingDamage, out float energyGainedByAttacker)
     {
         energyGainedByAttacker = 0f;
@@ -6911,6 +7099,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return false;
     }
 
+    // Learns safer home areas and remembers dangerous places
     private void UpdateHabitatMemory()
     {
         if (Candidate == null || Candidate.Genome == null)
@@ -6956,6 +7145,7 @@ public class MarineCreatureAgent : MonoBehaviour
         UpdateCandidateSpawnMemory();
     }
 
+    // Updates candidate spawn memory using the current sim state
     private void UpdateCandidateSpawnMemory()
     {
         if (Candidate == null || Candidate.Genome == null || !hasHomeArea)
@@ -6973,6 +7163,7 @@ public class MarineCreatureAgent : MonoBehaviour
         }
     }
 
+    // Handles remember danger area
     private void RememberDangerArea(Vector3 dangerPosition)
     {
         rememberedDangerArea = dangerPosition;
@@ -6980,6 +7171,7 @@ public class MarineCreatureAgent : MonoBehaviour
     }
 
 
+    // Checks if it should seek mate right now
     private bool ShouldSeekMate()
     {
         if (Candidate == null || Candidate.Genome == null || EffectiveStats == null)
@@ -7016,6 +7208,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return true;
     }
 
+    // Updates mate target using the current sim state
     private void UpdateMateTarget()
     {
         if (!ShouldSeekMate() || EvolutionEcosystemManager.Instance == null)
@@ -7043,6 +7236,7 @@ public class MarineCreatureAgent : MonoBehaviour
         mateTargetTimer = Mathf.Max(0.25f, MateTargetRefreshTime);
     }
 
+    // Gets the mate seeking pull used by the sim
     private Vector3 GetMateSeekingPull(float hungerPressure)
     {
         if (!ShouldSeekMate())
@@ -7075,6 +7269,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return toMate.normalized * MateSeekingWeight * drive;
     }
 
+    // Gets the cached terrain avoidance pull used by the sim
     private Vector3 GetCachedTerrainAvoidancePull()
     {
         bool urgentTerrainCheck = currentBrainMode == FishAutonomousBehaviourMode.Fleeing
@@ -7098,6 +7293,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return cachedTerrainPull;
     }
 
+    // Gets the terrain avoidance pull used by the sim
     private Vector3 GetTerrainAvoidancePull()
     {
         lastTerrainAvoidance = Vector3.zero;
@@ -7157,6 +7353,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return pull;
     }
 
+    // Handles add terrain ray avoidance
     private void AddTerrainRayAvoidance(Vector3 origin, Vector3 direction, float distance, float radius, LayerMask mask, ref Vector3 pull)
     {
         if (direction.sqrMagnitude <= 0.001f || distance <= 0f)
@@ -7193,6 +7390,7 @@ public class MarineCreatureAgent : MonoBehaviour
         }
     }
 
+    // Checks mating needs and creates eggs when a safe mate is reached
     private void TryMateAndLayEggs()
     {
         if (eggLayTimer > 0f || EvolutionEcosystemManager.Instance == null || Candidate == null || Candidate.Genome == null)
@@ -7279,11 +7477,13 @@ public class MarineCreatureAgent : MonoBehaviour
         Candidate.EggsLaid += eggs;
     }
 
+    // Checks if it is mature for mating
     public bool IsMatureForMating()
     {
         return !IsJuvenile && AgeSeconds >= MaturityAgeSeconds;
     }
 
+    // Checks if it has mating energy available
     public bool HasMatingEnergy()
     {
         if (Candidate == null || Candidate.Genome == null || EffectiveStats == null)
@@ -7302,6 +7502,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return GetEffectiveEnergyRatio() >= requiredEnergy && CurrentHealth >= GetMaxHealth() * requiredHealthRatio;
     }
 
+    // Sets the juvenile on hatch value used later
     public void SetJuvenileOnHatch()
     {
         IsJuvenile = true;
@@ -7309,6 +7510,7 @@ public class MarineCreatureAgent : MonoBehaviour
         ApplyJuvenileScale();
     }
 
+    // Updates juvenile growth using the current sim state
     private void UpdateJuvenileGrowth()
     {
         if (!IsJuvenile)
@@ -7324,12 +7526,14 @@ public class MarineCreatureAgent : MonoBehaviour
         }
     }
 
+    // Applies juvenile scale to the current object
     private void ApplyJuvenileScale()
     {
         float t = Mathf.Clamp01(AgeSeconds / Mathf.Max(1f, JuvenileGrowTime));
         transform.localScale = Vector3.one * Mathf.Lerp(JuvenileStartScale, 1f, t);
     }
 
+    // Handles add meat to stomach from egg
     public void AddMeatToStomachFromEgg(float mass)
     {
         if (mass <= 0f)
@@ -7345,6 +7549,7 @@ public class MarineCreatureAgent : MonoBehaviour
         }
     }
 
+    // Updates survival, fitness and behaviour counters for end-of-generation selection
     private void UpdateMetrics()
     {
         if (Candidate == null)
@@ -7373,6 +7578,7 @@ public class MarineCreatureAgent : MonoBehaviour
         }
     }
 
+    // Handles add brain output evidence metric
     private void AddBrainOutputEvidenceMetric()
     {
         if (Candidate == null)
@@ -7392,6 +7598,7 @@ public class MarineCreatureAgent : MonoBehaviour
         Candidate.BrainOutputSamples = newCount;
     }
 
+    // Handles running average
     private float RunningAverage(float currentAverage, float newValue, int oldCount, int newCount)
     {
         if (newCount <= 1)
@@ -7402,6 +7609,7 @@ public class MarineCreatureAgent : MonoBehaviour
         return (currentAverage * oldCount + newValue) / newCount;
     }
 
+    // Handles add brain mode metric
     private void AddBrainModeMetric(float deltaTime)
     {
         if (Candidate == null)
@@ -7430,6 +7638,7 @@ public class MarineCreatureAgent : MonoBehaviour
         }
     }
 
+    // Updates debug movement state using the current sim state
     private void UpdateDebugMovementState(float hungerPressure, Vector3 targetPull, Vector3 dangerPull, Vector3 schoolPull, Vector3 boundaryPull, Vector3 emergencyPull)
     {
         if (stuckEscapeTimer > 0f || emergencyPull.sqrMagnitude > 0.01f)
@@ -7455,6 +7664,7 @@ public class MarineCreatureAgent : MonoBehaviour
         }
     }
 
+    // Draws optional debug rays for movement and target checks
     private void DrawRuntimeDebugRays()
     {
         EcosystemDebugSettings settings = EcosystemDebugSettings.Instance;
@@ -7488,6 +7698,7 @@ public class MarineCreatureAgent : MonoBehaviour
         if (currentMateTarget != null && ShouldSeekMate()) Debug.DrawLine(transform.position, currentMateTarget.transform.position, new Color(1f, 0.3f, 1f), duration);
     }
 
+    // Builds a short debug string for the current state
     public string GetDebugSummary()
     {
         if (Candidate == null || Candidate.Genome == null || EffectiveStats == null)
@@ -7518,6 +7729,7 @@ public class MarineCreatureAgent : MonoBehaviour
                " | Diet P/M/C " + Candidate.Genome.PlantDiet.ToString("F2") + "/" + Candidate.Genome.MeatDiet.ToString("F2") + "/" + Candidate.Genome.CarrionDiet.ToString("F2");
     }
 
+    // Records final metrics, spawns carrion when needed and removes the fish
     public void Die(bool causedByExtinctionEvent)
     {
         if (EvolutionEcosystemManager.Instance != null)
@@ -7529,6 +7741,7 @@ public class MarineCreatureAgent : MonoBehaviour
         Destroy(gameObject);
     }
 
+    // Gets the habitat debug summary used by the sim
     public string GetHabitatDebugSummary()
     {
         if (!hasHomeArea)
@@ -7541,11 +7754,13 @@ public class MarineCreatureAgent : MonoBehaviour
         return "Home " + homeDistance.ToString("F1") + "m | Confidence " + homeConfidence.ToString("F2") + danger;
     }
 
+    // Gets the debug move state used by the sim
     public string GetDebugMoveState()
     {
         return debugMoveState;
     }
 
+    // Gets the brain debug summary used by the sim
     public string GetBrainDebugSummary()
     {
         string complexity = Candidate != null && Candidate.Genome != null && Candidate.Genome.Brain != null
@@ -7564,41 +7779,49 @@ public class MarineCreatureAgent : MonoBehaviour
             + complexity;
     }
 
+    // Gets the brain mode used by the sim
     public FishAutonomousBehaviourMode GetBrainMode()
     {
         return currentBrainMode;
     }
 
+    // Gets the debug vertical reason used by the sim
     public string GetDebugVerticalReason()
     {
         return debugVerticalReason;
     }
 
+    // Gets the friendly schoolmate count used by the sim
     public int GetFriendlySchoolmateCount()
     {
         return lastFriendlyCount;
     }
 
+    // Gets the threat count used by the sim
     public int GetThreatCount()
     {
         return lastThreatCount;
     }
 
+    // Gets the preferred depth01 used by the sim
     public float GetPreferredDepth01()
     {
         return Candidate != null && Candidate.Genome != null ? Candidate.Genome.PreferredDepth01 : 0.5f;
     }
 
+    // Draws scene gizmos so setup can be checked visually
     private void OnDrawGizmos()
     {
         DrawGizmosInternal(false);
     }
 
+    // Draws selected-only gizmos so setup can be checked without clutter
     private void OnDrawGizmosSelected()
     {
         DrawGizmosInternal(true);
     }
 
+    // Draws gizmos internal for debugging
     private void DrawGizmosInternal(bool selectedStyle)
     {
         if (Candidate == null || Candidate.Genome == null)
@@ -7641,6 +7864,7 @@ public class MarineCreatureAgent : MonoBehaviour
         }
     }
 
+    // Draws the old debug UI when it is enabled
     private void OnGUI()
     {
         EcosystemDebugSettings settings = EcosystemDebugSettings.Instance;

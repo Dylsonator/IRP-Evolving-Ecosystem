@@ -3,6 +3,7 @@ using UnityEngine;
 
 public static class EvolutionBreedingUtility
 {
+    // Mixes parent genomes and mutates the result to create a child genome
     public static EvolutionGenome CreateChildGenome(EvolutionGenome mother, EvolutionGenome father, float mutationMultiplier)
     {
         if (mother == null && father == null)

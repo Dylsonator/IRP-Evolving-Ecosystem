@@ -1,5 +1,6 @@
 using UnityEngine;
 
+// Shared morph slots, families and socket data.
 public enum CreatureMorphSlot
 {
     Body,
@@ -47,6 +48,7 @@ public struct CreatureMorphSocketDefinition
     public bool ScalePositionByBodyShape;
     public bool ScaleSocketByBodyShape;
 
+    // Creates the object or data needed here
     public static CreatureMorphSocketDefinition Create(CreatureMorphSlot slot, Vector3 position, Vector3 rotation, Vector3 scale, bool mirrorOnX)
     {
         CreatureMorphSocketDefinition socket = new CreatureMorphSocketDefinition();

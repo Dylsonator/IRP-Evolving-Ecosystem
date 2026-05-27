@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 
+// Stores one creature genome plus its lifetime metrics, fitness calculation and debug identity.
 [Serializable]
 public class EvolutionCandidate
 {
@@ -13,6 +14,7 @@ public class EvolutionCandidate
     public string DisplayName;
     public CreatureBehaviourType BehaviourType;
 
+    // Lifetime metrics are stored here so selection can judge what the creature actually did.
     [Header("Evaluation")]
     public float SurvivalTime;
     public float FinalEnergy;
@@ -72,12 +74,14 @@ public class EvolutionCandidate
     public string PreferredSpawnNiche;
     [Range(0f, 1f)] public float PreferredSpawnConfidence;
 
+    // Creates a candidate around a genome and makes sure identity data exists
     public EvolutionCandidate(EvolutionGenome genome)
     {
         Genome = genome;
         RefreshDebugIdentity();
     }
 
+    // Sets the runtime ID and display name used by logs and labels
     public void AssignRuntimeIdentity(int id, int generationBorn, int parentId = 0)
     {
         Id = id;
@@ -86,6 +90,7 @@ public class EvolutionCandidate
         RefreshDebugIdentity();
     }
 
+    // Updates the readable behaviour type and display name from the genome
     public void RefreshDebugIdentity()
     {
         BehaviourType = CreatureDebugTypeUtility.GetBehaviourType(Genome);
@@ -100,6 +105,7 @@ public class EvolutionCandidate
         }
     }
 
+    // Scores how well this creature survived and used its niche during the run
     public float GetFitness()
     {
         // Fitness is intentionally multi-factor, but it must not over-reward the safest food source.
@@ -208,6 +214,7 @@ public class EvolutionCandidate
         return Mathf.Max(0f, fitness);
     }
 
+    // Builds a compact behaviour descriptor for novelty and archive scoring
     public Vector2 GetBehaviourDescriptor()
     {
         float movementDescriptor = Mathf.Clamp01(DistanceTravelled / 500f);
@@ -217,6 +224,7 @@ public class EvolutionCandidate
         return new Vector2(movementDescriptor, feedingDescriptor);
     }
 
+    // Returns the main diet label used for logs and selection
     public Vector2 GetDietDescriptor()
     {
         if (Genome == null)
@@ -231,6 +239,7 @@ public class EvolutionCandidate
         );
     }
 
+    // Creates a mutated child candidate from this candidate
     public EvolutionCandidate CreateChild(float mutationMultiplier)
     {
         EvolutionCandidate child;
@@ -252,6 +261,7 @@ public class EvolutionCandidate
         return child;
     }
 
+    // Copies runtime results from a fish back into this candidate
     public void AddMetricsFrom(EvolutionCandidate other)
     {
         if (other == null)
@@ -321,6 +331,7 @@ public class EvolutionCandidate
         }
     }
 
+    // Blends parent values when creating child metrics
     private float WeightedAverage(float a, int aCount, float b, int bCount)
     {
         int total = aCount + bCount;

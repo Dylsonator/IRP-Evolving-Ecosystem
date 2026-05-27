@@ -1,16 +1,12 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-/// <summary>
-/// Converts a candidate into a continuous behaviour descriptor.
-/// This is used for natural diversity pressure, novelty search, fitness sharing and archive logging.
-/// It avoids hard-coding fixed role quotas: similar agents compete with each other, while genuinely different
-/// successful strategies are preserved by their distance in behaviour space.
-/// </summary>
+// Converts a fish into behaviour values for novelty/QD without hard role quotas.
 public static class EvolutionBehaviourDescriptorUtility
 {
     public const int DescriptorLength = 16;
 
+    // Builds a behaviour descriptor used for novelty and diversity checks
     public static float[] BuildDescriptor(EvolutionCandidate candidate)
     {
         float[] descriptor = new float[DescriptorLength];
@@ -18,6 +14,7 @@ public static class EvolutionBehaviourDescriptorUtility
         return descriptor;
     }
 
+    // Fills descriptor values from diet, movement, defence and behaviour metrics
     public static void FillDescriptor(EvolutionCandidate candidate, float[] descriptor)
     {
         if (descriptor == null || descriptor.Length < DescriptorLength)
@@ -58,6 +55,7 @@ public static class EvolutionBehaviourDescriptorUtility
         descriptor[15] = Mathf.Clamp01(candidate.FleeingTime / totalModeTime);
     }
 
+    // Returns the distance between two behaviour descriptors
     public static float Distance(EvolutionCandidate a, EvolutionCandidate b)
     {
         if (a == null || b == null)
@@ -70,6 +68,7 @@ public static class EvolutionBehaviourDescriptorUtility
         return Distance(da, db);
     }
 
+    // Returns the distance between two behaviour descriptors
     public static float Distance(float[] a, float[] b)
     {
         if (a == null || b == null)
@@ -93,6 +92,7 @@ public static class EvolutionBehaviourDescriptorUtility
         return Mathf.Sqrt(sum / count);
     }
 
+    // Measures how spread out a set of descriptors is
     public static float CalculateFeatureSpread(List<EvolutionCandidate> candidates)
     {
         if (candidates == null || candidates.Count <= 1)

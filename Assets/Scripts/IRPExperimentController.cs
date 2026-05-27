@@ -3,6 +3,7 @@ using System.IO;
 using System.Text;
 using UnityEngine;
 
+// Runs labelled experiment phases such as bloom, scarcity, current pressure and extinction recovery.
 public enum IRPExperimentPhase
 {
     Baseline,
@@ -13,11 +14,7 @@ public enum IRPExperimentPhase
     ExtinctionRecovery
 }
 
-/// <summary>
-/// Lightweight controller for repeatable IRP-style trials.
-/// It does not replace the ecosystem manager. It applies labelled pressure phases,
-/// records an event log and gives clear evidence for controlled runs.
-/// </summary>
+// Runs labelled IRP test phases and logs when each phase happens.
 public class IRPExperimentController : MonoBehaviour
 {
     [Header("References")]
@@ -90,6 +87,7 @@ public class IRPExperimentController : MonoBehaviour
     private bool hasStarted;
     private bool stopHandled;
 
+    // Sets up cached references and safe starting values before the sim runs
     private void Awake()
     {
         ResolveReferences();
@@ -102,6 +100,7 @@ public class IRPExperimentController : MonoBehaviour
         EnsureEventHeader();
     }
 
+    // Starts the setup that needs other scene objects to already exist
     private void Start()
     {
         ResolveReferences();
@@ -120,6 +119,7 @@ public class IRPExperimentController : MonoBehaviour
         LogEvent("RunStarted", "Trial started.");
     }
 
+    // Runs the normal frame checks and timers
     private void Update()
     {
         if (!hasStarted)
@@ -169,7 +169,9 @@ public class IRPExperimentController : MonoBehaviour
         }
     }
 
+    // Handles the start new trial step.
     [ContextMenu("IRP/Start New Trial")]
+    // Starts a labelled trial and resets the trial timer
     public void StartNewTrial()
     {
         TrialIndex++;
@@ -204,7 +206,9 @@ public class IRPExperimentController : MonoBehaviour
         LogEvent("NewTrial", "Started new trial.");
     }
 
+    // Handles the log manual observation step.
     [ContextMenu("IRP/Log Manual Observation")]
+    // Adds a manual note to the experiment event log
     public void LogManualObservation()
     {
         LogEvent("ManualObservation", "Manual observation marker.");
@@ -219,7 +223,9 @@ public class IRPExperimentController : MonoBehaviour
         }
     }
 
+    // Handles the trigger controlled extinction step.
     [ContextMenu("IRP/Trigger Controlled Extinction")]
+    // Triggers a controlled extinction event for comparison runs
     public void TriggerControlledExtinction()
     {
         if (Manager == null)
@@ -234,6 +240,7 @@ public class IRPExperimentController : MonoBehaviour
         LogEvent("ControlledExtinction", "Triggered controlled extinction at " + ScheduledExtinctionKillPercent.ToString("P0") + ".");
     }
 
+    // Applies the phase settings that match the current generation
     private void ApplyPhaseForCurrentGeneration(bool force)
     {
         if (Manager == null)
@@ -263,6 +270,7 @@ public class IRPExperimentController : MonoBehaviour
         }
     }
 
+    // Gets the experiment phase that should run for this generation
     private IRPExperimentPhase GetScheduledPhase(int generation)
     {
         int b = Mathf.Max(0, BaselineGenerations);
@@ -295,6 +303,7 @@ public class IRPExperimentController : MonoBehaviour
         return IRPExperimentPhase.ExtinctionRecovery;
     }
 
+    // Sets food, current, mutation and extinction pressure for the phase
     private void ApplyPhaseValues(IRPExperimentPhase phase)
     {
         if (Environment == null)
@@ -335,6 +344,7 @@ public class IRPExperimentController : MonoBehaviour
         }
     }
 
+    // Finds manager and helper references if they were not assigned
     private void ResolveReferences()
     {
         if (Manager == null)
@@ -371,6 +381,7 @@ public class IRPExperimentController : MonoBehaviour
         }
     }
 
+    // Writes one experiment event line to the CSV
     private void LogEvent(string eventType, string note)
     {
         if (!WriteEventCsv)
@@ -400,6 +411,7 @@ public class IRPExperimentController : MonoBehaviour
         File.AppendAllText(eventCsvPath, line.ToString() + "\n");
     }
 
+    // Handles ensure event header
     private void EnsureEventHeader()
     {
         if (!WriteEventCsv)
@@ -418,6 +430,7 @@ public class IRPExperimentController : MonoBehaviour
         }
     }
 
+    // Deletes an old CSV so a new run starts cleanly
     private void DeleteFileIfExists(string fileName)
     {
         string path = Path.Combine(Application.persistentDataPath, fileName);
@@ -427,6 +440,7 @@ public class IRPExperimentController : MonoBehaviour
         }
     }
 
+    // Escapes CSV text safely
     private string Escape(string text)
     {
         if (string.IsNullOrEmpty(text))

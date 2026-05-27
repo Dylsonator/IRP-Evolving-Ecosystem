@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+// Holds all morph parts/modifiers and finds them by slot + ID.
 [CreateAssetMenu(menuName = "IRP Evolution/Creature Morph Library", fileName = "CreatureMorphLibrary")]
 public class CreatureMorphLibrary : ScriptableObject
 {
@@ -10,6 +11,7 @@ public class CreatureMorphLibrary : ScriptableObject
     public List<CreatureMorphPartData> Parts = new List<CreatureMorphPartData>();
     public List<CreatureMorphModifierData> Modifiers = new List<CreatureMorphModifierData>();
 
+    // Sets the shared active library so other systems can find morph parts
     public static void SetActiveLibrary(CreatureMorphLibrary library)
     {
         activeLibrary = library;
@@ -20,6 +22,7 @@ public class CreatureMorphLibrary : ScriptableObject
         get { return activeLibrary; }
     }
 
+    // Finds a morph part by slot and ID, using normalised IDs for safer matching
     public CreatureMorphPartData FindPart(CreatureMorphSlot slot, string partId)
     {
         string wantedId = NormalisePartIdForSlot(slot, partId);
@@ -49,6 +52,7 @@ public class CreatureMorphLibrary : ScriptableObject
         return null;
     }
 
+    // Checks if a slot has a real part that can actually spawn
     public bool HasUsablePart(CreatureMorphSlot slot, string partId)
     {
         CreatureMorphPartData part = FindPart(slot, partId);
@@ -66,11 +70,13 @@ public class CreatureMorphLibrary : ScriptableObject
         return part.PartPrefab != null;
     }
 
+    // Checks if this is the no-part ID by normalising the text and comparing it with none
     public static bool IsNonePartId(string partId)
     {
         return NormaliseSharedPartId(partId) == "none";
     }
 
+    // Finds the first usable part in the requested slot
     public CreatureMorphPartData FindAnyPart(string partId)
     {
         if (string.IsNullOrEmpty(partId))
@@ -96,6 +102,7 @@ public class CreatureMorphLibrary : ScriptableObject
         return null;
     }
 
+    // Picks a random valid part ID for a slot using mutation weights
     public string GetRandomPartId(CreatureMorphSlot slot, string currentId)
     {
         List<CreatureMorphPartData> validParts = new List<CreatureMorphPartData>();
@@ -140,6 +147,7 @@ public class CreatureMorphLibrary : ScriptableObject
         return NormalisePartIdForSlot(slot, validParts[validParts.Count - 1].PartId);
     }
 
+    // Picks a random part from the currently active library
     public static string GetRandomPartIdFromActive(CreatureMorphSlot slot, string currentId)
     {
         if (activeLibrary != null)
@@ -150,16 +158,19 @@ public class CreatureMorphLibrary : ScriptableObject
         return NormalisePartIdForSlot(slot, currentId);
     }
 
+    // Picks a fallback ID if the library is missing or empty
     public static string GetFallbackRandomPartId(CreatureMorphSlot slot, string currentId)
     {
         return NormalisePartIdForSlot(slot, currentId);
     }
 
+    // Returns the simple built-in IDs used when asset data is missing
     public static string[] GetFallbackPartIds(CreatureMorphSlot slot)
     {
         return new string[0];
     }
 
+    // Normalises a part ID and removes the slot prefix if it was included
     public static string NormalisePartIdForSlot(CreatureMorphSlot slot, string partId)
     {
         if (string.IsNullOrEmpty(partId))
@@ -207,6 +218,7 @@ public class CreatureMorphLibrary : ScriptableObject
         return id;
     }
 
+    // Normalises shared ID text so names compare consistently
     private static string NormaliseSharedPartId(string partId)
     {
         string id = partId.Trim().ToLowerInvariant();
@@ -246,6 +258,7 @@ public class CreatureMorphLibrary : ScriptableObject
         return id;
     }
 
+    // Removes prefixes like body_ or tail_ so shared IDs match
     private static string RemoveSlotPrefix(string id, string prefix)
     {
         if (id.StartsWith(prefix))
@@ -256,6 +269,7 @@ public class CreatureMorphLibrary : ScriptableObject
         return id;
     }
 
+    // Turns a fallback ID into readable display text
     public static string GetFallbackDisplayName(string partId)
     {
         if (string.IsNullOrEmpty(partId))

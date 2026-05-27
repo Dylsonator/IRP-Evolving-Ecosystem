@@ -1,5 +1,6 @@
 using UnityEngine;
 
+// Small on-screen overview for the current run.
 public class EcosystemDebugUI : MonoBehaviour
 {
     [Header("Read Only UI")]
@@ -7,6 +8,7 @@ public class EcosystemDebugUI : MonoBehaviour
     public Vector2 Position = new Vector2(12f, 12f);
     public Vector2 Size = new Vector2(420f, 210f);
 
+    // Draws the old debug UI when it is enabled
     private void OnGUI()
     {
         if (!ShowOverview)

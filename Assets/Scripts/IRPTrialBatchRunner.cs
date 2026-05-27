@@ -3,6 +3,7 @@ using System.IO;
 using System.Text;
 using UnityEngine;
 
+// Runs repeatable fixed-seed trials and logs final trial summaries for comparison.
 public enum IRPTrialCondition
 {
     Baseline,
@@ -13,10 +14,7 @@ public enum IRPTrialCondition
     ExtinctionRecovery
 }
 
-/// <summary>
-/// Optional fixed-seed trial runner for dissertation evidence.
-/// It lets you run repeatable conditions without hand-changing settings every time.
-/// </summary>
+// Optional fixed-seed trial runner so tests can be repeated fairly.
 public class IRPTrialBatchRunner : MonoBehaviour
 {
     public EvolutionEcosystemManager Manager;
@@ -77,6 +75,7 @@ public class IRPTrialBatchRunner : MonoBehaviour
     private string trialCsvPath;
     private bool trialRunning;
 
+    // Sets up cached references and safe starting values before the sim runs
     private void Awake()
     {
         ResolveReferences();
@@ -85,6 +84,7 @@ public class IRPTrialBatchRunner : MonoBehaviour
         EnsureHeader();
     }
 
+    // Starts the setup that needs other scene objects to already exist
     private void Start()
     {
         ResolveReferences();
@@ -94,6 +94,7 @@ public class IRPTrialBatchRunner : MonoBehaviour
         }
     }
 
+    // Runs the normal frame checks and timers
     private void Update()
     {
         if (!AutoRunBatch || !trialRunning || Manager == null)
@@ -109,6 +110,7 @@ public class IRPTrialBatchRunner : MonoBehaviour
     }
 
     [ContextMenu("IRP Trials/Start Batch From Beginning")]
+    // Starts the full batch trial list from the first condition
     public void StartBatchFromBeginning()
     {
         currentConditionIndex = 0;
@@ -117,36 +119,47 @@ public class IRPTrialBatchRunner : MonoBehaviour
         StartNextBatchTrial();
     }
 
+    // Handles the run baseline trial step.
     [ContextMenu("IRP Trials/Run Baseline Trial")]
+    // Starts a single baseline trial
     public void RunBaselineTrial()
     {
         StartSingleTrial(IRPTrialCondition.Baseline, SeedStart);
     }
 
+    // Handles the run scarcity trial step.
     [ContextMenu("IRP Trials/Run Scarcity Trial")]
+    // Starts a single scarcity trial
     public void RunScarcityTrial()
     {
         StartSingleTrial(IRPTrialCondition.Scarcity, SeedStart);
     }
 
+    // Handles the run cold current trial step.
     [ContextMenu("IRP Trials/Run Cold Current Trial")]
+    // Starts a single cold current trial
     public void RunColdCurrentTrial()
     {
         StartSingleTrial(IRPTrialCondition.ColdCurrent, SeedStart);
     }
 
+    // Handles the run mutation pulse trial step.
     [ContextMenu("IRP Trials/Run Mutation Pulse Trial")]
+    // Starts a single mutation pulse trial
     public void RunMutationPulseTrial()
     {
         StartSingleTrial(IRPTrialCondition.MutationPulse, SeedStart);
     }
 
+    // Handles the complete trial manually step.
     [ContextMenu("IRP Trials/Complete Current Trial")]
+    // Ends the current trial when the user chooses to stop it
     public void CompleteTrialManually()
     {
         CompleteCurrentTrial("ManualComplete");
     }
 
+    // Starts a one-off trial with the selected condition
     public void StartSingleTrial(IRPTrialCondition condition, int seed)
     {
         AutoRunBatch = false;
@@ -156,6 +169,7 @@ public class IRPTrialBatchRunner : MonoBehaviour
         StartTrial(condition, seed);
     }
 
+    // Moves the batch runner onto the next condition
     private void StartNextBatchTrial()
     {
         if (ConditionOrder == null || ConditionOrder.Length == 0)
@@ -186,6 +200,7 @@ public class IRPTrialBatchRunner : MonoBehaviour
         StartTrial(CurrentCondition, CurrentSeed);
     }
 
+    // Sets the seed, condition and timers for a trial
     private void StartTrial(IRPTrialCondition condition, int seed)
     {
         ResolveReferences();
@@ -206,6 +221,7 @@ public class IRPTrialBatchRunner : MonoBehaviour
         Manager.ResetSimulation();
     }
 
+    // Logs the result and optionally moves to the next trial
     private void CompleteCurrentTrial(string reason)
     {
         if (!trialRunning)
@@ -226,6 +242,7 @@ public class IRPTrialBatchRunner : MonoBehaviour
         trialRunning = false;
     }
 
+    // Applies the selected trial condition to the ecosystem
     private void ApplyCondition(IRPTrialCondition condition)
     {
         if (Environment == null)
@@ -268,6 +285,7 @@ public class IRPTrialBatchRunner : MonoBehaviour
         }
     }
 
+    // Pushes the trial name into the loggers so CSVs line up
     private void PushRunContext()
     {
         if (ExperimentController != null)
@@ -292,6 +310,7 @@ public class IRPTrialBatchRunner : MonoBehaviour
         }
     }
 
+    // Finds manager and helper references if they were not assigned
     private void ResolveReferences()
     {
         if (Manager == null)
@@ -320,6 +339,7 @@ public class IRPTrialBatchRunner : MonoBehaviour
         }
     }
 
+    // Writes a trial event to the trial CSV
     private void LogTrialEvent(string eventType, IRPTrialCondition condition, int seed, string note)
     {
         if (!WriteTrialCsv)
@@ -340,6 +360,7 @@ public class IRPTrialBatchRunner : MonoBehaviour
         File.AppendAllText(trialCsvPath, line.ToString() + "\n");
     }
 
+    // Creates the CSV header if the file is new
     private void EnsureHeader()
     {
         if (!WriteTrialCsv)
@@ -358,6 +379,7 @@ public class IRPTrialBatchRunner : MonoBehaviour
         }
     }
 
+    // Cleans text so commas and nulls do not break CSV output
     private string Safe(string text)
     {
         if (string.IsNullOrEmpty(text))

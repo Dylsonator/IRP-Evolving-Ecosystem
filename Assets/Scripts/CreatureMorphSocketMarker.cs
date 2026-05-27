@@ -1,9 +1,7 @@
 using UnityEngine;
 
-/// <summary>
-/// Place this component on empty child objects inside a BODY prefab.
-/// The morph builder will use these markers as attachment points for tails, fins, jaws, eyes, armour, spikes, etc.
-/// </summary>
+// Put this on empty children inside body prefabs to mark attachment points.
+// Socket marker inside body prefabs for tails, fins, jaws, sensors etc.
 public class CreatureMorphSocketMarker : MonoBehaviour
 {
     [Header("Socket Identity")]
@@ -31,6 +29,7 @@ public class CreatureMorphSocketMarker : MonoBehaviour
     public Color GizmoColour = Color.yellow;
     public float GizmoSize = 0.08f;
 
+    // Draws scene gizmos so setup can be checked visually
     private void OnDrawGizmos()
     {
         Gizmos.color = GizmoColour;

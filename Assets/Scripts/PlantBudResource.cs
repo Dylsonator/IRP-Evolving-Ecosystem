@@ -1,5 +1,6 @@
 using UnityEngine;
 
+// Links an edible bud to its parent plant and handles detaching, drifting and spoil timing.
 [RequireComponent(typeof(FoodSource))]
 public class PlantBudResource : MonoBehaviour
 {
@@ -25,12 +26,14 @@ public class PlantBudResource : MonoBehaviour
     private Vector3 driftVelocity;
     private bool hasBeenBitten;
 
+    // Sets up cached references and safe starting values before the sim runs
     private void Awake()
     {
         food = GetComponent<FoodSource>();
     }
 
 
+    // Runs the normal frame checks and timers
     private void Update()
     {
         if (food != null && food.IsConsumed)
@@ -100,6 +103,7 @@ public class PlantBudResource : MonoBehaviour
         }
     }
 
+    // Marks a bud as bitten and may detach it if the settings allow
     public void NotifyBitten(float massTaken, int feederId)
     {
         if (massTaken <= 0f)
@@ -123,6 +127,7 @@ public class PlantBudResource : MonoBehaviour
         }
     }
 
+    // Detaches the bud from its parent and lets it drift in the water
     public void DetachFromPlant(Vector3 impulse)
     {
         if (!AttachedToPlant)
@@ -143,6 +148,7 @@ public class PlantBudResource : MonoBehaviour
         }
     }
 
+    // Builds a small drift impulse when a bud gets knocked loose
     private Vector3 BuildBiteImpulse()
     {
         Vector3 impulse = Random.insideUnitSphere;
@@ -165,6 +171,7 @@ public class PlantBudResource : MonoBehaviour
         return impulse.normalized * Random.Range(DetachImpulseMin, DetachImpulseMax);
     }
 
+    // Tells the parent plant this bud is gone
     private void NotifyParentConsumed()
     {
         if (ParentPlant != null)

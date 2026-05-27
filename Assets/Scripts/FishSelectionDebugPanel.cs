@@ -5,6 +5,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 #endif
 
+// Lets you click a fish and inspect what it is doing.
 public class FishSelectionDebugPanel : MonoBehaviour
 {
     [Header("Selection")]
@@ -32,6 +33,7 @@ public class FishSelectionDebugPanel : MonoBehaviour
 
     private float cameraRefreshTimer;
 
+    // Sets up cached references and safe starting values before the sim runs
     private void Awake()
     {
         if (SelectionCamera == null)
@@ -40,6 +42,7 @@ public class FishSelectionDebugPanel : MonoBehaviour
         }
     }
 
+    // Runs the normal frame checks and timers
     private void Update()
     {
         if (!ShowPanel && !AllowSelectionWhenPanelHidden)
@@ -50,6 +53,7 @@ public class FishSelectionDebugPanel : MonoBehaviour
         TrySelectFishFromMouse();
     }
 
+    // Raycasts and fallback-checks the mouse position to select a fish
     private void TrySelectFishFromMouse()
     {
         if (!WasLeftMousePressedThisFrame())
@@ -101,6 +105,7 @@ public class FishSelectionDebugPanel : MonoBehaviour
     }
 
 
+    // Uses a wider sphere cast so small fish are easier to click
     private MarineCreatureAgent TrySpherePick(Ray ray)
     {
         float radius = Mathf.Max(0.05f, SelectionSphereRadius);
@@ -142,6 +147,7 @@ public class FishSelectionDebugPanel : MonoBehaviour
         return best;
     }
 
+    // Finds the closest visible fish on screen if the raycast misses
     private MarineCreatureAgent TryScreenDistancePick(Vector2 mousePosition)
     {
         if (SelectionCamera == null || EvolutionEcosystemManager.Instance == null)
@@ -185,6 +191,7 @@ public class FishSelectionDebugPanel : MonoBehaviour
         return best;
     }
 
+    // Stores the selected fish and opens the panel again
     private void SelectFish(MarineCreatureAgent creature)
     {
         if (creature == null)
@@ -205,6 +212,7 @@ public class FishSelectionDebugPanel : MonoBehaviour
         }
     }
 
+    // Handles was left mouse pressed this frame
     private bool WasLeftMousePressedThisFrame()
     {
 #if ENABLE_INPUT_SYSTEM
@@ -216,6 +224,7 @@ public class FishSelectionDebugPanel : MonoBehaviour
 #endif
     }
 
+    // Gets the mouse screen position used by the sim
     private Vector2 GetMouseScreenPosition()
     {
 #if ENABLE_INPUT_SYSTEM
@@ -227,6 +236,7 @@ public class FishSelectionDebugPanel : MonoBehaviour
 #endif
     }
 
+    // Draws the old debug UI when it is enabled
     private void OnGUI()
     {
         EcosystemDebugSettings settings = EcosystemDebugSettings.Instance;
@@ -295,6 +305,7 @@ public class FishSelectionDebugPanel : MonoBehaviour
         GUILayout.EndArea();
     }
 
+    // Saves selected fish data to JSON for evidence/debugging
     public void SaveSelectedFishSnapshot()
     {
         if (SelectedFish == null || SelectedFish.Candidate == null || SelectedFish.Candidate.Genome == null)
@@ -311,6 +322,7 @@ public class FishSelectionDebugPanel : MonoBehaviour
         Debug.Log("Saved selected fish snapshot: " + path);
     }
 
+    // Builds the selected fish snapshot text by appending important values
     private string BuildJsonSnapshot(MarineCreatureAgent fish)
     {
         EvolutionGenome g = fish.Candidate.Genome;
@@ -355,24 +367,28 @@ public class FishSelectionDebugPanel : MonoBehaviour
         return sb.ToString();
     }
 
+    // Adds one JSON field with basic escaping
     private void AppendJson(StringBuilder sb, string key, string value, bool comma)
     {
         sb.Append("  \"").Append(key).Append("\": \"").Append(value).Append("\"");
         sb.AppendLine(comma ? "," : string.Empty);
     }
 
+    // Adds one JSON field with basic escaping
     private void AppendJson(StringBuilder sb, string key, int value, bool comma)
     {
         sb.Append("  \"").Append(key).Append("\": ").Append(value);
         sb.AppendLine(comma ? "," : string.Empty);
     }
 
+    // Adds one JSON field with basic escaping
     private void AppendJson(StringBuilder sb, string key, float value, bool comma)
     {
         sb.Append("  \"").Append(key).Append("\": ").Append(value.ToString("F4"));
         sb.AppendLine(comma ? "," : string.Empty);
     }
 
+    // Adds one JSON field with basic escaping
     private void AppendJson(StringBuilder sb, string key, bool value, bool comma)
     {
         sb.Append("  \"").Append(key).Append("\": ").Append(value ? "true" : "false");

@@ -2,6 +2,7 @@ using UnityEngine;
 
 public static class EvolutionNicheUtility
 {
+    // Builds a niche key from diet, movement, social, defence and reproduction traits
     public static string BuildNicheKey(EvolutionCandidate candidate)
     {
         if (candidate == null || candidate.Genome == null)
@@ -19,6 +20,7 @@ public static class EvolutionNicheUtility
         return diet + "|" + movement + "|" + social + "|" + defence + "|" + reproduction;
     }
 
+    // Builds the selection grouping key used by quality-diversity
     public static string BuildSelectionKey(EvolutionCandidate candidate, int bins)
     {
         if (candidate == null || candidate.Genome == null)
@@ -37,6 +39,7 @@ public static class EvolutionNicheUtility
         return BuildCoreNicheKey(candidate) + "|Move" + movementBin + "|Feed" + feedingBin;
     }
 
+    // Builds the broad niche label used for convergence checks
     public static string BuildCoreNicheKey(EvolutionCandidate candidate)
     {
         if (candidate == null || candidate.Genome == null)
@@ -47,6 +50,7 @@ public static class EvolutionNicheUtility
         return BuildCoreNicheKey(candidate.Genome);
     }
 
+    // Builds the broad niche label used for convergence checks
     public static string BuildCoreNicheKey(EvolutionGenome g)
     {
         if (g == null)
@@ -74,6 +78,7 @@ public static class EvolutionNicheUtility
         return "generalist";
     }
 
+    // Checks if the candidate looks like an ambush predator
     public static bool IsLikelyAmbusher(EvolutionGenome g)
     {
         if (g == null)
@@ -84,6 +89,7 @@ public static class EvolutionNicheUtility
         return g.MeatDiet >= 0.44f && g.Aggression >= 0.24f && g.Stealth >= 0.48f && (g.Territoriality >= 0.35f || g.Speed < 5.2f);
     }
 
+    // Returns the diet part of a niche label
     private static string GetDietNiche(EvolutionGenome g)
     {
         if (g.MeatDiet >= 0.52f && g.MeatDiet >= g.PlantDiet && g.MeatDiet >= g.CarrionDiet) return "active_predator";
@@ -93,6 +99,7 @@ public static class EvolutionNicheUtility
         return "mixed_diet";
     }
 
+    // Returns the movement part of a niche label
     private static string GetMovementNiche(EvolutionGenome g)
     {
         if (g.Speed >= 6.3f && g.TailLength >= 1.08f) return "sprinter";
@@ -102,6 +109,7 @@ public static class EvolutionNicheUtility
         return "general_mover";
     }
 
+    // Returns the social part of a niche label
     private static string GetSocialNiche(EvolutionGenome g)
     {
         if (g.Territoriality >= 0.55f) return "territorial";
@@ -110,6 +118,7 @@ public static class EvolutionNicheUtility
         return "loose_social";
     }
 
+    // Returns the defence part of a niche label
     private static string GetDefenceNiche(EvolutionGenome g)
     {
         if (g.DangerFactor >= 0.75f || g.SpikeSize >= 0.85f) return "warning_defence";
@@ -118,6 +127,7 @@ public static class EvolutionNicheUtility
         return "normal_defence";
     }
 
+    // Returns the reproduction part of a niche label
     private static string GetReproductionNiche(EvolutionGenome g)
     {
         if (g.EggProtection >= 0.62f && g.NestingDrive >= 0.45f) return "egg_guardian";
