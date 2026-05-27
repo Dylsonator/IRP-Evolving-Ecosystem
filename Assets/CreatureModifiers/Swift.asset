@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 976646c8c5b8d5c4293fb284adfd3c5a, type: 3}
+  m_Name: Swift
+  m_EditorClassIdentifier: 
+  ModifierId: swift
+  DisplayName: swift
+  ScaleMultiplier: {x: 0.9, y: 0.9, z: 0.9}
+  SpeedModifier: 0.8
+  TurnRateModifier: 10
+  EnergyCapacityModifier: -5
+  EnergyDrainMultiplier: 1.12
+  BiteDamageModifier: 0
+  DefenceModifier: -0.1
+  DangerFactorModifier: 0

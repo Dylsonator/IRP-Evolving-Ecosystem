@@ -51,6 +51,27 @@ public class EvolutionCandidate
     public float AveragePreyDistance;
     public float AverageCarrionDistance;
 
+    [Header("Neural / Survival Evidence")]
+    public int BrainOutputSamples;
+    public float AverageBrainFoodBias;
+    public float AverageBrainHuntBias;
+    public float AverageBrainFleeBias;
+    public float AverageBrainMateSocialBias;
+    public float AverageBrainExploreHomeBias;
+    public float AverageBrainRestBias;
+    public float AverageBrainSprintBias;
+    public float SurvivalEmergencyTime;
+    public int SurvivalEmergencyActivations;
+    public float PredatorTypeAvoidanceTime;
+    public float GroupDefenceDamageDealt;
+    public int GroupDefenceEvents;
+
+    [Header("Ancestral Spawn Memory")]
+    public bool HasPreferredSpawnArea;
+    public Vector3 PreferredSpawnArea;
+    public string PreferredSpawnNiche;
+    [Range(0f, 1f)] public float PreferredSpawnConfidence;
+
     public EvolutionCandidate(EvolutionGenome genome)
     {
         Genome = genome;
@@ -151,6 +172,10 @@ public class EvolutionCandidate
         }
 
         child.ParentId = Id;
+        child.HasPreferredSpawnArea = HasPreferredSpawnArea;
+        child.PreferredSpawnArea = PreferredSpawnArea + UnityEngine.Random.insideUnitSphere * Mathf.Lerp(0.75f, 4.0f, 1f - Mathf.Clamp01(PreferredSpawnConfidence));
+        child.PreferredSpawnNiche = PreferredSpawnNiche;
+        child.PreferredSpawnConfidence = Mathf.Clamp01(PreferredSpawnConfidence * 0.92f);
         return child;
     }
 
@@ -194,5 +219,43 @@ public class EvolutionCandidate
         AverageFoodDistance += other.AverageFoodDistance;
         AveragePreyDistance += other.AveragePreyDistance;
         AverageCarrionDistance += other.AverageCarrionDistance;
+
+        int combinedBrainSamples = BrainOutputSamples + other.BrainOutputSamples;
+        if (combinedBrainSamples > 0)
+        {
+            AverageBrainFoodBias = WeightedAverage(AverageBrainFoodBias, BrainOutputSamples, other.AverageBrainFoodBias, other.BrainOutputSamples);
+            AverageBrainHuntBias = WeightedAverage(AverageBrainHuntBias, BrainOutputSamples, other.AverageBrainHuntBias, other.BrainOutputSamples);
+            AverageBrainFleeBias = WeightedAverage(AverageBrainFleeBias, BrainOutputSamples, other.AverageBrainFleeBias, other.BrainOutputSamples);
+            AverageBrainMateSocialBias = WeightedAverage(AverageBrainMateSocialBias, BrainOutputSamples, other.AverageBrainMateSocialBias, other.BrainOutputSamples);
+            AverageBrainExploreHomeBias = WeightedAverage(AverageBrainExploreHomeBias, BrainOutputSamples, other.AverageBrainExploreHomeBias, other.BrainOutputSamples);
+            AverageBrainRestBias = WeightedAverage(AverageBrainRestBias, BrainOutputSamples, other.AverageBrainRestBias, other.BrainOutputSamples);
+            AverageBrainSprintBias = WeightedAverage(AverageBrainSprintBias, BrainOutputSamples, other.AverageBrainSprintBias, other.BrainOutputSamples);
+            BrainOutputSamples = combinedBrainSamples;
+        }
+
+        SurvivalEmergencyTime += other.SurvivalEmergencyTime;
+        SurvivalEmergencyActivations += other.SurvivalEmergencyActivations;
+        PredatorTypeAvoidanceTime += other.PredatorTypeAvoidanceTime;
+        GroupDefenceDamageDealt += other.GroupDefenceDamageDealt;
+        GroupDefenceEvents += other.GroupDefenceEvents;
+
+        if (other.HasPreferredSpawnArea && (!HasPreferredSpawnArea || other.PreferredSpawnConfidence > PreferredSpawnConfidence))
+        {
+            HasPreferredSpawnArea = true;
+            PreferredSpawnArea = other.PreferredSpawnArea;
+            PreferredSpawnNiche = other.PreferredSpawnNiche;
+            PreferredSpawnConfidence = other.PreferredSpawnConfidence;
+        }
+    }
+
+    private float WeightedAverage(float a, int aCount, float b, int bCount)
+    {
+        int total = aCount + bCount;
+        if (total <= 0)
+        {
+            return 0f;
+        }
+
+        return (a * aCount + b * bCount) / total;
     }
 }

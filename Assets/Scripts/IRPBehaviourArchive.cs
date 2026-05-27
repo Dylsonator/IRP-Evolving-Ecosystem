@@ -27,6 +27,12 @@ public class IRPBehaviourArchive : MonoBehaviour
         public float Grouping;
         public float BrainHidden;
         public float BrainConnections;
+        public float BrainMemoryDecay;
+        public float SurvivalTime;
+        public float PreyKills;
+        public float ReproductionCount;
+        public string MorphologySummary;
+        public string PrimaryBehaviourSummary;
     }
 
     [Header("References")]
@@ -135,6 +141,12 @@ public class IRPBehaviourArchive : MonoBehaviour
         entry.Grouping = g.GroupingChance;
         entry.BrainHidden = g.Brain != null ? g.Brain.HiddenCount : 0;
         entry.BrainConnections = g.Brain != null ? g.Brain.GetConnectionCount() : 0;
+        entry.BrainMemoryDecay = g.BrainMemoryDecay;
+        entry.SurvivalTime = candidate.SurvivalTime;
+        entry.PreyKills = candidate.PreyKills;
+        entry.ReproductionCount = candidate.ReproductionCount + candidate.EggsLaid + candidate.EggsHatched;
+        entry.MorphologySummary = CreatureDebugTypeUtility.GetMorphologyName(g);
+        entry.PrimaryBehaviourSummary = BuildPrimaryBehaviourSummary(candidate);
         archive[key] = entry;
     }
 
@@ -173,7 +185,13 @@ public class IRPBehaviourArchive : MonoBehaviour
             line.Append(e.Aggression.ToString("F3")).Append(',');
             line.Append(e.Grouping.ToString("F3")).Append(',');
             line.Append(e.BrainHidden.ToString("F0")).Append(',');
-            line.Append(e.BrainConnections.ToString("F0"));
+            line.Append(e.BrainConnections.ToString("F0")).Append(',');
+            line.Append(e.BrainMemoryDecay.ToString("F3")).Append(',');
+            line.Append(e.SurvivalTime.ToString("F2")).Append(',');
+            line.Append(e.PreyKills.ToString("F0")).Append(',');
+            line.Append(e.ReproductionCount.ToString("F0")).Append(',');
+            line.Append(Safe(e.MorphologySummary)).Append(',');
+            line.Append(Safe(e.PrimaryBehaviourSummary));
             File.AppendAllText(csvPath, line.ToString() + "\n");
         }
     }
@@ -182,6 +200,35 @@ public class IRPBehaviourArchive : MonoBehaviour
     public void ClearArchive()
     {
         archive.Clear();
+    }
+
+    private string BuildPrimaryBehaviourSummary(EvolutionCandidate candidate)
+    {
+        if (candidate == null)
+        {
+            return "Unknown";
+        }
+
+        string best = "Resting";
+        float value = candidate.RestingTime;
+        CheckBehaviour(candidate.ExploringTime, "Exploring", ref best, ref value);
+        CheckBehaviour(candidate.SchoolingTime, "Schooling", ref best, ref value);
+        CheckBehaviour(candidate.ForagingTime, "Foraging", ref best, ref value);
+        CheckBehaviour(candidate.FeedingTime, "Feeding", ref best, ref value);
+        CheckBehaviour(candidate.MateSeekingTime, "Mating/Nesting", ref best, ref value);
+        CheckBehaviour(candidate.HuntingTime, "Hunting/Ambush", ref best, ref value);
+        CheckBehaviour(candidate.FleeingTime, "Fleeing/Mobbing", ref best, ref value);
+        CheckBehaviour(candidate.RecoveryTime, "Recovering", ref best, ref value);
+        return best;
+    }
+
+    private void CheckBehaviour(float candidateTime, string label, ref string bestLabel, ref float bestTime)
+    {
+        if (candidateTime > bestTime)
+        {
+            bestTime = candidateTime;
+            bestLabel = label;
+        }
     }
 
     private void EnsureHeader()
@@ -198,7 +245,7 @@ public class IRPBehaviourArchive : MonoBehaviour
 
         if (!File.Exists(csvPath))
         {
-            File.WriteAllText(csvPath, "RunId,Generation,Reason,CellKey,CoreNiche,DisplayName,FirstSeenGeneration,LastImprovedGeneration,BestFitness,PlantDiet,MeatDiet,CarrionDiet,Speed,BodySize,Aggression,Grouping,BrainHidden,BrainConnections\n");
+            File.WriteAllText(csvPath, "RunId,Generation,Reason,CellKey,CoreNiche,DisplayName,FirstSeenGeneration,LastImprovedGeneration,BestFitness,PlantDiet,MeatDiet,CarrionDiet,Speed,BodySize,Aggression,Grouping,BrainHidden,BrainConnections,BrainMemoryDecay,SurvivalTime,PreyKills,ReproductionCount,MorphologySummary,PrimaryBehaviourSummary\n");
         }
     }
 

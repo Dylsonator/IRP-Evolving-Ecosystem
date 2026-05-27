@@ -199,8 +199,8 @@ MonoBehaviour:
   SocketName: LeftFinSocket
   SpawnPart: 1
   MirrorOnX: 0
-  PartPositionOffset: {x: 0, y: 0, z: 0}
-  PartRotationOffset: {x: 0, y: 0, z: 0}
+  PartPositionOffset: {x: -0.1, y: 0, z: 0}
+  PartRotationOffset: {x: 0, y: 0, z: 180}
   PartScaleMultiplier: {x: 1, y: 1, z: 1}
   UseMarkerScale: 0
   GizmoColour: {r: 1, g: 0.92156863, b: 0.015686275, a: 0}
@@ -3468,7 +3468,7 @@ MonoBehaviour:
   SpawnPart: 1
   MirrorOnX: 0
   PartPositionOffset: {x: 0, y: 0, z: 0}
-  PartRotationOffset: {x: 0, y: 0, z: 0}
+  PartRotationOffset: {x: 0, y: 0, z: 140}
   PartScaleMultiplier: {x: 1, y: 1, z: 1}
   UseMarkerScale: 0
   GizmoColour: {r: 1, g: 0.92156863, b: 0.015686275, a: 0}
@@ -3661,7 +3661,7 @@ Transform:
   m_GameObject: {fileID: 8278568398465953042}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: -0.5779}
+  m_LocalPosition: {x: 0, y: 0.166, z: -0.696}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 1
   m_Children: []

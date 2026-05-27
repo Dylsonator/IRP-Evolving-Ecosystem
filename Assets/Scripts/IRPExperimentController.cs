@@ -182,6 +182,9 @@ public class IRPExperimentController : MonoBehaviour
         {
             DeleteFileIfExists(EventCsvFileName);
             DeleteFileIfExists("IRP_EcosystemResearchMetrics_V2.csv");
+            DeleteFileIfExists("IRP_EcosystemResearchMetrics_V3.csv");
+            DeleteFileIfExists("IRP_GraphReadyGenerationSummary.csv");
+            DeleteFileIfExists("IRP_NoveltyArchive.csv");
             DeleteFileIfExists("IRP_BehaviourArchive.csv");
             eventCsvPath = Path.Combine(Application.persistentDataPath, EventCsvFileName);
             EnsureEventHeader();

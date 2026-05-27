@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 976646c8c5b8d5c4293fb284adfd3c5a, type: 3}
+  m_Name: Bulky
+  m_EditorClassIdentifier: 
+  ModifierId: bulky
+  DisplayName: bulky
+  ScaleMultiplier: {x: 1.18, y: 1.15, z: 1.02}
+  SpeedModifier: -0.65
+  TurnRateModifier: -25
+  EnergyCapacityModifier: 35
+  EnergyDrainMultiplier: 1.18
+  BiteDamageModifier: 0.35
+  DefenceModifier: 0.35
+  DangerFactorModifier: 0.08

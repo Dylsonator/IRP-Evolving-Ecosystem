@@ -69,7 +69,7 @@ public class CreatureEffectiveStats
         stats.Speed += (genome.TailLength - 1f) * 1.35f;
         stats.Speed += (genome.BodyLength - 1f) * 0.85f;
         stats.Speed -= (genome.BodyWidth - 1f) * 0.8f;
-        stats.Speed -= genome.Armour * 0.65f;
+        stats.Speed -= genome.Armour * 0.95f;
 
         stats.Acceleration += (genome.Muscle - 1f) * 2.4f;
         stats.TurnRate += (genome.FinWidth - 1f) * 45f;
@@ -87,16 +87,17 @@ public class CreatureEffectiveStats
         stats.BiteDamage += (genome.JawLength - 1f) * 2.5f;
         stats.BiteDamage += (genome.SpikeSize - 1f) * 1.5f;
 
-        stats.Defence += genome.Armour * 1.15f;
+        stats.Defence += genome.Armour * 1.18f;
         stats.Defence += Mathf.Max(0f, genome.SpikeSize - 1f) * 0.25f;
         stats.DangerFactor += genome.SpikeSize * 0.35f;
-        stats.DangerFactor += genome.Armour * 0.25f;
+        // Armour should deter other species, but it must be costly so it cannot dominate for free.
+        stats.DangerFactor += genome.Armour * 0.42f;
         stats.DangerFactor += genome.JawSize * genome.MeatDiet * 0.2f;
         stats.DangerFactor += genome.BodySize * 0.1f;
 
         stats.EnergyDrainMultiplier *= genome.GetEnergyDrainMultiplier();
         stats.EnergyDrainMultiplier *= 1f + Mathf.Max(0f, genome.SpikeSize - 1f) * 0.08f;
-        stats.EnergyDrainMultiplier *= 1f + Mathf.Max(0f, genome.Armour) * 0.1f;
+        stats.EnergyDrainMultiplier *= 1f + Mathf.Max(0f, genome.Armour) * 0.22f;
         stats.EnergyDrainMultiplier *= 1f - Mathf.Clamp01((genome.GillSize - 1f) * 0.08f);
 
         stats.Clamp();
@@ -162,7 +163,7 @@ public class CreatureEffectiveStats
         if (slot == CreatureMorphSlot.Body)
         {
             if (id.Contains("streamlined")) { Speed += 1.2f * l; EnergyDrainMultiplier *= 0.88f; Defence -= 0.15f; }
-            else if (id.Contains("armoured")) { Defence += 0.9f * s; DangerFactor += 0.3f * s; Speed -= 0.55f * s; EnergyDrainMultiplier *= 1.18f; }
+            else if (id.Contains("armoured")) { Defence += 0.9f * s; DangerFactor += 0.42f * s; Speed -= 0.75f * s; EnergyDrainMultiplier *= 1.28f; }
             else if (id.Contains("bulky")) { BodySize += 0.22f * s; EnergyCapacity += 25f * s; Speed -= 0.45f; TurnRate -= 18f; EnergyDrainMultiplier *= 1.12f; }
             else if (id.Contains("soft")) { TurnRate += 18f; EnergyDrainMultiplier *= 0.94f; Defence -= 0.2f; }
         }
@@ -194,8 +195,8 @@ public class CreatureEffectiveStats
         else if (slot == CreatureMorphSlot.Armour)
         {
             if (id.Contains("light")) { Defence += 0.35f * s; DangerFactor += 0.12f; Speed -= 0.12f; }
-            else if (id.Contains("plated")) { Defence += 0.85f * s; DangerFactor += 0.28f * s; Speed -= 0.45f; EnergyDrainMultiplier *= 1.14f; }
-            else if (id.Contains("shell")) { Defence += 1.25f * s; DangerFactor += 0.4f * s; Speed -= 0.75f; TurnRate -= 25f; EnergyDrainMultiplier *= 1.22f; }
+            else if (id.Contains("plated")) { Defence += 0.85f * s; DangerFactor += 0.38f * s; Speed -= 0.62f; EnergyDrainMultiplier *= 1.23f; }
+            else if (id.Contains("shell")) { Defence += 1.25f * s; DangerFactor += 0.55f * s; Speed -= 0.95f; TurnRate -= 32f; EnergyDrainMultiplier *= 1.34f; }
         }
         else if (slot == CreatureMorphSlot.DorsalFin)
         {

@@ -319,6 +319,25 @@ public class PlantResource : MonoBehaviour
         }
     }
 
+    [ContextMenu("Reset Buds For New Generation")]
+    public void ResetBudsForNewGeneration()
+    {
+        for (int i = activeBuds.Count - 1; i >= 0; i--)
+        {
+            PlantBudResource bud = activeBuds[i];
+            if (bud != null)
+            {
+                Destroy(bud.gameObject);
+            }
+        }
+
+        activeBuds.Clear();
+        regrowTimer = 0f;
+        detachTimer = 0f;
+        CacheSockets();
+        FillBuds();
+    }
+
     public void NotifyBudRemoved(PlantBudResource bud)
     {
         activeBuds.Remove(bud);

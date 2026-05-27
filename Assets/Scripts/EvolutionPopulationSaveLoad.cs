@@ -20,14 +20,20 @@ public class EvolutionPopulationSaveLoad : MonoBehaviour
     public EvolutionEcosystemManager Manager;
     public string FolderName = "IRP_EvolvedPopulations";
     public string FileName = "evolved_population.json";
+    public string BaselineFileName = "baseline_population.json";
     public bool ResetGenerationTimerOnLoad = true;
 
     private string FullPath
     {
         get
         {
-            return Path.Combine(Application.persistentDataPath, FolderName, FileName);
+            return GetFullPath(FileName);
         }
+    }
+
+    private string GetFullPath(string fileName)
+    {
+        return Path.Combine(Application.persistentDataPath, FolderName, string.IsNullOrEmpty(fileName) ? FileName : fileName);
     }
 
     private void Awake()
@@ -40,6 +46,25 @@ public class EvolutionPopulationSaveLoad : MonoBehaviour
 
     [ContextMenu("Save Current Evolved Population")]
     public void SaveCurrentPopulation()
+    {
+        SaveCurrentPopulationToFile(FileName);
+    }
+
+    [ContextMenu("Save Timestamped Population Snapshot")]
+    public void SaveTimestampedPopulationSnapshot()
+    {
+        string stamp = System.DateTime.Now.ToString("yyyyMMdd_HHmmss");
+        int generation = Manager != null ? Manager.CurrentGeneration : 0;
+        SaveCurrentPopulationToFile("evolved_population_gen" + generation.ToString("0000") + "_" + stamp + ".json");
+    }
+
+    [ContextMenu("Save Current Population As Baseline")]
+    public void SaveCurrentPopulationAsBaseline()
+    {
+        SaveCurrentPopulationToFile(BaselineFileName);
+    }
+
+    public void SaveCurrentPopulationToFile(string fileName)
     {
         if (Manager == null)
         {
@@ -64,18 +89,30 @@ public class EvolutionPopulationSaveLoad : MonoBehaviour
             data.Genomes.Add(creature.Candidate.Genome.Clone());
         }
 
-        string folder = Path.GetDirectoryName(FullPath);
+        string path = GetFullPath(fileName);
+        string folder = Path.GetDirectoryName(path);
         if (!Directory.Exists(folder))
         {
             Directory.CreateDirectory(folder);
         }
 
-        File.WriteAllText(FullPath, JsonUtility.ToJson(data, true));
-        Debug.Log("Saved evolved population with " + data.Genomes.Count + " genomes to: " + FullPath, this);
+        File.WriteAllText(path, JsonUtility.ToJson(data, true));
+        Debug.Log("Saved evolved population with " + data.Genomes.Count + " genomes to: " + path, this);
     }
 
     [ContextMenu("Load Saved Evolved Population")]
     public void LoadSavedPopulation()
+    {
+        LoadPopulationFromFile(FileName);
+    }
+
+    [ContextMenu("Load Baseline Population")]
+    public void LoadBaselinePopulation()
+    {
+        LoadPopulationFromFile(BaselineFileName);
+    }
+
+    public void LoadPopulationFromFile(string fileName)
     {
         if (Manager == null)
         {
@@ -83,21 +120,22 @@ public class EvolutionPopulationSaveLoad : MonoBehaviour
             return;
         }
 
-        if (!File.Exists(FullPath))
+        string path = GetFullPath(fileName);
+        if (!File.Exists(path))
         {
-            Debug.LogWarning("No evolved population save found at: " + FullPath, this);
+            Debug.LogWarning("No evolved population save found at: " + path, this);
             return;
         }
 
-        EvolutionPopulationSaveData data = JsonUtility.FromJson<EvolutionPopulationSaveData>(File.ReadAllText(FullPath));
+        EvolutionPopulationSaveData data = JsonUtility.FromJson<EvolutionPopulationSaveData>(File.ReadAllText(path));
         if (data == null || data.Genomes == null || data.Genomes.Count == 0)
         {
-            Debug.LogWarning("Population save was empty or invalid: " + FullPath, this);
+            Debug.LogWarning("Population save was empty or invalid: " + path, this);
             return;
         }
 
         Manager.ReplacePopulationWithGenomes(data.Genomes, data.Generation, ResetGenerationTimerOnLoad ? 0f : data.GenerationTimer);
-        Debug.Log("Loaded evolved population with " + data.Genomes.Count + " genomes from: " + FullPath, this);
+        Debug.Log("Loaded evolved population with " + data.Genomes.Count + " genomes from: " + path, this);
     }
 
     public string GetSavePath()

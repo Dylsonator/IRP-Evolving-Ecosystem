@@ -22,7 +22,12 @@ public class FishSelectionDebugPanel : MonoBehaviour
     public string SnapshotFolder = "IRP_SelectedFishSnapshots";
 
     [Header("Performance")]
-    public bool AllowSelectionWhenPanelHidden = false;
+    public bool AllowSelectionWhenPanelHidden = true;
+    public bool OpenPanelOnSelect = true;
+    public bool UseSphereCastFallback = true;
+    public float SelectionSphereRadius = 0.45f;
+    public bool UseScreenDistanceFallback = true;
+    public float FallbackScreenPickRadiusPixels = 55f;
     public float CameraRefreshInterval = 1f;
 
     private float cameraRefreshTimer;
@@ -69,15 +74,134 @@ public class FishSelectionDebugPanel : MonoBehaviour
 
         Vector2 mousePosition = GetMouseScreenPosition();
         Ray ray = SelectionCamera.ScreenPointToRay(mousePosition);
-        if (!Physics.Raycast(ray, out RaycastHit hit, SelectionDistance, SelectionMask, QueryTriggerInteraction.Collide))
+        MarineCreatureAgent creature = null;
+
+        if (Physics.Raycast(ray, out RaycastHit hit, SelectionDistance, SelectionMask, QueryTriggerInteraction.Collide))
+        {
+            creature = hit.collider.GetComponentInParent<MarineCreatureAgent>();
+
+            CreatureHurtbox hurtbox = creature == null ? hit.collider.GetComponentInParent<CreatureHurtbox>() : null;
+            if (hurtbox != null)
+            {
+                creature = hurtbox.Owner;
+            }
+        }
+
+        if (creature == null && UseSphereCastFallback)
+        {
+            creature = TrySpherePick(ray);
+        }
+
+        if (creature == null && UseScreenDistanceFallback)
+        {
+            creature = TryScreenDistancePick(mousePosition);
+        }
+
+        SelectFish(creature);
+    }
+
+
+    private MarineCreatureAgent TrySpherePick(Ray ray)
+    {
+        float radius = Mathf.Max(0.05f, SelectionSphereRadius);
+        RaycastHit[] hits = Physics.SphereCastAll(ray, radius, SelectionDistance, SelectionMask, QueryTriggerInteraction.Collide);
+        MarineCreatureAgent best = null;
+        float bestDistance = float.MaxValue;
+
+        for (int i = 0; i < hits.Length; i++)
+        {
+            Collider hitCollider = hits[i].collider;
+            if (hitCollider == null)
+            {
+                continue;
+            }
+
+            MarineCreatureAgent creature = hitCollider.GetComponentInParent<MarineCreatureAgent>();
+            if (creature == null)
+            {
+                CreatureHurtbox hurtbox = hitCollider.GetComponentInParent<CreatureHurtbox>();
+                if (hurtbox != null)
+                {
+                    creature = hurtbox.Owner;
+                }
+            }
+
+            if (creature == null)
+            {
+                continue;
+            }
+
+            float distance = hits[i].distance;
+            if (distance < bestDistance)
+            {
+                bestDistance = distance;
+                best = creature;
+            }
+        }
+
+        return best;
+    }
+
+    private MarineCreatureAgent TryScreenDistancePick(Vector2 mousePosition)
+    {
+        if (SelectionCamera == null || EvolutionEcosystemManager.Instance == null)
+        {
+            return null;
+        }
+
+        System.Collections.Generic.List<MarineCreatureAgent> creatures = EvolutionEcosystemManager.Instance.GetActiveCreatures();
+        if (creatures == null || creatures.Count == 0)
+        {
+            return null;
+        }
+
+        MarineCreatureAgent best = null;
+        float bestScreenDistance = Mathf.Max(4f, FallbackScreenPickRadiusPixels);
+        float bestDepth = float.MaxValue;
+
+        for (int i = 0; i < creatures.Count; i++)
+        {
+            MarineCreatureAgent creature = creatures[i];
+            if (creature == null)
+            {
+                continue;
+            }
+
+            Vector3 screen = SelectionCamera.WorldToScreenPoint(creature.transform.position);
+            if (screen.z <= 0f || screen.z > SelectionDistance)
+            {
+                continue;
+            }
+
+            float screenDistance = Vector2.Distance(mousePosition, new Vector2(screen.x, screen.y));
+            if (screenDistance <= bestScreenDistance && screen.z < bestDepth)
+            {
+                bestScreenDistance = screenDistance;
+                bestDepth = screen.z;
+                best = creature;
+            }
+        }
+
+        return best;
+    }
+
+    private void SelectFish(MarineCreatureAgent creature)
+    {
+        if (creature == null)
         {
             return;
         }
 
-        MarineCreatureAgent creature = hit.collider.GetComponentInParent<MarineCreatureAgent>();
-        if (creature != null)
+        SelectedFish = creature;
+
+        if (OpenPanelOnSelect)
         {
-            SelectedFish = creature;
+            ShowPanel = true;
+            EcosystemDebugSettings settings = EcosystemDebugSettings.Instance;
+            if (settings != null)
+            {
+                settings.ShowSelectedFishPanel = true;
+            }
         }
     }
 

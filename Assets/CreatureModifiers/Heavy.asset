@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 976646c8c5b8d5c4293fb284adfd3c5a, type: 3}
+  m_Name: Heavy
+  m_EditorClassIdentifier: 
+  ModifierId: heavy
+  DisplayName: heavy
+  ScaleMultiplier: {x: 1.15, y: 1.15, z: 1.15}
+  SpeedModifier: -0.45
+  TurnRateModifier: -15
+  EnergyCapacityModifier: 20
+  EnergyDrainMultiplier: 1.12
+  BiteDamageModifier: 0.25
+  DefenceModifier: 0.25
+  DangerFactorModifier: 0.05
