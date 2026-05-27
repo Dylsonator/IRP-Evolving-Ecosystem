@@ -129,15 +129,15 @@ public class MarineCreatureAgent : MonoBehaviour
 
     [Header("Predator Bite Reliability")]
     public bool UsePredatorOverlapBiteCheck = true;
-    public float PredatorBiteScanRadiusMultiplier = 2.4f;
-    public float PredatorContactBiteBodyPadding = 1.05f;
-    public float PredatorContactBiteMouthPadding = 0.65f;
+    public float PredatorBiteScanRadiusMultiplier = 1.85f;
+    public float PredatorContactBiteBodyPadding = 0.72f;
+    public float PredatorContactBiteMouthPadding = 0.45f;
     [Tooltip("Predators gain some meat from every successful bite, not only from final kills. This stops hunters starving before they can finish prey.")]
-    public float PredatorBiteMeatFromDamageMultiplier = 0.38f;
+    public float PredatorBiteMeatFromDamageMultiplier = 0.26f;
     [Tooltip("Extra meat chunk taken on successful predator bites. This makes hunting viable without needing dozens of bites.")]
-    public float PredatorBiteBaseMeatReward = 2.4f;
+    public float PredatorBiteBaseMeatReward = 1.45f;
     [Tooltip("Bite damage multiplier for committed hunters so prey cannot simply out-heal repeated attacks.")]
-    public float PredatorCommittedBiteDamageMultiplier = 1.35f;
+    public float PredatorCommittedBiteDamageMultiplier = 1.18f;
     [Tooltip("Predators below this energy ratio are willing to attack more dangerous prey instead of giving up.")]
     [Range(0f, 1f)] public float HungryPredatorCommitEnergyRatio = 0.42f;
     [Tooltip("Strong meat/aggression hunters can attack similar morphs rather than refusing most of the population.")]
@@ -151,14 +151,49 @@ public class MarineCreatureAgent : MonoBehaviour
     [Tooltip("Extra chase pull while locked onto wounded prey.")]
     public float HunterStickyChaseWeight = 5.2f;
     [Tooltip("Damage scaling from predator/prey size difference. Large predators kill small prey quickly, small predators need repeated bites.")]
-    public float PredatorSizeDamageScale = 0.85f;
+    public float PredatorSizeDamageScale = 0.62f;
     [Tooltip("Plant-led grazers below this meat value are treated as peaceful feeders and should not keep hunting schoolmates.")]
     [Range(0f, 1f)] public float GrazerHuntBlockMeatThreshold = 0.55f;
     [Tooltip("A creature needs at least this meat value or a clearly meat-dominant diet to behave as an ecological predator.")]
-    [Range(0f, 1f)] public float EcologicalPredatorMeatThreshold = 0.50f;
+    [Range(0f, 1f)] public float EcologicalPredatorMeatThreshold = 0.52f;
     [Tooltip("Predators above these reserves stop chaining hunts and return to resting/schooling/exploring until hungry again.")]
-    [Range(0f, 1f)] public float HunterChillEnergyRatio = 0.62f;
-    [Range(0f, 1f)] public float HunterChillStomachRatio = 0.34f;
+    [Range(0f, 1f)] public float HunterChillEnergyRatio = 0.66f;
+    [Range(0f, 1f)] public float HunterChillStomachRatio = 0.42f;
+
+    [Header("Predator Diet Priority")]
+    [Tooltip("Meat-biased predator bodies above this meat value refuse plants unless in absolute emergency.")]
+    [Range(0f, 1f)] public float PredatorPlantBlockMeatThreshold = 0.42f;
+    [Tooltip("Only below this energy can a predator use plants as a last-resort emergency fallback.")]
+    [Range(0f, 1f)] public float PredatorPlantEmergencyEnergyRatio = 0.18f;
+    [Tooltip("Only below this stomach ratio can a predator use plants as a last-resort emergency fallback.")]
+    [Range(0f, 1f)] public float PredatorPlantEmergencyStomachRatio = 0.09f;
+    [Tooltip("When true, predator-like fish prioritise carrion/prey and clear plant targets instead of grazing between hunts.")]
+    public bool StrictPredatorMeatPriority = true;
+
+    [Header("Predator Realism / Wounds")]
+    public bool UseRealisticInjuryMovement = true;
+    [Tooltip("Health ratio where wounds first start to affect swimming. Recent bites also apply a small temporary injury even above this value.")]
+    [Range(0f, 1f)] public float InjuryMovementStartHealthRatio = 0.72f;
+    [Range(0f, 1f)] public float InjuryMaxSpeedLoss = 0.24f;
+    [Range(0f, 1f)] public float InjuryMaxTurnLoss = 0.20f;
+    [Range(0f, 1f)] public float InjuryMaxAccelerationLoss = 0.18f;
+    [Tooltip("Extra sprint energy multiplier from wounds. Injured prey can still burst, but it is expensive.")]
+    public float InjurySprintEnergyExtraMultiplier = 0.22f;
+    [Tooltip("How long a bitten fish leaves a useful wounded scent/memory for predators.")]
+    public float WoundedScentDuration = 9f;
+    public float WoundedScentPredatorBonus = 0.58f;
+
+    public bool UsePredatorHuntCommitment = true;
+    [Tooltip("Shark-like predators commit to a chase briefly, then give up if they cannot land a bite.")]
+    public float PredatorFailedChaseGiveUpTime = 4.8f;
+    public float PredatorExhaustionAfterFailedChase = 4.2f;
+    public float PredatorExhaustionAfterEnoughBites = 5.5f;
+    [Range(0f, 1f)] public float PredatorSatisfiedAfterBiteEnergyRatio = 0.58f;
+    [Range(0f, 1f)] public float PredatorSatisfiedAfterBiteStomachRatio = 0.35f;
+    public float PredatorCloseChaseDistance = 5.5f;
+    public float PredatorWoundedPreyCommitBonus = 1.03f;
+    public float SharkLikeStrikeDamageMultiplier = 1.04f;
+
     [Tooltip("Cached group support still discourages attacks in emergency performance mode without doing an expensive fresh scan.")]
     public float CachedGroupDefenceThreatWeight = 0.32f;
 
@@ -251,7 +286,7 @@ public class MarineCreatureAgent : MonoBehaviour
     [Tooltip("Satisfied predators fully stop hunting until they need food again.")]
     public bool SatisfiedPredatorsStopHunting = true;
     [Tooltip("Predator damage is damped against healthy grouped prey so hunters remain viable without wiping the ecosystem.")]
-    public float HealthyGroupedPreyDamageDamping = 0.72f;
+    public float HealthyGroupedPreyDamageDamping = 0.58f;
 
     [Header("Evolved Movement Model")]
     [Tooltip("Minimum swim speed as a ratio of evolved speed. Fish should rarely hard-stop.")]
@@ -576,6 +611,10 @@ public class MarineCreatureAgent : MonoBehaviour
     private MarineCreatureAgent nearestPrey;
     private MarineCreatureAgent focusedPrey;
     private float hunterPreyFocusTimer;
+    private float predatorChaseTimer;
+    private float predatorTimeSinceLastBite;
+    private float predatorExhaustionTimer;
+    private float woundedScentTimer;
 
     private FoodSource retainedFood;
     private CarrionSource retainedCarrion;
@@ -781,6 +820,10 @@ public class MarineCreatureAgent : MonoBehaviour
         aliveTimer = 0f;
         lowProgressTimer = 0f;
         retainedTargetTimer = 0f;
+        predatorChaseTimer = 0f;
+        predatorTimeSinceLastBite = 999f;
+        predatorExhaustionTimer = 0f;
+        woundedScentTimer = 0f;
         ignoredResourceTimer = 0f;
         temporarilyIgnoredFood = null;
         temporarilyIgnoredCarrion = null;
@@ -863,18 +906,28 @@ public class MarineCreatureAgent : MonoBehaviour
         SleepingHealMultiplier = Mathf.Clamp(SleepingHealMultiplier, 1.75f, 3.25f);
         SprintSpeedMultiplier = Mathf.Clamp(SprintSpeedMultiplier, 1.25f, 1.85f);
         SprintEnergyCostMultiplier = Mathf.Max(2.0f, SprintEnergyCostMultiplier);
-        HunterPreyFocusTime = Mathf.Clamp(HunterPreyFocusTime, 4.0f, 12.0f);
-        HunterBiteFocusTime = Mathf.Clamp(HunterBiteFocusTime, HunterPreyFocusTime, 16.0f);
+        HunterPreyFocusTime = Mathf.Clamp(HunterPreyFocusTime, 3.0f, 5.25f);
+        HunterBiteFocusTime = Mathf.Clamp(HunterBiteFocusTime, HunterPreyFocusTime, 7.5f);
+        PredatorFailedChaseGiveUpTime = Mathf.Clamp(PredatorFailedChaseGiveUpTime, 3.0f, 5.4f);
+        PredatorExhaustionAfterFailedChase = Mathf.Clamp(PredatorExhaustionAfterFailedChase, 2.5f, 10.0f);
+        PredatorExhaustionAfterEnoughBites = Mathf.Clamp(PredatorExhaustionAfterEnoughBites, 3.0f, 10.0f);
         GrazerHuntBlockMeatThreshold = Mathf.Clamp(GrazerHuntBlockMeatThreshold, 0.42f, 0.72f);
-        EcologicalPredatorMeatThreshold = Mathf.Clamp(EcologicalPredatorMeatThreshold, 0.42f, 0.70f);
+        EcologicalPredatorMeatThreshold = Mathf.Clamp(EcologicalPredatorMeatThreshold, 0.48f, 0.74f);
         HunterChillEnergyRatio = Mathf.Clamp(HunterChillEnergyRatio, 0.52f, 0.78f);
         HunterChillStomachRatio = Mathf.Clamp(HunterChillStomachRatio, 0.22f, 0.58f);
         HunterStickyChaseWeight = Mathf.Clamp(HunterStickyChaseWeight, 3.2f, 8.0f);
-        PredatorCommittedBiteDamageMultiplier = Mathf.Clamp(PredatorCommittedBiteDamageMultiplier, 1.0f, 1.35f);
-        PredatorSizeDamageScale = Mathf.Clamp(PredatorSizeDamageScale, 0.30f, 0.75f);
-        PredatorBiteBaseMeatReward = Mathf.Clamp(PredatorBiteBaseMeatReward, 0.8f, 1.8f);
-        PredatorBiteMeatFromDamageMultiplier = Mathf.Clamp(PredatorBiteMeatFromDamageMultiplier, 0.16f, 0.30f);
-        BiteCooldown = Mathf.Max(BiteCooldown, 2.15f);
+        PredatorCommittedBiteDamageMultiplier = Mathf.Clamp(PredatorCommittedBiteDamageMultiplier, 1.0f, 1.36f);
+        PredatorSizeDamageScale = Mathf.Clamp(PredatorSizeDamageScale, 0.25f, 0.78f);
+        PredatorBiteBaseMeatReward = Mathf.Clamp(PredatorBiteBaseMeatReward, 0.55f, 1.90f);
+        PredatorBiteMeatFromDamageMultiplier = Mathf.Clamp(PredatorBiteMeatFromDamageMultiplier, 0.10f, 0.34f);
+        InjuryMovementStartHealthRatio = Mathf.Clamp(InjuryMovementStartHealthRatio, 0.55f, 0.82f);
+        InjuryMaxSpeedLoss = Mathf.Clamp(InjuryMaxSpeedLoss, 0.08f, 0.60f);
+        InjuryMaxTurnLoss = Mathf.Clamp(InjuryMaxTurnLoss, 0.04f, 0.55f);
+        InjuryMaxAccelerationLoss = Mathf.Clamp(InjuryMaxAccelerationLoss, 0.04f, 0.55f);
+        WoundedScentDuration = Mathf.Clamp(WoundedScentDuration, 4f, 18f);
+        WoundedScentPredatorBonus = Mathf.Clamp(WoundedScentPredatorBonus, 0.10f, 1.15f);
+        SharkLikeStrikeDamageMultiplier = Mathf.Clamp(SharkLikeStrikeDamageMultiplier, 1.0f, 1.18f);
+        BiteCooldown = Mathf.Max(BiteCooldown, 2.75f);
         SimilarPredatorPeaceSimilarity = Mathf.Clamp01(SimilarPredatorPeaceSimilarity);
         SimilarPredatorAttackEnergyRatio = Mathf.Clamp(SimilarPredatorAttackEnergyRatio, 0.05f, 0.28f);
         SimilarPredatorAttackStomachRatio = Mathf.Clamp(SimilarPredatorAttackStomachRatio, 0.01f, 0.16f);
@@ -898,8 +951,11 @@ public class MarineCreatureAgent : MonoBehaviour
         PredatorMateRiskEnergyRatio = Mathf.Clamp01(PredatorMateRiskEnergyRatio);
         PredatorMateRiskStomachRatio = Mathf.Clamp01(PredatorMateRiskStomachRatio);
         PredatorMateSimilarity = Mathf.Clamp01(PredatorMateSimilarity);
-        HealthyGroupedPreyDamageDamping = Mathf.Clamp(HealthyGroupedPreyDamageDamping, 0.45f, 0.95f);
-        BiteCooldown = Mathf.Max(BiteCooldown, 2.15f);
+        HealthyGroupedPreyDamageDamping = Mathf.Clamp(HealthyGroupedPreyDamageDamping, 0.38f, 0.82f);
+        BiteCooldown = Mathf.Max(BiteCooldown, 2.75f);
+        PredatorPlantBlockMeatThreshold = Mathf.Clamp(PredatorPlantBlockMeatThreshold, 0.30f, 0.70f);
+        PredatorPlantEmergencyEnergyRatio = Mathf.Clamp(PredatorPlantEmergencyEnergyRatio, 0.04f, 0.25f);
+        PredatorPlantEmergencyStomachRatio = Mathf.Clamp(PredatorPlantEmergencyStomachRatio, 0.02f, 0.16f);
         InjuredSurvivalHealthRatio = Mathf.Clamp(InjuredSurvivalHealthRatio, 0.35f, 0.65f);
         SurvivalWarningHealthRatio = Mathf.Max(SurvivalWarningHealthRatio, InjuredSurvivalHealthRatio);
         SurvivalCriticalHealthRatio = Mathf.Max(SurvivalCriticalHealthRatio, Mathf.Min(0.42f, InjuredSurvivalHealthRatio * 0.84f));
@@ -1011,16 +1067,29 @@ public class MarineCreatureAgent : MonoBehaviour
         {
             survivalRecentDamageTimer -= Time.fixedDeltaTime;
         }
+        if (predatorExhaustionTimer > 0f)
+        {
+            predatorExhaustionTimer -= Time.fixedDeltaTime;
+        }
+        if (woundedScentTimer > 0f)
+        {
+            woundedScentTimer -= Time.fixedDeltaTime;
+        }
+        predatorTimeSinceLastBite += Time.fixedDeltaTime;
         isSprintingThisTick = false;
         senseTimer -= Time.fixedDeltaTime;
         retainedTargetTimer -= Time.fixedDeltaTime;
         if (hunterPreyFocusTimer > 0f)
         {
             hunterPreyFocusTimer -= Time.fixedDeltaTime;
+            predatorChaseTimer += Time.fixedDeltaTime;
             if (hunterPreyFocusTimer <= 0f || focusedPrey == null || focusedPrey.CurrentHealth <= 0f || !CanAttackPrey(focusedPrey))
             {
-                focusedPrey = null;
-                hunterPreyFocusTimer = 0f;
+                ClearFocusedPrey(false);
+            }
+            else if (ShouldAbandonFocusedPrey())
+            {
+                ClearFocusedPrey(true);
             }
         }
         ignoredResourceTimer -= Time.fixedDeltaTime;
@@ -1348,6 +1417,11 @@ public class MarineCreatureAgent : MonoBehaviour
         nearestFood = manager.GetBestFoodForCreature(this, mouth, senseRange, ResourceCrowdRadius, comfortableFeeders, crowdPenalty);
         nearestCarrion = manager.GetBestCarrionForCreature(this, mouth, senseRange, ResourceCrowdRadius, comfortableFeeders, crowdPenalty);
 
+        if (IsPredatorPlantBlockedRole() && !CanUsePlantAsPredatorEmergencyFallback())
+        {
+            nearestFood = null;
+        }
+
         if (ignoredResourceTimer > 0f && nearestFood == temporarilyIgnoredFood)
         {
             nearestFood = null;
@@ -1414,7 +1488,6 @@ public class MarineCreatureAgent : MonoBehaviour
         return lastThreatCount > 0
             || survivalRecentDamageTimer > 0f
             || mobbingPressureTimer > 0f
-            || groupPredatorWarningTimer > 0f
             || HasCloseVisiblePredatorThreat()
             || lastCurrentStress >= CurrentEscapeStressThreshold;
     }
@@ -1430,7 +1503,6 @@ public class MarineCreatureAgent : MonoBehaviour
             || survivalEmergencyTimer > 0f
             || lastThreatCount > 0
             || survivalRecentDamageTimer > 0f
-            || groupPredatorWarningTimer > 0f
             || HasCloseVisiblePredatorThreat()
             || threatFoodSuppressionTimer > 0f;
 
@@ -1747,7 +1819,7 @@ public class MarineCreatureAgent : MonoBehaviour
             return FishAutonomousBehaviourMode.Courtship;
         }
 
-        if (groupPredatorWarningTimer > 0f && !IsCriticallyStarving())
+        if (ShouldReactToGroupPredatorWarnings() && groupPredatorWarningTimer > 0f && !IsCriticallyStarving())
         {
             brainReason = "group predator warning";
             return FishAutonomousBehaviourMode.Fleeing;
@@ -1908,7 +1980,8 @@ public class MarineCreatureAgent : MonoBehaviour
         bool harshCurrent = UseCurrentEscapeSteering && (lastCurrentStress >= CurrentEscapeStressThreshold || currentEscapeTimer > 0f);
 
         MarineCreatureAgent threat = FindImmediateSurvivalThreat();
-        bool shouldFlee = (criticalHealth || warningHealthAfterDamage || starvingAndWeak) && (threat != null || harshCurrent || lastThreatCount > 0 || groupPredatorWarningTimer > 0f || survivalRecentDamageTimer > 0f);
+        bool groupWarningApplies = ShouldReactToGroupPredatorWarnings() && groupPredatorWarningTimer > 0f;
+        bool shouldFlee = (criticalHealth || warningHealthAfterDamage || starvingAndWeak) && (threat != null || harshCurrent || lastThreatCount > 0 || groupWarningApplies || survivalRecentDamageTimer > 0f);
 
         if (!shouldFlee)
         {
@@ -2482,7 +2555,8 @@ public class MarineCreatureAgent : MonoBehaviour
             return 0f;
         }
 
-        return Mathf.Clamp01(Candidate.Genome.MeatDiet * 0.55f + Candidate.Genome.Aggression * 0.35f + Candidate.Genome.JawSize * 0.06f + Candidate.Genome.RiskTolerance * 0.04f);
+        float meatLead = Mathf.Clamp01((Candidate.Genome.MeatDiet - Mathf.Max(Candidate.Genome.PlantDiet, Candidate.Genome.CarrionDiet) + 0.18f) / 0.55f);
+        return Mathf.Clamp01(Candidate.Genome.MeatDiet * 0.46f + Candidate.Genome.Aggression * 0.30f + Candidate.Genome.JawSize * 0.05f + Candidate.Genome.RiskTolerance * 0.03f + meatLead * 0.20f);
     }
 
     private float GetAmbushScore01()
@@ -3082,9 +3156,26 @@ public class MarineCreatureAgent : MonoBehaviour
         Vector3? targetPosition = null;
         string targetKind = GetPreferredFoodKind();
 
-        if (targetKind == "Meat" && nearestPrey != null && CanAttackPrey(nearestPrey))
+        if (targetKind == "Meat" && focusedPrey != null && hunterPreyFocusTimer > 0f && CanAttackPrey(focusedPrey))
+        {
+            targetPosition = focusedPrey.GetBiteTargetPosition();
+        }
+        else if (targetKind == "Meat" && nearestPrey != null && CanAttackPrey(nearestPrey))
         {
             targetPosition = nearestPrey.GetBiteTargetPosition();
+        }
+        else if (targetKind == "Meat" && HasUsableCarrionTarget())
+        {
+            CarrionSource carrionTarget = claimedFreshKillCarrion != null && !claimedFreshKillCarrion.IsConsumed ? claimedFreshKillCarrion : nearestCarrion;
+            if (carrionTarget == null || carrionTarget.IsConsumed)
+            {
+                carrionTarget = retainedCarrion;
+            }
+
+            if (carrionTarget != null && !carrionTarget.IsConsumed)
+            {
+                targetPosition = GetMovementTargetForStaticResource(carrionTarget.transform.position);
+            }
         }
         else if (targetKind == "Carrion" && nearestCarrion != null && !nearestCarrion.IsConsumed)
         {
@@ -3097,7 +3188,24 @@ public class MarineCreatureAgent : MonoBehaviour
 
         if (!targetPosition.HasValue)
         {
-            if (nearestFood != null && !nearestFood.IsConsumed && Candidate.Genome.PlantDiet >= 0.12f)
+            if (IsPredatorPlantBlockedRole() && !CanUsePlantAsPredatorEmergencyFallback())
+            {
+                ClearPlantTargetForPredator();
+
+                if (nearestCarrion != null && !nearestCarrion.IsConsumed)
+                {
+                    targetPosition = GetMovementTargetForStaticResource(nearestCarrion.transform.position);
+                }
+                else if (retainedCarrion != null && !retainedCarrion.IsConsumed)
+                {
+                    targetPosition = GetMovementTargetForStaticResource(retainedCarrion.transform.position);
+                }
+                else if (nearestPrey != null && CanAttackPrey(nearestPrey))
+                {
+                    targetPosition = nearestPrey.GetBiteTargetPosition();
+                }
+            }
+            else if (nearestFood != null && !nearestFood.IsConsumed && Candidate.Genome.PlantDiet >= 0.12f)
             {
                 targetPosition = GetMovementTargetForStaticResource(nearestFood.transform.position);
             }
@@ -3176,14 +3284,19 @@ public class MarineCreatureAgent : MonoBehaviour
             return "Carrion";
         }
 
-        if (IsLockedMeatSpecialist())
+        if (IsLockedMeatSpecialist() || IsPredatorPlantBlockedRole())
         {
+            if (HasUsableCarrionTarget())
+            {
+                return "Carrion";
+            }
+
             return "Meat";
         }
 
         if (ShouldSuppressPlantsForHunter() && (nearestPrey != null || focusedPrey != null))
         {
-            return "Meat";
+            return HasUsableCarrionTarget() && nearestPrey == null && focusedPrey == null ? "Carrion" : "Meat";
         }
 
         float plant = Candidate.Genome.PlantDiet;
@@ -3236,10 +3349,70 @@ public class MarineCreatureAgent : MonoBehaviour
 
         EvolutionGenome g = Candidate.Genome;
         float bestNonMeat = Mathf.Max(g.PlantDiet, g.CarrionDiet);
-        bool meatDominant = g.MeatDiet >= bestNonMeat - 0.04f;
-        bool hasPredatorBody = g.JawSize >= 1.02f || g.Speed >= 4.8f || (!string.IsNullOrEmpty(g.BodyMorphId) && g.BodyMorphId.Contains("streamlined"));
-        bool hasPredatorMind = g.Aggression >= 0.24f || brainOutputHuntBias > 0.22f;
+        bool meatDominant = g.MeatDiet >= bestNonMeat + 0.05f || g.MeatDiet >= 0.66f;
+        bool hasPredatorBody = g.JawSize >= 1.06f || g.Speed >= 5.05f || (!string.IsNullOrEmpty(g.BodyMorphId) && g.BodyMorphId.Contains("streamlined"));
+        bool hasPredatorMind = g.Aggression >= 0.28f || brainOutputHuntBias > 0.28f;
         return g.MeatDiet >= EcologicalPredatorMeatThreshold && meatDominant && hasPredatorMind && hasPredatorBody;
+    }
+
+    private bool HasUsableCarrionTarget()
+    {
+        return (claimedFreshKillCarrion != null && !claimedFreshKillCarrion.IsConsumed)
+            || (nearestCarrion != null && !nearestCarrion.IsConsumed)
+            || (retainedCarrion != null && !retainedCarrion.IsConsumed);
+    }
+
+    private bool HasVisibleMeatTargetForDietPriority()
+    {
+        return HasUsableCarrionTarget()
+            || focusedPrey != null
+            || nearestPrey != null
+            || retainedPrey != null;
+    }
+
+    private bool IsPredatorPlantBlockedRole()
+    {
+        if (!StrictPredatorMeatPriority || Candidate == null || Candidate.Genome == null)
+        {
+            return false;
+        }
+
+        EvolutionGenome g = Candidate.Genome;
+        float bestNonMeat = Mathf.Max(g.PlantDiet, g.CarrionDiet);
+        bool meatBiased = g.MeatDiet >= PredatorPlantBlockMeatThreshold && g.MeatDiet >= bestNonMeat - 0.08f;
+        bool predatorShape = g.JawSize >= 1.04f
+            || g.JawLength >= 1.04f
+            || g.Speed >= 4.9f
+            || (!string.IsNullOrEmpty(g.BodyMorphId) && g.BodyMorphId.Contains("streamlined"))
+            || (!string.IsNullOrEmpty(g.JawMorphId) && (g.JawMorphId.Contains("hunter") || g.JawMorphId.Contains("predator")));
+        bool predatorMind = g.Aggression >= 0.22f || brainOutputHuntBias > 0.18f || currentBrainMode == FishAutonomousBehaviourMode.Hunting || currentBrainMode == FishAutonomousBehaviourMode.Ambushing;
+
+        return meatBiased && (predatorShape || predatorMind || IsEcologicalPredatorRole() || IsLockedMeatSpecialist());
+    }
+
+    private bool CanUsePlantAsPredatorEmergencyFallback()
+    {
+        if (!IsPredatorPlantBlockedRole())
+        {
+            return true;
+        }
+
+        if (HasVisibleMeatTargetForDietPriority())
+        {
+            return false;
+        }
+
+        // This is an absolute last-resort fallback, not normal predator grazing.
+        // Do not also require low health; that made weak predator niches die out before
+        // they could find carrion or an easier prey target.
+        return GetEffectiveEnergyRatio() <= PredatorPlantEmergencyEnergyRatio
+            && GetStomachFullness01() <= PredatorPlantEmergencyStomachRatio;
+    }
+
+    private void ClearPlantTargetForPredator()
+    {
+        nearestFood = null;
+        retainedFood = null;
     }
 
     private bool ShouldPredatorChillAfterFeeding()
@@ -3252,6 +3425,11 @@ public class MarineCreatureAgent : MonoBehaviour
         if (ShouldContinueEatingFreshKillCarrion() || survivalEmergencyTimer > 0f || IsCriticallyStarving())
         {
             return false;
+        }
+
+        if (UsePredatorHuntCommitment && predatorExhaustionTimer > 0f && GetEffectiveEnergyRatio() > SurvivalCriticalEnergyRatio)
+        {
+            return true;
         }
 
         if (!SatisfiedPredatorsStopHunting)
@@ -3273,7 +3451,7 @@ public class MarineCreatureAgent : MonoBehaviour
             return false;
         }
 
-        if (ShouldPredatorChillAfterFeeding() || IsPeacefulGrazerRole())
+        if ((UsePredatorHuntCommitment && predatorExhaustionTimer > 0f && !IsCriticallyStarving()) || ShouldPredatorChillAfterFeeding() || IsPeacefulGrazerRole())
         {
             return false;
         }
@@ -3322,11 +3500,92 @@ public class MarineCreatureAgent : MonoBehaviour
             return;
         }
 
+        if (focusedPrey != prey)
+        {
+            predatorChaseTimer = 0f;
+            predatorTimeSinceLastBite = Mathf.Min(predatorTimeSinceLastBite, PredatorFailedChaseGiveUpTime);
+        }
+
         focusedPrey = prey;
         nearestPrey = prey;
         retainedPrey = prey;
         retainedTargetTimer = Mathf.Max(retainedTargetTimer, TargetRetainTime);
-        hunterPreyFocusTimer = Mathf.Max(hunterPreyFocusTimer, duration);
+
+        float focusDuration = duration;
+        if (prey.GetWoundedScent01() > 0.25f || prey.GetHealthRatio() < 0.55f)
+        {
+            focusDuration *= PredatorWoundedPreyCommitBonus;
+        }
+        hunterPreyFocusTimer = Mathf.Max(hunterPreyFocusTimer, focusDuration);
+    }
+
+    private void ClearFocusedPrey(bool startExhaustion)
+    {
+        focusedPrey = null;
+        retainedPrey = null;
+        hunterPreyFocusTimer = 0f;
+        predatorChaseTimer = 0f;
+        predatorTimeSinceLastBite = 999f;
+        if (startExhaustion && UsePredatorHuntCommitment)
+        {
+            predatorExhaustionTimer = Mathf.Max(predatorExhaustionTimer, PredatorExhaustionAfterFailedChase * Mathf.Lerp(0.75f, 1.25f, 1f - Candidate.Genome.Aggression));
+        }
+    }
+
+    private bool ShouldAbandonFocusedPrey()
+    {
+        if (!UsePredatorHuntCommitment || focusedPrey == null || Candidate == null || Candidate.Genome == null)
+        {
+            return false;
+        }
+
+        if (ShouldContinueEatingFreshKillCarrion())
+        {
+            return true;
+        }
+
+        float distance = Vector3.Distance(GetMouthWorldPosition(), focusedPrey.GetBiteTargetPosition());
+        float closeDistance = Mathf.Max(PredatorCloseChaseDistance, GetScaledMouthRadius() * 3.0f + focusedPrey.GetPersonalRadius());
+        bool closeEnoughToKeepTrying = distance <= closeDistance;
+        bool preyIsWounded = focusedPrey.GetHealthRatio() < 0.48f || focusedPrey.GetWoundedScent01() > 0.35f;
+
+        float allowedCommit = PredatorFailedChaseGiveUpTime * Mathf.Lerp(0.85f, 1.35f, Candidate.Genome.Aggression + brainOutputHuntBias * 0.25f);
+        if (preyIsWounded)
+        {
+            allowedCommit *= PredatorWoundedPreyCommitBonus;
+        }
+        if (closeEnoughToKeepTrying)
+        {
+            allowedCommit *= 1.35f;
+        }
+
+        bool tooLongWithoutBite = predatorChaseTimer >= allowedCommit && predatorTimeSinceLastBite >= allowedCommit * 0.75f;
+        bool energyRisk = GetEffectiveEnergyRatio() <= SurvivalCriticalEnergyRatio && predatorTimeSinceLastBite >= PredatorFailedChaseGiveUpTime * 0.65f;
+        return tooLongWithoutBite || energyRisk;
+    }
+
+    public float GetWoundedScent01()
+    {
+        if (!UseRealisticInjuryMovement)
+        {
+            return 0f;
+        }
+
+        float healthWound = Mathf.InverseLerp(InjuryMovementStartHealthRatio, 0.20f, GetHealthRatio());
+        float freshWound = woundedScentTimer > 0f ? Mathf.Clamp01(woundedScentTimer / Mathf.Max(0.01f, WoundedScentDuration)) : 0f;
+        return Mathf.Clamp01(Mathf.Max(healthWound, freshWound * 0.75f));
+    }
+
+    private float GetInjurySeverity01()
+    {
+        if (!UseRealisticInjuryMovement)
+        {
+            return 0f;
+        }
+
+        float healthSeverity = Mathf.InverseLerp(InjuryMovementStartHealthRatio, 0.20f, GetHealthRatio());
+        float recentBiteSeverity = survivalRecentDamageTimer > 0f ? 0.12f : 0f;
+        return Mathf.Clamp01(Mathf.Max(healthSeverity, recentBiteSeverity));
     }
 
     private bool ShouldContinueEatingFreshKillCarrion()
@@ -4360,8 +4619,10 @@ public class MarineCreatureAgent : MonoBehaviour
         float bank = Mathf.Clamp(-localWanted.x * MaxBankAngle * crowdBankScale, -MaxBankAngle, MaxBankAngle);
         targetRotation *= Quaternion.AngleAxis(bank, Vector3.forward);
 
+        float injurySeverity = GetInjurySeverity01();
         float turnResponsiveness = RotationResponsiveness * (holdingBite ? FeedingTurnResponsiveness : 1f);
-        float turn = Mathf.Max(35f, EffectiveStats.TurnRate) * turnResponsiveness;
+        float turnInjuryScale = 1f - injurySeverity * InjuryMaxTurnLoss;
+        float turn = Mathf.Max(35f, EffectiveStats.TurnRate) * turnResponsiveness * Mathf.Clamp(turnInjuryScale, 0.35f, 1f);
         Quaternion nextRotation = Quaternion.RotateTowards(rb.rotation, targetRotation, turn * Time.fixedDeltaTime);
         rb.MoveRotation(nextRotation);
         if (SuppressPhysicsSpin && !rb.isKinematic)
@@ -4407,7 +4668,8 @@ public class MarineCreatureAgent : MonoBehaviour
 
         bool directFeedingMotion = IsCloseStaticFeedingTarget() && !holdingBite && !ShouldIgnoreStaticFoodBecauseThreatened();
         float stomachSlow = Mathf.Lerp(1f, Mathf.Clamp01(1f - FullStomachSlowdown), GetStomachFullness01());
-        targetScale = Mathf.Max(MinimumCruiseSpeedScale, targetScale * sharpTurnScale * stomachSlow);
+        float injurySpeedScale = 1f - injurySeverity * InjuryMaxSpeedLoss;
+        targetScale = Mathf.Max(MinimumCruiseSpeedScale, targetScale * sharpTurnScale * stomachSlow * Mathf.Clamp(injurySpeedScale, 0.35f, 1f));
         isSprintingThisTick = ShouldSprintThisTick(target, hungerPressure);
         if (isSprintingThisTick)
         {
@@ -4476,6 +4738,7 @@ public class MarineCreatureAgent : MonoBehaviour
         desiredVelocity = PreventOutwardVelocityAtBounds(desiredVelocity);
 
         float accel = Mathf.Max(1f, EffectiveStats.Acceleration) * SteeringAcceleration;
+        accel *= Mathf.Clamp(1f - injurySeverity * InjuryMaxAccelerationLoss, 0.35f, 1f);
         if (holdingBite)
         {
             currentVelocity = Vector3.MoveTowards(currentVelocity, Vector3.zero, FeedingHoldDamping * Time.fixedDeltaTime);
@@ -5043,12 +5306,13 @@ public class MarineCreatureAgent : MonoBehaviour
             return false;
         }
 
-        if (IsLockedMeatSpecialist() && nearestCarrion == null && !ShouldContinueEatingFreshKillCarrion())
+        if ((IsLockedMeatSpecialist() || IsPredatorPlantBlockedRole()) && !HasUsableCarrionTarget() && !ShouldContinueEatingFreshKillCarrion())
         {
-            return false;
+            // Meat predators should search/rest/hunt instead of grazing.
+            return CanUsePlantAsPredatorEmergencyFallback();
         }
 
-        if (ShouldSuppressPlantsForHunter() && nearestCarrion == null && !ShouldContinueEatingFreshKillCarrion())
+        if (ShouldSuppressPlantsForHunter() && !HasUsableCarrionTarget() && !ShouldContinueEatingFreshKillCarrion())
         {
             return false;
         }
@@ -5101,6 +5365,23 @@ public class MarineCreatureAgent : MonoBehaviour
             return claimedFreshKillCarrion.transform.position;
         }
 
+        if (IsPredatorPlantBlockedRole() && !CanUsePlantAsPredatorEmergencyFallback())
+        {
+            ClearPlantTargetForPredator();
+
+            if (nearestCarrion != null && !nearestCarrion.IsConsumed)
+            {
+                return nearestCarrion.transform.position;
+            }
+
+            if (retainedCarrion != null && !retainedCarrion.IsConsumed)
+            {
+                return retainedCarrion.transform.position;
+            }
+
+            return null;
+        }
+
         string preferred = GetPreferredFoodKind();
 
         if (preferred == "Carrion" && nearestCarrion != null && !nearestCarrion.IsConsumed)
@@ -5146,6 +5427,23 @@ public class MarineCreatureAgent : MonoBehaviour
         if (ShouldContinueEatingFreshKillCarrion() && claimedFreshKillCarrion != null && !claimedFreshKillCarrion.IsConsumed)
         {
             return claimedFreshKillCarrion.transform.position;
+        }
+
+        if (IsPredatorPlantBlockedRole() && !CanUsePlantAsPredatorEmergencyFallback())
+        {
+            ClearPlantTargetForPredator();
+
+            if (nearestCarrion != null && !nearestCarrion.IsConsumed)
+            {
+                return nearestCarrion.transform.position;
+            }
+
+            if (retainedCarrion != null && !retainedCarrion.IsConsumed)
+            {
+                return retainedCarrion.transform.position;
+            }
+
+            return null;
         }
 
         string preferred = GetPreferredFoodKind();
@@ -5250,7 +5548,7 @@ public class MarineCreatureAgent : MonoBehaviour
             return true;
         }
 
-        if (groupWarningPredator != null && groupPredatorWarningTimer > 0f && IsPredatorThreateningThis(groupWarningPredator, EarlyGroupPredatorWarningRange, EarlyGroupPredatorWarningHalfAngle, false, true))
+        if (groupWarningPredator != null && groupPredatorWarningTimer > 0f && IsPredatorThreateningThis(groupWarningPredator, ClosePredatorThreatRange, ClosePredatorThreatHalfAngle, true, false))
         {
             return true;
         }
@@ -5280,7 +5578,7 @@ public class MarineCreatureAgent : MonoBehaviour
             return true;
         }
 
-        bool predatorCanHurtThis = predator.GetPredatorDrive01() > 0.48f;
+        bool predatorCanHurtThis = predator.GetPredatorDrive01() > 0.56f || predator.IsEcologicalPredatorRole() || predator.IsLockedMeatSpecialist();
         if (!predatorCanHurtThis && !IsRememberedPredatorType(predator))
         {
             return false;
@@ -5293,11 +5591,6 @@ public class MarineCreatureAgent : MonoBehaviour
             return false;
         }
 
-        if (allowEarlyWarning && !requireCloseOrApproach)
-        {
-            return predatorCanHurtThis;
-        }
-
         bool predatorIsTargetingThis = predator.nearestPrey == this
             || predator.retainedPrey == this
             || predator.focusedPrey == this
@@ -5307,6 +5600,14 @@ public class MarineCreatureAgent : MonoBehaviour
         predatorToMe.y *= 0.35f;
         bool predatorFacingThis = predatorToMe.sqrMagnitude > 0.001f && Vector3.Dot(predator.transform.forward.normalized, predatorToMe.normalized) >= PredatorApproachDotForThreat;
         bool activeHunter = predator.currentBrainMode == FishAutonomousBehaviourMode.Hunting || predator.currentBrainMode == FishAutonomousBehaviourMode.Ambushing || predator.brainWantsHunt;
+
+        // Early group warnings should not mean "a predator exists somewhere in view".
+        // They only fire when the predator is close, actively targeting, or visibly
+        // approaching as a hunter. Otherwise the whole ecosystem freezes/panics.
+        if (allowEarlyWarning && !requireCloseOrApproach)
+        {
+            return veryClose || predatorIsTargetingThis || (activeHunter && predatorFacingThis);
+        }
 
         return veryClose || predatorIsTargetingThis || (activeHunter && predatorFacingThis);
     }
@@ -5332,9 +5633,46 @@ public class MarineCreatureAgent : MonoBehaviour
         return dot >= threshold;
     }
 
+    private bool ShouldReactToGroupPredatorWarnings()
+    {
+        if (Candidate == null || Candidate.Genome == null || CurrentHealth <= 0f)
+        {
+            return false;
+        }
+
+        // Group warnings are for prey/schooling fish. Predators should not start fleeing
+        // just because the school is warning each other about predators nearby.
+        // Direct attacks, low-health survival logic and close threats still work elsewhere.
+        if (IsLockedMeatSpecialist() || IsEcologicalPredatorRole())
+        {
+            return false;
+        }
+
+        // Strong meat-biased fish can still receive direct threat checks, but they should
+        // not be dragged into school-wide panic behaviour.
+        if (Candidate.Genome.MeatDiet >= 0.58f && Candidate.Genome.MeatDiet >= Candidate.Genome.PlantDiet + 0.10f)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    private bool ShouldSendGroupPredatorWarnings()
+    {
+        if (!ShouldReactToGroupPredatorWarnings())
+        {
+            return false;
+        }
+
+        // Solitary/brave fish can still flee alone, but do not alarm a whole group unless
+        // they have at least some social tendency.
+        return Candidate.Genome.GroupingChance >= 0.18f || Candidate.Genome.FoodSharing >= 0.25f || Candidate.Genome.SchoolTightness >= 0.25f;
+    }
+
     private void ProcessEarlyGroupPredatorWarning(EvolutionEcosystemManager manager, float senseRange)
     {
-        if (!UseCloseLineOfSightThreats || manager == null || groupPredatorWarningCooldownTimer > 0f)
+        if (!UseCloseLineOfSightThreats || manager == null || groupPredatorWarningCooldownTimer > 0f || !ShouldSendGroupPredatorWarnings())
         {
             return;
         }
@@ -5374,7 +5712,7 @@ public class MarineCreatureAgent : MonoBehaviour
         for (int i = 0; i < allies.Count; i++)
         {
             MarineCreatureAgent ally = allies[i];
-            if (ally == null || ally == this || ally.CurrentHealth <= 0f)
+            if (ally == null || ally == this || ally.CurrentHealth <= 0f || !ally.ShouldReactToGroupPredatorWarnings())
             {
                 continue;
             }
@@ -5390,7 +5728,7 @@ public class MarineCreatureAgent : MonoBehaviour
 
     private void ReceiveGroupPredatorWarning(MarineCreatureAgent predator)
     {
-        if (predator == null || predator == this)
+        if (predator == null || predator == this || !ShouldReactToGroupPredatorWarnings())
         {
             return;
         }
@@ -5416,7 +5754,10 @@ public class MarineCreatureAgent : MonoBehaviour
         groupPredatorWarningDirection = warningDirection;
         groupPredatorWarningTimer = Mathf.Max(groupPredatorWarningTimer, GroupPredatorWarningDuration);
         groupWarningPredator = predator;
-        threatFoodSuppressionTimer = Mathf.Max(threatFoodSuppressionTimer, Mathf.Min(ThreatFoodSuppressionMemoryTime, GroupPredatorWarningDuration));
+        if (Vector3.SqrMagnitude(predator.transform.position - transform.position) <= ClosePredatorThreatRange * ClosePredatorThreatRange)
+        {
+            threatFoodSuppressionTimer = Mathf.Max(threatFoodSuppressionTimer, Mathf.Min(ThreatFoodSuppressionMemoryTime, GroupPredatorWarningDuration));
+        }
         rememberedDangerArea = predator.transform.position;
     }
 
@@ -5706,7 +6047,8 @@ public class MarineCreatureAgent : MonoBehaviour
         drain += movementCost * 0.10f;
         if (isSprintingThisTick)
         {
-            drain *= Mathf.Max(1f, SprintEnergyCostMultiplier);
+            float injurySprintPenalty = 1f + GetInjurySeverity01() * Mathf.Max(0f, InjurySprintEnergyExtraMultiplier);
+            drain *= Mathf.Max(1f, SprintEnergyCostMultiplier) * injurySprintPenalty;
         }
 
         float stomachReserve = GetStomachFullness01();
@@ -5745,6 +6087,12 @@ public class MarineCreatureAgent : MonoBehaviour
 
     private void TryEatFood()
     {
+        if (IsPredatorPlantBlockedRole() && !CanUsePlantAsPredatorEmergencyFallback())
+        {
+            ClearPlantTargetForPredator();
+            return;
+        }
+
         if (feedingHoldTimer > 0f || ShouldIgnoreStaticFoodBecauseThreatened() || !WantsStaticResourceNow() || nearestFood == null || nearestFood.IsConsumed || GetRemainingStomachSpace() <= 0.05f)
         {
             return;
@@ -6098,6 +6446,8 @@ public class MarineCreatureAgent : MonoBehaviour
         }
 
         bool killed = biteTarget.ReceiveBite(this, damage, out float energyGained);
+        predatorTimeSinceLastBite = 0f;
+        predatorChaseTimer = 0f;
         RememberFoodArea(preyDeathPosition, false);
         if (!killed)
         {
@@ -6115,6 +6465,11 @@ public class MarineCreatureAgent : MonoBehaviour
 
         float meatStored = Mathf.Min(energyGained, GetRemainingStomachSpace());
         AddToStomach(0f, meatStored, 0f);
+        if (!killed && UsePredatorHuntCommitment && (GetEffectiveEnergyRatio() >= PredatorSatisfiedAfterBiteEnergyRatio || GetStomachFullness01() >= PredatorSatisfiedAfterBiteStomachRatio))
+        {
+            ClearFocusedPrey(false);
+            predatorExhaustionTimer = Mathf.Max(predatorExhaustionTimer, PredatorExhaustionAfterEnoughBites);
+        }
         Candidate.MeatEnergyConsumed += meatStored;
         Candidate.Genome.ReinforceDietUsage(Candidate.PlantEnergyConsumed, Candidate.MeatEnergyConsumed, Candidate.CarrionEnergyConsumed, DietLearningRate);
         Candidate.PreyBites++;
@@ -6246,7 +6601,9 @@ public class MarineCreatureAgent : MonoBehaviour
         float sizeRatio = Mathf.Clamp(ownSize / preySize, 0.35f, 3.5f);
         float sizeMultiplier = Mathf.Lerp(0.50f, 1.55f, Mathf.InverseLerp(0.45f, 2.6f, sizeRatio));
         damage *= Mathf.Lerp(1f, sizeMultiplier, Mathf.Clamp01(PredatorSizeDamageScale));
-        damage *= Mathf.Lerp(1.18f, 1.0f, prey.GetHealthRatio());
+        damage *= Mathf.Max(1f, SharkLikeStrikeDamageMultiplier);
+        damage *= Mathf.Lerp(1.28f, 1.0f, prey.GetHealthRatio());
+        damage *= Mathf.Lerp(1f, 1.18f, prey.GetWoundedScent01());
         if (prey.lastFriendlyCount >= prey.GroupCounterMinimumAllies && prey.GetHealthRatio() > 0.55f)
         {
             damage *= Mathf.Clamp(HealthyGroupedPreyDamageDamping, 0.45f, 0.95f);
@@ -6411,6 +6768,15 @@ public class MarineCreatureAgent : MonoBehaviour
             }
         }
 
+        float preyHealthRatio = prey.GetHealthRatio();
+        bool preyPlantLed = prey.Candidate.Genome.PlantDiet >= prey.Candidate.Genome.MeatDiet && prey.Candidate.Genome.PlantDiet >= prey.Candidate.Genome.CarrionDiet;
+        bool preyHealthyGroupedGrazer = preyPlantLed && preyHealthRatio > 0.62f && prey.GetWoundedScent01() < 0.12f && prey.lastFriendlyCount >= Mathf.Max(2, prey.GroupCounterMinimumAllies);
+        bool predatorIsStarving = energyRatio <= StarvingAttackEnergyRatio || GetStomachFullness01() <= 0.12f;
+        if (preyHealthyGroupedGrazer && !predatorIsStarving)
+        {
+            return false;
+        }
+
         return true;
     }
 
@@ -6508,6 +6874,7 @@ public class MarineCreatureAgent : MonoBehaviour
         float reduction = Mathf.Clamp01(defence * ArmourDamageReductionPerPoint);
         float damage = Mathf.Max(0.25f, incomingDamage * (1f - reduction));
         CurrentHealth -= damage;
+        woundedScentTimer = Mathf.Max(woundedScentTimer, WoundedScentDuration);
         recentDamageHealLockTimer = Mathf.Max(recentDamageHealLockTimer, HealDelayAfterDamage);
         survivalRecentDamageTimer = Mathf.Max(survivalRecentDamageTimer, SurvivalRecentDamagePanicTime);
         if (attacker != null)
@@ -6924,7 +7291,15 @@ public class MarineCreatureAgent : MonoBehaviour
             return false;
         }
 
-        return GetEffectiveEnergyRatio() >= MateEnergyRatioRequired && CurrentHealth >= GetMaxHealth() * 0.42f;
+        float requiredEnergy = MateEnergyRatioRequired;
+        float requiredHealthRatio = 0.42f;
+        if (IsEcologicalPredatorRole())
+        {
+            requiredEnergy = Mathf.Max(requiredEnergy, 0.68f);
+            requiredHealthRatio = 0.68f;
+        }
+
+        return GetEffectiveEnergyRatio() >= requiredEnergy && CurrentHealth >= GetMaxHealth() * requiredHealthRatio;
     }
 
     public void SetJuvenileOnHatch()

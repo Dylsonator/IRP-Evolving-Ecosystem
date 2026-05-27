@@ -102,34 +102,107 @@ public class EvolutionCandidate
 
     public float GetFitness()
     {
-        // Fitness is intentionally multi-factor. This avoids selecting only one "best" stat.
-        // It rewards survival, energy collection, reproduction, movement and successful feeding strategy.
+        // Fitness is intentionally multi-factor, but it must not over-reward the safest food source.
+        // Earlier versions rewarded raw plant count too much, so grazers could out-score every other
+        // niche simply by surviving and eating safe buds. This version scores niche success instead:
+        // plant specialists are rewarded for plant energy, predators for meat/prey success, and
+        // scavengers for carrion. Wrong-diet feeding still keeps a creature alive, but it is not
+        // treated as strong evolutionary proof.
+        if (Genome == null)
+        {
+            return 0f;
+        }
+
+        float plantDiet = Mathf.Clamp01(Genome.PlantDiet);
+        float meatDiet = Mathf.Clamp01(Genome.MeatDiet);
+        float carrionDiet = Mathf.Clamp01(Genome.CarrionDiet);
+        float dietTotal = Mathf.Max(0.001f, plantDiet + meatDiet + carrionDiet);
+        plantDiet /= dietTotal;
+        meatDiet /= dietTotal;
+        carrionDiet /= dietTotal;
+
         float fitness = 0f;
-        fitness += SurvivalTime * 1.0f;
-        fitness += EnergyGained * 0.35f;
-        fitness += FinalHealth * 0.25f;
-        fitness += FinalStomachFullness * 8f;
-        fitness += FoodEaten * 12f;
-        fitness += CarrionEaten * 10f;
-        fitness += FoodMassConsumed * 0.18f;
-        fitness += PreyBites * 6f;
-        fitness += PreyKills * 28f;
-        fitness += BiteDamageDealt * 0.22f;
-        fitness += ReproductionCount * 52f;
-        fitness += EggsLaid * 5f;
-        fitness += EggsHatched * 18f;
-        fitness += FoodMemoryUses * 1.2f;
+
+        // Baseline biological success. Survival matters, but not enough to let slow starving armour win forever.
+        fitness += SurvivalTime * 0.82f;
+        fitness += EnergyGained * 0.18f;
+        fitness += FinalHealth * 0.18f;
+        fitness += FinalStomachFullness * 5.0f;
+
+        // Diet-aligned feeding. These are the main feeding rewards.
+        float plantAlignment = Mathf.Lerp(0.18f, 1.0f, plantDiet);
+        float meatAlignment = Mathf.Lerp(0.20f, 1.08f, meatDiet);
+        float carrionAlignment = Mathf.Lerp(0.20f, 1.05f, carrionDiet);
+
+        fitness += PlantEnergyConsumed * 0.082f * plantAlignment;
+        fitness += MeatEnergyConsumed * 0.140f * meatAlignment;
+        fitness += CarrionEnergyConsumed * 0.105f * carrionAlignment;
+
+        // Counts are now small evidence bonuses, not the main score driver.
+        fitness += FoodEaten * Mathf.Lerp(0.8f, 3.8f, plantDiet);
+        fitness += CarrionEaten * Mathf.Lerp(1.0f, 6.0f, carrionDiet);
+        fitness += FoodMassConsumed * 0.035f * plantAlignment;
+
+        // Predator success. Bites are useful proof, but kills/own meat intake matter more.
+        float predatorProof = Mathf.Clamp01(meatDiet * 1.35f + Genome.Aggression * 0.45f);
+        fitness += PreyBites * Mathf.Lerp(1.2f, 8.5f, predatorProof);
+        fitness += PreyKills * Mathf.Lerp(10f, 42f, predatorProof);
+        fitness += BiteDamageDealt * Mathf.Lerp(0.035f, 0.18f, predatorProof);
+
+        // Scavengers should have a real path that is not just failed predation.
+        if (carrionDiet > plantDiet && carrionDiet >= meatDiet)
+        {
+            fitness += CarrionEaten * 3.5f;
+            fitness += CarrionEnergyConsumed * 0.030f;
+        }
+
+        // Plant-led creatures need a fair route to selection that is not just raw food count.
+        // Reward stable grazing/schooling slightly when it produces real plant energy and survival.
+        if (plantDiet >= 0.52f && plantDiet >= meatDiet && PlantEnergyConsumed > 0f)
+        {
+            fitness += Mathf.Min(18f, PlantEnergyConsumed * 0.018f + Mathf.Min(SchoolingTime, SurvivalTime) * 0.018f);
+        }
+
+        // Reproduction and offspring remain the strongest evidence of a viable strategy.
+        fitness += ReproductionCount * 56f;
+        fitness += EggsLaid * 6f;
+        fitness += EggsHatched * 20f;
+
+        // Behaviour evidence. Small values only, so movement spam does not become a goal.
+        fitness += FoodMemoryUses * 1.0f;
         fitness += LeaderFollowEvents * 0.6f;
-        fitness += Mathf.Min(ForagingTime, SurvivalTime) * 0.08f;
-        fitness += Mathf.Min(MateSeekingTime, SurvivalTime) * 0.05f;
-        fitness += DistanceTravelled * 0.02f;
+        fitness += Mathf.Min(ForagingTime, SurvivalTime) * Mathf.Lerp(0.015f, 0.055f, plantDiet);
+        fitness += Mathf.Min(MateSeekingTime, SurvivalTime) * 0.06f;
+        fitness += Mathf.Min(SchoolingTime, SurvivalTime) * Mathf.Lerp(0.015f, 0.050f, Genome.GroupingChance);
+        fitness += DistanceTravelled * 0.010f;
+
+        // Wrong-diet penalties. These do not stop emergency survival, but they stop selection from
+        // treating a predator that grazes all day, or a grazer that randomly hunts, as a better version
+        // of that niche.
+        float wrongPlantForPredator = Mathf.Clamp01((meatDiet - plantDiet) * 1.8f) * PlantEnergyConsumed;
+        float wrongHuntingForGrazer = Mathf.Clamp01((plantDiet - meatDiet) * 1.8f) * (PreyBites + PreyKills * 3f);
+        fitness -= wrongPlantForPredator * 0.045f;
+        fitness -= wrongHuntingForGrazer * 4.0f;
+
+        // A hunter that spends a long time hunting but gets no bite is not a good hunter.
+        if (HuntingTime > 2f)
+        {
+            float huntProof = PreyBites + PreyKills * 2f + MeatEnergyConsumed * 0.018f;
+            float wastedHunt = Mathf.Max(0f, HuntingTime - huntProof * 5f);
+            fitness -= wastedHunt * Mathf.Lerp(0.03f, 0.16f, meatDiet);
+        }
 
         // Natural anti-convergence support: a creature that only survives by slowly starving should not dominate selection.
-        // This lets heavy armour remain useful, but prevents barely-functional armoured builds taking over every niche.
-        fitness -= StarvationDamageTaken * 0.55f;
+        fitness -= StarvationDamageTaken * 0.75f;
         if (FinalHealth > 0f && FinalHealth < 35f)
         {
-            fitness -= (35f - FinalHealth) * 0.35f;
+            fitness -= (35f - FinalHealth) * 0.50f;
+        }
+
+        // Heavy armour should survive through useful strategy, not just by taking ages to die.
+        if (Genome.Armour > 0.65f && StarvationDamageTaken > 5f)
+        {
+            fitness -= (Genome.Armour - 0.65f) * StarvationDamageTaken * 0.35f;
         }
 
         return Mathf.Max(0f, fitness);

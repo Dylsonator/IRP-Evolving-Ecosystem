@@ -63,7 +63,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
     public bool UseBehaviourFeatureBuckets = true;
     public int QualityDiversityBins = 4;
     public bool UseNoveltySelectionBias = true;
-    public float NoveltySelectionBonus = 35f;
+    public float NoveltySelectionBonus = 40f;
     [Tooltip("Small pressure against uncontrolled neural bloat. Keeps NEAT-lite complexification useful instead of endlessly growing.")]
     public float BrainComplexityPenalty = 0.08f;
 
@@ -73,7 +73,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
     public bool UseFitnessSharing = true;
     [Range(0.05f, 0.65f)] public float FitnessSharingSigma = 0.24f;
     public float FitnessSharingStrength = 0.55f;
-    public float BehaviourNoveltySelectionBonus = 85f;
+    public float BehaviourNoveltySelectionBonus = 95f;
     [Tooltip("When false, anti-convergence does not hard-cap roles. Diversity comes from MAP-Elites-style buckets, novelty and sharing instead.")]
     public bool UseHardNicheCaps = false;
 
@@ -84,7 +84,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
     [Tooltip("If fewer broad ecological roles survive selection, the manager injects rescue mutants into weak/missing roles.")]
     public int MinimumSurvivingCoreNiches = 6;
     public int MaximumDiversityRescueMutants = 0;
-    public float RareNicheSelectionBonus = 70f;
+    public float RareNicheSelectionBonus = 85f;
     public float CollapseMutationMultiplier = 1.35f;
     [Tooltip("When false, anti-convergence uses selection pressure only. This is more natural for IRP runs than injecting forced rescue mutants.")]
     public bool InjectMissingNichesWhenCollapsed = false;
@@ -103,8 +103,13 @@ public class EvolutionEcosystemManager : MonoBehaviour
     public bool ResetPlantBudsEachGeneration = true;
 
     [Header("Natural Predator Restraint")]
-    [Range(0.05f, 0.65f)] public float IdealPredatorMaxFraction = 0.34f;
-    [Range(0f, 1f)] public float PredatorDominanceSelectionPenalty = 0.55f;
+    [Range(0.05f, 0.65f)] public float IdealPredatorMaxFraction = 0.24f;
+    [Range(0f, 1f)] public float PredatorDominanceSelectionPenalty = 0.68f;
+
+    [Header("Natural Plant Niche Support")]
+    [Tooltip("If plant-led niches fall below this fraction, successful grazers/schoolers receive a selection boost. This is selection pressure only, not forced spawning.")]
+    [Range(0.05f, 0.75f)] public float IdealPlantNicheMinFraction = 0.34f;
+    public float PlantNicheScarcitySelectionBonus = 48f;
 
     [Header("Aggressive Spawn Spacing")]
     public bool AvoidAggressiveSameNicheSpawnClusters = true;
@@ -249,7 +254,7 @@ public class EvolutionEcosystemManager : MonoBehaviour
         MaxCarrionSources = Mathf.Max(MaxCarrionSources, 90);
 
         // Predators/scavengers should be possible, not forcibly guaranteed every generation.
-        StartingPredatorFraction = Mathf.Clamp(StartingPredatorFraction, 0.03f, 0.11f);
+        StartingPredatorFraction = Mathf.Clamp(StartingPredatorFraction, 0.03f, 0.10f);
         StartingScavengerFraction = Mathf.Clamp(StartingScavengerFraction, 0.04f, 0.16f);
         ReplaceMissingDietNichesEachGeneration = false;
         MinimumPredatorSeedsPerGeneration = 0;
@@ -266,10 +271,12 @@ public class EvolutionEcosystemManager : MonoBehaviour
         RareNicheSelectionBonus = Mathf.Max(RareNicheSelectionBonus, 0f);
         FitnessSharingSigma = Mathf.Clamp(FitnessSharingSigma, 0.16f, 0.38f);
         FitnessSharingStrength = Mathf.Clamp(FitnessSharingStrength, 0.25f, 0.95f);
-        BehaviourNoveltySelectionBonus = Mathf.Max(BehaviourNoveltySelectionBonus, 55f);
+        BehaviourNoveltySelectionBonus = Mathf.Max(BehaviourNoveltySelectionBonus, 75f);
         CollapseMutationMultiplier = Mathf.Clamp(CollapseMutationMultiplier, 1.05f, 1.75f);
-        IdealPredatorMaxFraction = Mathf.Clamp(IdealPredatorMaxFraction, 0.12f, 0.48f);
+        IdealPredatorMaxFraction = Mathf.Clamp(IdealPredatorMaxFraction, 0.14f, 0.34f);
         PredatorDominanceSelectionPenalty = Mathf.Clamp01(PredatorDominanceSelectionPenalty);
+        IdealPlantNicheMinFraction = Mathf.Clamp(IdealPlantNicheMinFraction, 0.18f, 0.62f);
+        PlantNicheScarcitySelectionBonus = Mathf.Max(0f, PlantNicheScarcitySelectionBonus);
         AggressiveSameNicheSpawnAvoidRadius = Mathf.Clamp(AggressiveSameNicheSpawnAvoidRadius, 8f, 40f);
         AggressiveSpawnSeparationSamples = Mathf.Clamp(AggressiveSpawnSeparationSamples, 3, 24);
 
@@ -1233,8 +1240,68 @@ public class EvolutionEcosystemManager : MonoBehaviour
                 float predatorFraction = total > 0 ? predatorCount / (float)total : 0f;
                 if (predatorFraction > IdealPredatorMaxFraction)
                 {
-                    float excess = Mathf.InverseLerp(IdealPredatorMaxFraction, 0.85f, predatorFraction);
-                    score *= Mathf.Lerp(1f, 1f - PredatorDominanceSelectionPenalty, excess);
+                    float excess = Mathf.InverseLerp(IdealPredatorMaxFraction, 0.62f, predatorFraction);
+                    float penalty = Mathf.Lerp(1f, 1f - PredatorDominanceSelectionPenalty, excess);
+                    score *= Mathf.Clamp(penalty, 0.08f, 1f);
+                }
+            }
+        }
+
+        if (UseAntiConvergence && coreCounts != null && candidate.Genome != null)
+        {
+            string core = BuildCoreNicheKey(candidate);
+            bool predatorCore = core == "active_predator" || core == "ambush_predator";
+            if (predatorCore)
+            {
+                int total = 0;
+                int predatorCount = 0;
+                foreach (KeyValuePair<string, int> pair in coreCounts)
+                {
+                    total += pair.Value;
+                    if (pair.Key == "active_predator" || pair.Key == "ambush_predator")
+                    {
+                        predatorCount += pair.Value;
+                    }
+                }
+
+                float predatorFraction = total > 0 ? predatorCount / (float)total : 0f;
+
+                // Natural support when the predator niche is being lost.
+                // This does not spawn or force predators; it only stops successful predators
+                // with real meat/carrion interaction from being discarded too easily.
+                if (predatorFraction < IdealPredatorMaxFraction * 0.55f)
+                {
+                    float proof = Mathf.Clamp01(candidate.PreyBites * 0.20f + candidate.PreyKills * 0.75f + candidate.MeatEnergyConsumed * 0.025f + candidate.CarrionEnergyConsumed * 0.012f);
+                    float rarity = Mathf.Clamp01(1f - predatorFraction / Mathf.Max(0.01f, IdealPredatorMaxFraction));
+                    score += rarity * (35f + proof * 75f);
+                }
+            }
+        }
+
+        if (UseAntiConvergence && coreCounts != null && candidate.Genome != null && PlantNicheScarcitySelectionBonus > 0f)
+        {
+            string core = BuildCoreNicheKey(candidate);
+            bool plantCore = core == "grazer" || core == "defensive_grazer" || core == "schooling_grazer" || core == "egg_guardian";
+            bool plantLed = candidate.Genome.PlantDiet >= candidate.Genome.MeatDiet && candidate.Genome.PlantDiet >= candidate.Genome.CarrionDiet;
+            if (plantCore && plantLed)
+            {
+                int total = 0;
+                int plantCount = 0;
+                foreach (KeyValuePair<string, int> pair in coreCounts)
+                {
+                    total += pair.Value;
+                    if (pair.Key == "grazer" || pair.Key == "defensive_grazer" || pair.Key == "schooling_grazer" || pair.Key == "egg_guardian")
+                    {
+                        plantCount += pair.Value;
+                    }
+                }
+
+                float plantFraction = total > 0 ? plantCount / (float)total : 0f;
+                if (plantFraction < IdealPlantNicheMinFraction)
+                {
+                    float proof = Mathf.Clamp01(candidate.PlantEnergyConsumed * 0.018f + candidate.FoodEaten * 0.06f + candidate.ReproductionCount * 0.35f + candidate.EggsLaid * 0.08f + candidate.SchoolingTime * 0.004f);
+                    float rarity = Mathf.Clamp01(1f - plantFraction / Mathf.Max(0.01f, IdealPlantNicheMinFraction));
+                    score += rarity * (PlantNicheScarcitySelectionBonus * (0.45f + proof));
                 }
             }
         }
@@ -1953,18 +2020,32 @@ public class EvolutionEcosystemManager : MonoBehaviour
             float sizeAdvantage = Mathf.Clamp01((ownSize / Mathf.Max(0.1f, preySize) - 0.65f) / 1.65f);
             float injuredBonus = 1f - preyHealth;
             float weakBonus = 1f - preyEnergy;
+            float woundedScent = creature.GetWoundedScent01();
             float juvenileBonus = creature.IsJuvenile ? 0.45f : 0f;
-            float dangerPenalty = creature.EffectiveStats != null ? creature.EffectiveStats.DangerFactor * 0.10f + creature.EffectiveStats.Defence * 0.08f : 0f;
+            float dangerPenalty = creature.EffectiveStats != null ? creature.EffectiveStats.DangerFactor * 0.22f + creature.EffectiveStats.Defence * 0.18f : 0f;
+            float preyPredatorDrive = creature.Candidate.Genome.MeatDiet * 0.55f + creature.Candidate.Genome.Aggression * 0.35f + creature.Candidate.Genome.JawSize * 0.06f;
+            int preyFriends = creature.GetFriendlySchoolmateCount();
+            float isolatedBonus = preyFriends <= 0 ? 0.58f : -Mathf.Min(1.85f, preyFriends * 0.26f);
+            bool preyPlantLed = creature.Candidate.Genome.PlantDiet >= creature.Candidate.Genome.MeatDiet && creature.Candidate.Genome.PlantDiet >= creature.Candidate.Genome.CarrionDiet;
+            bool healthyGroupedGrazer = preyPlantLed && preyHealth > 0.62f && woundedScent < 0.12f && preyFriends >= 2;
+            float easyPreySignal = Mathf.Clamp01(injuredBonus * 0.75f + weakBonus * 0.35f + woundedScent * 0.80f + (preyFriends <= 0 ? 0.30f : 0f) + juvenileBonus);
+            float nonPredatorBonus = preyPredatorDrive < 0.42f ? Mathf.Lerp(-0.20f, 0.42f, easyPreySignal) : -0.38f;
+            float healthyGrazerHerdPenalty = healthyGroupedGrazer ? Mathf.Lerp(0.65f, 1.65f, Mathf.Clamp01(preyFriends / 7f)) : 0f;
 
-            // Predators should not just pick the closest fish. They should prefer wounded, weak and smaller prey.
+            // Predators should prefer wounded, weak, isolated and smaller prey.
+            // Healthy grouped grazers should not be the default target, otherwise the food web collapses into predators.
             float score = 0f;
-            score += injuredBonus * 2.6f;
-            score += weakBonus * 1.35f;
-            score += sizeAdvantage * 1.8f;
+            score += injuredBonus * 2.05f;
+            score += weakBonus * 1.25f;
+            score += woundedScent * 0.82f;
+            score += sizeAdvantage * 1.22f;
             score += juvenileBonus;
-            score += hunterDrive * 0.45f;
-            score += (1f - distance01) * 0.95f;
+            score += nonPredatorBonus;
+            score += isolatedBonus;
+            score += hunterDrive * 0.28f;
+            score += (1f - distance01) * 0.48f;
             score -= dangerPenalty;
+            score -= healthyGrazerHerdPenalty;
 
             if (score > bestScore)
             {

@@ -60,7 +60,7 @@ public static class EvolutionNicheUtility
         bool defensive = g.Armour >= 0.50f || g.SpikeSize >= 0.70f || g.DangerFactor >= 0.70f;
         bool schooling = g.GroupingChance >= 0.55f && g.SchoolTightness >= 0.38f;
         bool eggGuardian = g.EggProtection >= 0.58f && g.NestingDrive >= 0.42f;
-        bool predator = g.MeatDiet >= 0.34f && g.Aggression >= 0.20f;
+        bool predator = g.MeatDiet >= 0.44f && g.Aggression >= 0.26f && (meatFocused || g.MeatDiet >= Mathf.Max(g.PlantDiet, g.CarrionDiet) + 0.08f);
 
         if (predator && IsLikelyAmbusher(g)) return "ambush_predator";
         if (predator && meatFocused) return "active_predator";
@@ -81,7 +81,7 @@ public static class EvolutionNicheUtility
             return false;
         }
 
-        return g.MeatDiet >= 0.34f && g.Stealth >= 0.48f && (g.Territoriality >= 0.35f || g.Speed < 5.2f);
+        return g.MeatDiet >= 0.44f && g.Aggression >= 0.24f && g.Stealth >= 0.48f && (g.Territoriality >= 0.35f || g.Speed < 5.2f);
     }
 
     private static string GetDietNiche(EvolutionGenome g)
